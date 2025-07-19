@@ -149,8 +149,6 @@ class FirebaseManager: ObservableObject {
     
     func createIdeaSpark(title: String, description: String, tags: [String], isPublic: Bool, creatorId: String, creatorUsername: String) async throws -> String {
         let ideaSparkId = UUID().uuidString
-        print("Creating idea with ID: \(ideaSparkId)")
-        print("isPublic: \(isPublic)")
         
         let ideaSpark = [
             "id": ideaSparkId,
@@ -167,16 +165,10 @@ class FirebaseManager: ObservableObject {
             "status": "sparking"
         ] as [String: Any]
         
-        print("Idea data: \(ideaSpark)")
-        
         if isPublic {
-            print("Saving to public collection: ideaSparks/\(ideaSparkId)")
             try await db.collection("ideaSparks").document(ideaSparkId).setData(ideaSpark)
-            print("Successfully saved public idea")
         } else {
-            print("Saving to private collection: users/\(creatorId)/privateIdeaSparks/\(ideaSparkId)")
             try await db.collection("users").document(creatorId).collection("privateIdeaSparks").document(ideaSparkId).setData(ideaSpark)
-            print("Successfully saved private idea")
         }
         
         return ideaSparkId
@@ -208,11 +200,7 @@ class FirebaseManager: ObservableObject {
     }
     
     func getPublicIdeaSparks() async throws -> [[String: Any]] {
-        print("Fetching public idea sparks from Firestore...")
-        
-        // First, try to get all documents to see what's in the collection
         let allSnapshot = try await db.collection("ideaSparks").getDocuments()
-        print("Total documents in ideaSparks collection: \(allSnapshot.documents.count)")
         
         // Filter for public ideas
         let publicIdeas = allSnapshot.documents.compactMap { doc -> [String: Any]? in
@@ -231,42 +219,10 @@ class FirebaseManager: ObservableObject {
             return date1 > date2
         }
         
-        print("Found \(sortedIdeas.count) public ideas after filtering")
-        
-        // Debug: Print each idea's details
-        for (index, idea) in sortedIdeas.enumerated() {
-            print("Idea \(index + 1):")
-            print("  - ID: \(idea["id"] ?? "N/A")")
-            print("  - Title: \(idea["title"] ?? "N/A")")
-            print("  - Author: \(idea["authorUsername"] ?? "N/A")")
-            print("  - isPublic: \(idea["isPublic"] ?? "N/A")")
-            print("  - Status: \(idea["status"] ?? "N/A")")
-            print("  - Created At: \(idea["createdAt"] ?? "N/A")")
-        }
-        
         return sortedIdeas
     }
     
-    // MARK: - Debug Methods
-    
-    func debugIdeaSparksCollection() async {
-        print("=== DEBUG: IdeaSparks Collection ===")
-        do {
-            let snapshot = try await db.collection("ideaSparks").getDocuments()
-            print("Total documents: \(snapshot.documents.count)")
-            
-            for (index, doc) in snapshot.documents.enumerated() {
-                let data = doc.data()
-                print("Document \(index + 1) - ID: \(doc.documentID)")
-                print("  Data: \(data)")
-                print("  isPublic field: \(data["isPublic"] ?? "MISSING")")
-                print("  ---")
-            }
-        } catch {
-            print("Error debugging collection: \(error)")
-        }
-        print("=== END DEBUG ===")
-    }
+
     
     // MARK: - Helper Methods
     

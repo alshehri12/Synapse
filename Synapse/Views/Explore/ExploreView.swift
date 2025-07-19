@@ -131,20 +131,9 @@ struct ExploreView: View {
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        Task {
-                            await firebaseManager.debugIdeaSparksCollection()
-                        }
-                    }) {
-                        Image(systemName: "ladybug")
-                            .font(.title2)
-                            .foregroundColor(Color.accentGreen)
-                    }
-                }
+
             }
             .onAppear {
-                print("ExploreView appeared, loading ideas...")
                 loadIdeas()
             }
             .refreshable {
@@ -158,7 +147,6 @@ struct ExploreView: View {
             }
             .fullScreenCover(isPresented: $showingCreateIdea) {
                 CreateIdeaView(onDismiss: {
-                    print("CreateIdeaView dismissed, refreshing ideas...")
                     showingCreateIdea = false
                     // Add a small delay to ensure Firebase data is committed
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -167,28 +155,24 @@ struct ExploreView: View {
                 })
             }
             .overlay(
-                // Floating Action Button - Only show when there are ideas
-                Group {
-                    if !filteredIdeas.isEmpty && !isLoading {
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                Button(action: {
-                                    showingCreateIdea = true
-                                }) {
-                                    Image(systemName: "sparkles")
-                                        .font(.system(size: 20, weight: .semibold))
-                                        .foregroundColor(.white)
-                                        .frame(width: 56, height: 56)
-                                        .background(Color.accentGreen)
-                                        .clipShape(Circle())
-                                        .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
-                                }
-                                .padding(.trailing, 20)
-                                .padding(.bottom, 100) // Above tab bar
-                            }
+                // Floating Action Button
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showingCreateIdea = true
+                        }) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(Color.accentGreen)
+                                .clipShape(Circle())
+                                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                         }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 100) // Above tab bar
                     }
                 }
             )
@@ -196,7 +180,6 @@ struct ExploreView: View {
     }
     
     private func loadIdeas() {
-        print("Loading ideas...")
         isLoading = true
         
         Task {
@@ -205,89 +188,62 @@ struct ExploreView: View {
     }
     
     private func refreshIdeas() async {
-        print("Refreshing ideas...")
         await loadIdeasAsync()
     }
     
     private func loadIdeasAsync() async {
         do {
             let ideaData = try await firebaseManager.getPublicIdeaSparks()
-            print("Loaded \(ideaData.count) ideas from Firebase")
             
-                            await MainActor.run {
-                    print("Processing \(ideaData.count) ideas from Firebase...")
-                    ideas = ideaData.compactMap { data in
-                        print("Processing idea data: \(data)")
-                        
-                        // Debug each field
-                        let id = data["id"] as? String
-                        let authorId = data["authorId"] as? String
-                        let authorUsername = data["authorUsername"] as? String
-                        let title = data["title"] as? String
-                        let description = data["description"] as? String
-                        let tags = data["tags"] as? [String]
-                        let isPublic = data["isPublic"] as? Bool
-                        let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
-                        let updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue()
-                        let likes = data["likes"] as? Int
-                        let comments = data["comments"] as? Int
-                        let statusString = data["status"] as? String
-                        let status = statusString != nil ? IdeaSpark.IdeaStatus(rawValue: statusString!) : nil
-                        
-                        print("  Parsed fields:")
-                        print("    id: \(id ?? "nil")")
-                        print("    authorId: \(authorId ?? "nil")")
-                        print("    authorUsername: \(authorUsername ?? "nil")")
-                        print("    title: \(title ?? "nil")")
-                        print("    description: \(description ?? "nil")")
-                        print("    tags: \(tags ?? [])")
-                        print("    isPublic: \(isPublic != nil ? String(describing: isPublic!) : "nil")")
-                        print("    createdAt: \(createdAt != nil ? String(describing: createdAt!) : "nil")")
-                        print("    updatedAt: \(updatedAt != nil ? String(describing: updatedAt!) : "nil")")
-                        print("    likes: \(likes != nil ? String(describing: likes!) : "nil")")
-                        print("    comments: \(comments != nil ? String(describing: comments!) : "nil")")
-                        print("    statusString: \(statusString ?? "nil")")
-                        print("    status: \(status?.rawValue ?? "nil")")
-                        
-                        guard let id = id,
-                              let authorId = authorId,
-                              let authorUsername = authorUsername,
-                              let title = title,
-                              let description = description,
-                              let tags = tags,
-                              let isPublic = isPublic,
-                              let createdAt = createdAt,
-                              let updatedAt = updatedAt,
-                              let likes = likes,
-                              let comments = comments,
-                              let status = status else {
-                            print("Failed to parse idea data - missing required fields")
-                            return nil
-                        }
-                        
-                        let idea = IdeaSpark(
-                            id: id,
-                            authorId: authorId,
-                            authorUsername: authorUsername,
-                            title: title,
-                            description: description,
-                            tags: tags,
-                            isPublic: isPublic,
-                            createdAt: createdAt,
-                            updatedAt: updatedAt,
-                            likes: likes,
-                            comments: comments,
-                            status: status
-                        )
-                        
-                        print("  Successfully created IdeaSpark: \(idea.title)")
-                        return idea
+            await MainActor.run {
+                ideas = ideaData.compactMap { data in
+                    let id = data["id"] as? String
+                    let authorId = data["authorId"] as? String
+                    let authorUsername = data["authorUsername"] as? String
+                    let title = data["title"] as? String
+                    let description = data["description"] as? String
+                    let tags = data["tags"] as? [String]
+                    let isPublic = data["isPublic"] as? Bool
+                    let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
+                    let updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue()
+                    let likes = data["likes"] as? Int
+                    let comments = data["comments"] as? Int
+                    let statusString = data["status"] as? String
+                    let status = statusString != nil ? IdeaSpark.IdeaStatus(rawValue: statusString!) : nil
+                    
+                    guard let id = id,
+                          let authorId = authorId,
+                          let authorUsername = authorUsername,
+                          let title = title,
+                          let description = description,
+                          let tags = tags,
+                          let isPublic = isPublic,
+                          let createdAt = createdAt,
+                          let updatedAt = updatedAt,
+                          let likes = likes,
+                          let comments = comments,
+                          let status = status else {
+                        return nil
                     }
-                    print("Final ideas count: \(ideas.count)")
-                    isLoading = false
+                    
+                    return IdeaSpark(
+                        id: id,
+                        authorId: authorId,
+                        authorUsername: authorUsername,
+                        title: title,
+                        description: description,
+                        tags: tags,
+                        isPublic: isPublic,
+                        createdAt: createdAt,
+                        updatedAt: updatedAt,
+                        likes: likes,
+                        comments: comments,
+                        status: status
+                    )
                 }
+                isLoading = false
+            }
         } catch {
-            print("Error loading ideas: \(error)")
             await MainActor.run {
                 isLoading = false
             }

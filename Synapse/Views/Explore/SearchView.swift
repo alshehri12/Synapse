@@ -307,6 +307,12 @@ struct SearchView: View {
 
 // MARK: - Trending Section
 struct TrendingSection: View {
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @State private var trendingIdeas: [IdeaSpark] = []
+    @State private var popularPods: [IncubationPod] = []
+    @State private var topUsers: [UserProfile] = []
+    @State private var isLoading = false
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -314,13 +320,29 @@ struct TrendingSection: View {
                 VStack(alignment: .leading, spacing: 16) {
                     SectionHeader(title: "Trending Ideas".localized, action: {})
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            ForEach(mockIdeas.prefix(5)) { idea in
-                                TrendingIdeaCard(idea: idea)
-                            }
+                    if isLoading {
+                        HStack {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                            Text("Loading trending ideas...".localized)
+                                .font(.system(size: 14))
+                                .foregroundColor(Color.textSecondary)
                         }
                         .padding(.horizontal, 20)
+                    } else if trendingIdeas.isEmpty {
+                        Text("No trending ideas yet".localized)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color.textSecondary)
+                            .padding(.horizontal, 20)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(trendingIdeas.prefix(5)) { idea in
+                                    TrendingIdeaCard(idea: idea)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
                     }
                 }
                 
@@ -328,13 +350,29 @@ struct TrendingSection: View {
                 VStack(alignment: .leading, spacing: 16) {
                     SectionHeader(title: "Popular Pods".localized, action: {})
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            ForEach(mockPods.prefix(5)) { pod in
-                                TrendingPodCard(pod: pod)
-                            }
+                    if isLoading {
+                        HStack {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                            Text("Loading popular pods...".localized)
+                                .font(.system(size: 14))
+                                .foregroundColor(Color.textSecondary)
                         }
                         .padding(.horizontal, 20)
+                    } else if popularPods.isEmpty {
+                        Text("No popular pods yet".localized)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color.textSecondary)
+                            .padding(.horizontal, 20)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(popularPods.prefix(5)) { pod in
+                                    TrendingPodCard(pod: pod)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
                     }
                 }
                 
@@ -342,15 +380,198 @@ struct TrendingSection: View {
                 VStack(alignment: .leading, spacing: 16) {
                     SectionHeader(title: "Top Contributors".localized, action: {})
                     
-                    LazyVStack(spacing: 12) {
-                        ForEach(mockUsers.prefix(5)) { user in
-                            UserRow(user: user)
+                    if isLoading {
+                        HStack {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                            Text("Loading top contributors...".localized)
+                                .font(.system(size: 14))
+                                .foregroundColor(Color.textSecondary)
                         }
+                        .padding(.horizontal, 20)
+                    } else if topUsers.isEmpty {
+                        Text("No top contributors yet".localized)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color.textSecondary)
+                            .padding(.horizontal, 20)
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(topUsers.prefix(5)) { user in
+                                UserRow(user: user)
+                            }
+                        }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
                 }
             }
             .padding(.vertical, 16)
+        }
+        .onAppear {
+            loadTrendingData()
+        }
+    }
+    
+    private func loadTrendingData() {
+        isLoading = true
+        
+        Task {
+            do {
+                async let ideasTask = firebaseManager.getPublicIdeaSparks()
+                async let podsTask = firebaseManager.getPublicPods()
+                async let usersTask = firebaseManager.getAllUsers()
+                
+                let (ideaData, podData, userData) = try await (ideasTask, podsTask, usersTask)
+                
+                await MainActor.run {
+                    trendingIdeas = ideaData.compactMap { data in
+                        guard let id = data["id"] as? String,
+                              let authorId = data["authorId"] as? String,
+                              let authorUsername = data["authorUsername"] as? String,
+                              let title = data["title"] as? String,
+                              let description = data["description"] as? String,
+                              let tags = data["tags"] as? [String],
+                              let isPublic = data["isPublic"] as? Bool,
+                              let createdAt = (data["createdAt"] as? Timestamp)?.dateValue(),
+                              let updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue(),
+                              let likes = data["likes"] as? Int,
+                              let comments = data["comments"] as? Int,
+                              let statusString = data["status"] as? String,
+                              let status = IdeaSpark.IdeaStatus(rawValue: statusString) else {
+                            return nil
+                        }
+                        
+                        return IdeaSpark(
+                            id: id,
+                            authorId: authorId,
+                            authorUsername: authorUsername,
+                            title: title,
+                            description: description,
+                            tags: tags,
+                            isPublic: isPublic,
+                            createdAt: createdAt,
+                            updatedAt: updatedAt,
+                            likes: likes,
+                            comments: comments,
+                            status: status
+                        )
+                    }
+                    
+                    popularPods = podData.compactMap { data -> IncubationPod? in
+                        guard let id = data["id"] as? String,
+                              let name = data["name"] as? String,
+                              let description = data["description"] as? String,
+                              let creatorId = data["creatorId"] as? String,
+                              let isPublic = data["isPublic"] as? Bool,
+                              let createdAt = (data["createdAt"] as? Timestamp)?.dateValue(),
+                              let updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue(),
+                              let membersData = data["members"] as? [[String: Any]],
+                              let tasksData = data["tasks"] as? [[String: Any]],
+                              let statusString = data["status"] as? String,
+                              let status = IncubationPod.PodStatus(rawValue: statusString) else {
+                            return nil
+                        }
+                        
+                        let members = membersData.compactMap { memberData -> PodMember? in
+                            guard let id = memberData["id"] as? String,
+                                  let userId = memberData["userId"] as? String,
+                                  let username = memberData["username"] as? String,
+                                  let role = memberData["role"] as? String,
+                                  let joinedAt = (memberData["joinedAt"] as? Timestamp)?.dateValue() else { return nil }
+                            
+                            let permissionsData = memberData["permissions"] as? [String] ?? []
+                            let permissions = permissionsData.compactMap { PodMember.Permission(rawValue: $0) }
+                            
+                            return PodMember(
+                                id: id,
+                                userId: userId,
+                                username: username,
+                                role: role,
+                                joinedAt: joinedAt,
+                                permissions: permissions
+                            )
+                        }
+                        
+                        let tasks = tasksData.compactMap { taskData -> PodTask? in
+                            guard let id = taskData["id"] as? String,
+                                  let title = taskData["title"] as? String,
+                                  let statusString = taskData["status"] as? String,
+                                  let status = PodTask.TaskStatus(rawValue: statusString),
+                                  let priorityString = taskData["priority"] as? String,
+                                  let priority = PodTask.TaskPriority(rawValue: priorityString),
+                                  let createdAt = (taskData["createdAt"] as? Timestamp)?.dateValue(),
+                                  let updatedAt = (taskData["updatedAt"] as? Timestamp)?.dateValue() else {
+                                return nil
+                            }
+                            
+                            let description = taskData["description"] as? String
+                            let assignedTo = taskData["assignedTo"] as? String
+                            let assignedToUsername = taskData["assignedToUsername"] as? String
+                            let dueDate = (taskData["dueDate"] as? Timestamp)?.dateValue()
+                            
+                            return PodTask(
+                                id: id,
+                                title: title,
+                                description: description,
+                                assignedTo: assignedTo,
+                                assignedToUsername: assignedToUsername,
+                                dueDate: dueDate,
+                                createdAt: createdAt,
+                                updatedAt: updatedAt,
+                                status: status,
+                                priority: priority
+                            )
+                        }
+                        
+                        return IncubationPod(
+                            id: id,
+                            name: name,
+                            description: description,
+                            creatorId: creatorId,
+                            isPublic: isPublic,
+                            createdAt: createdAt,
+                            updatedAt: updatedAt,
+                            members: members,
+                            tasks: tasks,
+                            status: status
+                        )
+                    }
+                    
+                    topUsers = userData.compactMap { data -> UserProfile? in
+                        guard let id = data["id"] as? String,
+                              let username = data["username"] as? String,
+                              let email = data["email"] as? String,
+                              let skills = data["skills"] as? [String],
+                              let interests = data["interests"] as? [String],
+                              let dateJoined = (data["dateJoined"] as? Timestamp)?.dateValue() else {
+                            return nil
+                        }
+                        
+                        let bio = data["bio"] as? String
+                        let avatarURL = data["avatarURL"] as? String
+                        let ideasSparked = data["ideasSparked"] as? Int ?? 0
+                        let projectsContributed = data["projectsContributed"] as? Int ?? 0
+                        
+                        return UserProfile(
+                            id: id,
+                            username: username,
+                            email: email,
+                            bio: bio,
+                            avatarURL: avatarURL,
+                            skills: skills,
+                            interests: interests,
+                            ideasSparked: ideasSparked,
+                            projectsContributed: projectsContributed,
+                            dateJoined: dateJoined
+                        )
+                    }
+                    
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                }
+            }
         }
     }
 }

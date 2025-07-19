@@ -16,6 +16,8 @@ struct CreateIdeaView: View {
     @State private var isPublic = true
     @State private var isSubmitting = false
     @State private var showingSuccessAlert = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     @EnvironmentObject private var localizationManager: LocalizationManager
     @EnvironmentObject private var firebaseManager: FirebaseManager
     
@@ -216,13 +218,7 @@ struct CreateIdeaView: View {
                     
                     // Submit Button
                     VStack(spacing: 16) {
-                        // Debug info (remove this later)
-                        Text("Form valid: \(isFormValid ? "Yes" : "No")")
-                            .font(.system(size: 12))
-                            .foregroundColor(isFormValid ? Color.accentGreen : Color.error)
-                            .padding(.horizontal, 20)
                         Button(action: {
-                            print("Button tapped! isFormValid: \(isFormValid), isSubmitting: \(isSubmitting)")
                             submitIdea()
                         }) {
                             HStack {
@@ -245,9 +241,7 @@ struct CreateIdeaView: View {
                             .cornerRadius(12)
                         }
                         .disabled(!isFormValid || isSubmitting)
-                        .onTapGesture {
-                            print("Tap gesture detected!")
-                        }
+
                         .padding(.horizontal, 20)
                         
                         Text("Your idea will be visible to the Synapse community and can attract collaborators".localized)
@@ -267,6 +261,11 @@ struct CreateIdeaView: View {
                 }
             } message: {
                 Text("Your idea has been shared with the community.".localized)
+            }
+            .alert("Error Creating Idea".localized, isPresented: $showingErrorAlert) {
+                Button("OK".localized) { }
+            } message: {
+                Text(errorMessage)
             }
     }
     
@@ -289,32 +288,16 @@ struct CreateIdeaView: View {
     }
     
     private func submitIdea() {
-        print("submitIdea() called")
-        print("isFormValid: \(isFormValid)")
-        print("title: '\(title)'")
-        print("description: '\(description)'")
+        guard isFormValid else { return }
+        guard let currentUser = firebaseManager.currentUser else { return }
         
-        guard isFormValid else { 
-            print("Form validation failed")
-            return 
-        }
-        guard let currentUser = firebaseManager.currentUser else { 
-            print("No current user")
-            return 
-        }
-        
-        print("Starting submission...")
         isSubmitting = true
         
         Task {
             do {
-                print("Getting user profile...")
-                // Get user profile to get username
                 if let userData = try await firebaseManager.getUserProfile(userId: currentUser.uid) {
                     let username = userData["username"] as? String ?? "Anonymous User"
-                    print("Username: \(username)")
                     
-                    print("Creating idea spark...")
                     let ideaSparkId = try await firebaseManager.createIdeaSpark(
                         title: title,
                         description: description,
@@ -324,25 +307,20 @@ struct CreateIdeaView: View {
                         creatorUsername: username
                     )
                     
-                    print("Idea created successfully!")
                     await MainActor.run {
                         isSubmitting = false
                         showingSuccessAlert = true
-                        // Ensure the idea is properly saved before showing success
-                        print("Idea saved with ID: \(ideaSparkId)")
                     }
                 } else {
-                    print("Failed to get user profile - this shouldn't happen now")
                     await MainActor.run {
                         isSubmitting = false
                     }
                 }
             } catch {
-                print("Error creating idea: \(error)")
-                print("Error details: \(error.localizedDescription)")
                 await MainActor.run {
                     isSubmitting = false
-                    // You might want to show an error alert here
+                    errorMessage = error.localizedDescription
+                    showingErrorAlert = true
                 }
             }
         }

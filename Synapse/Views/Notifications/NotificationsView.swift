@@ -8,54 +8,7 @@
 import SwiftUI
 import FirebaseFirestore
 
-// MARK: - Mock Data
-let mockNotifications: [AppNotification] = [
-    AppNotification(
-        id: "1",
-        userId: "user1",
-        type: .podInvite,
-        message: "Sarah invited you to join 'AI Study Assistant' pod",
-        relatedId: "pod1",
-        isRead: false,
-        timestamp: Date().addingTimeInterval(-3600)
-    ),
-    AppNotification(
-        id: "2",
-        userId: "user1",
-        type: .taskAssigned,
-        message: "You were assigned a new task: 'Design user interface'",
-        relatedId: "task1",
-        isRead: false,
-        timestamp: Date().addingTimeInterval(-7200)
-    ),
-    AppNotification(
-        id: "3",
-        userId: "user1",
-        type: .mention,
-        message: "Alex mentioned you in a comment on 'Sustainable Food Network'",
-        relatedId: "idea1",
-        isRead: true,
-        timestamp: Date().addingTimeInterval(-10800)
-    ),
-    AppNotification(
-        id: "4",
-        userId: "user1",
-        type: .like,
-        message: "Maria liked your idea 'Smart Home Automation'",
-        relatedId: "idea2",
-        isRead: true,
-        timestamp: Date().addingTimeInterval(-14400)
-    ),
-    AppNotification(
-        id: "5",
-        userId: "user1",
-        type: .taskCompleted,
-        message: "Task 'Research market trends' was completed by John",
-        relatedId: "task2",
-        isRead: true,
-        timestamp: Date().addingTimeInterval(-18000)
-    )
-]
+
 
 struct NotificationsView: View {
     @State private var selectedFilter: NotificationFilter = .all
@@ -122,7 +75,7 @@ struct NotificationsView: View {
                     EmptyStateView(
                         icon: "bell.slash",
                         title: "No notifications".localized,
-                        message: selectedFilter == .all ? "You're all caught up!".localized : "No \(selectedFilter.rawValue.lowercased()) notifications".localized
+                        message: getEmptyMessage()
                     )
                 } else {
                     ScrollView {
@@ -206,15 +159,39 @@ struct NotificationsView: View {
     }
     
     private func refreshNotifications() async {
-        // TODO: Refresh notifications from Firebase
-        await Task.sleep(1_000_000_000) // 1 second
         loadNotifications()
     }
     
+    private func getEmptyMessage() -> String {
+        switch selectedFilter {
+        case .all:
+            return "You're all caught up!".localized
+        case .unread:
+            return "No unread notifications".localized
+        case .mentions:
+            return "No mentions notifications".localized
+        case .tasks:
+            return "No tasks notifications".localized
+        case .pods:
+            return "No pods notifications".localized
+        }
+    }
+    
     private func markAllAsRead() {
-        // TODO: Mark all notifications as read in Firebase
-        for i in notifications.indices {
-            notifications[i].isRead = true
+        Task {
+            do {
+                for notification in notifications where !notification.isRead {
+                    try await firebaseManager.markNotificationAsRead(notificationId: notification.id)
+                }
+                
+                await MainActor.run {
+                    for index in notifications.indices {
+                        notifications[index].isRead = true
+                    }
+                }
+            } catch {
+                // Handle error silently for now
+            }
         }
     }
     

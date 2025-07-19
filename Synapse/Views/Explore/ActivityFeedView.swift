@@ -110,17 +110,51 @@ struct ActivityFeedView: View {
     
     private func loadActivities() {
         isLoading = true
-        // TODO: Load activities from Firebase
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            activities = mockActivities
-            isLoading = false
+        
+        Task {
+            await loadActivitiesAsync()
         }
     }
     
     private func refreshActivities() async {
-        // TODO: Refresh activities from Firebase
-        await Task.sleep(1_000_000_000) // 1 second
-        loadActivities()
+        await loadActivitiesAsync()
+    }
+    
+    private func loadActivitiesAsync() async {
+        do {
+            let activityData = try await firebaseManager.getActivityFeed()
+            
+            await MainActor.run {
+                activities = activityData.compactMap { data in
+                    guard let id = data["id"] as? String,
+                          let userId = data["userId"] as? String,
+                          let userName = data["userName"] as? String,
+                          let typeString = data["type"] as? String,
+                          let type = FeedActivityItem.ActivityType(rawValue: typeString),
+                          let message = data["message"] as? String,
+                          let timestamp = (data["timestamp"] as? Timestamp)?.dateValue() else {
+                        return nil
+                    }
+                    
+                    let relatedId = data["relatedId"] as? String
+                    
+                    return FeedActivityItem(
+                        id: id,
+                        userId: userId,
+                        userName: userName,
+                        type: type,
+                        message: message,
+                        relatedId: relatedId?.isEmpty == false ? relatedId : nil,
+                        timestamp: timestamp
+                    )
+                }
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+            }
+        }
     }
 }
 
@@ -235,78 +269,4 @@ struct FeedActivityItem: Identifiable, Codable {
     }
 }
 
-// MARK: - Mock Activities
-let mockActivities: [FeedActivityItem] = [
-    FeedActivityItem(
-        id: "1",
-        userId: "user1",
-        userName: "AlexChen",
-        type: .ideaCreated,
-        message: "created a new idea",
-        relatedId: "idea1",
-        timestamp: Date().addingTimeInterval(-1800)
-    ),
-    FeedActivityItem(
-        id: "2",
-        userId: "user2",
-        userName: "SarahKim",
-        type: .podJoined,
-        message: "joined the AI Study Assistant pod",
-        relatedId: "pod1",
-        timestamp: Date().addingTimeInterval(-3600)
-    ),
-    FeedActivityItem(
-        id: "3",
-        userId: "user3",
-        userName: "MariaGarcia",
-        type: .ideaLiked,
-        message: "liked your idea",
-        relatedId: "idea2",
-        timestamp: Date().addingTimeInterval(-5400)
-    ),
-    FeedActivityItem(
-        id: "4",
-        userId: "user4",
-        userName: "JohnSmith",
-        type: .taskCompleted,
-        message: "completed a task in Sustainable Food Network",
-        relatedId: "task1",
-        timestamp: Date().addingTimeInterval(-7200)
-    ),
-    FeedActivityItem(
-        id: "5",
-        userId: "user5",
-        userName: "EmmaWilson",
-        type: .podCreated,
-        message: "created a new pod",
-        relatedId: "pod2",
-        timestamp: Date().addingTimeInterval(-9000)
-    ),
-    FeedActivityItem(
-        id: "6",
-        userId: "user6",
-        userName: "DavidBrown",
-        type: .userJoined,
-        message: "joined Synapse",
-        relatedId: nil,
-        timestamp: Date().addingTimeInterval(-10800)
-    ),
-    FeedActivityItem(
-        id: "7",
-        userId: "user7",
-        userName: "LisaChen",
-        type: .ideaCommented,
-        message: "commented on your idea",
-        relatedId: "idea3",
-        timestamp: Date().addingTimeInterval(-12600)
-    ),
-    FeedActivityItem(
-        id: "8",
-        userId: "user8",
-        userName: "MikeJohnson",
-        type: .taskCreated,
-        message: "created a new task",
-        relatedId: "task2",
-        timestamp: Date().addingTimeInterval(-14400)
-    )
-] 
+ 

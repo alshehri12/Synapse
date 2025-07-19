@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
 
 struct IdeaSelectorView: View {
     @Binding var selectedIdea: IdeaSpark?
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
+    @EnvironmentObject private var firebaseManager: FirebaseManager
     
     @State private var ideas: [IdeaSpark] = []
     @State private var isLoading = false
@@ -95,10 +97,68 @@ struct IdeaSelectorView: View {
     
     private func loadIdeas() {
         isLoading = true
-        // TODO: Load ideas from Firebase
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            ideas = mockIdeas
-            isLoading = false
+        
+        Task {
+            await loadIdeasAsync()
+        }
+    }
+    
+    private func loadIdeasAsync() async {
+        do {
+            let ideaData = try await firebaseManager.getPublicIdeaSparks()
+            
+            await MainActor.run {
+                ideas = ideaData.compactMap { data in
+                    let id = data["id"] as? String
+                    let authorId = data["authorId"] as? String
+                    let authorUsername = data["authorUsername"] as? String
+                    let title = data["title"] as? String
+                    let description = data["description"] as? String
+                    let tags = data["tags"] as? [String]
+                    let isPublic = data["isPublic"] as? Bool
+                    let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
+                    let updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue()
+                    let likes = data["likes"] as? Int
+                    let comments = data["comments"] as? Int
+                    let statusString = data["status"] as? String
+                    let status = statusString != nil ? IdeaSpark.IdeaStatus(rawValue: statusString!) : nil
+                    
+                    guard let id = id,
+                          let authorId = authorId,
+                          let authorUsername = authorUsername,
+                          let title = title,
+                          let description = description,
+                          let tags = tags,
+                          let isPublic = isPublic,
+                          let createdAt = createdAt,
+                          let updatedAt = updatedAt,
+                          let likes = likes,
+                          let comments = comments,
+                          let status = status else {
+                        return nil
+                    }
+                    
+                    return IdeaSpark(
+                        id: id,
+                        authorId: authorId,
+                        authorUsername: authorUsername,
+                        title: title,
+                        description: description,
+                        tags: tags,
+                        isPublic: isPublic,
+                        createdAt: createdAt,
+                        updatedAt: updatedAt,
+                        likes: likes,
+                        comments: comments,
+                        status: status
+                    )
+                }
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+            }
         }
     }
 }
@@ -216,51 +276,7 @@ struct IdeaCard: View {
     }
 }
 
-// MARK: - Mock Ideas
-let mockIdeas: [IdeaSpark] = [
-    IdeaSpark(
-        id: "idea1",
-        authorId: "user1",
-        authorUsername: "AlexChen",
-        title: "AI Study Assistant",
-        description: "An intelligent app that helps students create personalized study plans and track progress using AI algorithms.",
-        tags: ["AI", "Education", "Productivity"],
-        isPublic: true,
-        createdAt: Date().addingTimeInterval(-86400),
-        updatedAt: Date().addingTimeInterval(-3600),
-        likes: 24,
-        comments: 8,
-        status: .incubating
-    ),
-    IdeaSpark(
-        id: "idea2",
-        authorId: "user2",
-        authorUsername: "SarahKim",
-        title: "Sustainable Food Network",
-        description: "Connecting local farmers with consumers to reduce food waste and support sustainable agriculture.",
-        tags: ["Sustainability", "Food", "Local Business"],
-        isPublic: true,
-        createdAt: Date().addingTimeInterval(-172800),
-        updatedAt: Date().addingTimeInterval(-7200),
-        likes: 18,
-        comments: 12,
-        status: .sparking
-    ),
-    IdeaSpark(
-        id: "idea3",
-        authorId: "user3",
-        authorUsername: "MarcusRodriguez",
-        title: "Mental Health Companion",
-        description: "A mobile app that provides daily mental health check-ins, mood tracking, and personalized wellness recommendations.",
-        tags: ["Health", "Mental Health", "Wellness"],
-        isPublic: true,
-        createdAt: Date().addingTimeInterval(-259200),
-        updatedAt: Date().addingTimeInterval(-10800),
-        likes: 31,
-        comments: 15,
-        status: .launched
-    )
-]
+
 
 #Preview {
     IdeaSelectorView(selectedIdea: .constant(nil))
