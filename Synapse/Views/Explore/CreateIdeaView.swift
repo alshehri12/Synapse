@@ -1,0 +1,398 @@
+//
+//  CreateIdeaView.swift
+//  Synapse
+//
+//  Created by Abdulrahman Alshehri on 18/01/1447 AH.
+//
+
+import SwiftUI
+
+struct CreateIdeaView: View {
+    let onDismiss: () -> Void
+    @State private var title = ""
+    @State private var description = ""
+    @State private var tags: [String] = []
+    @State private var newTag = ""
+    @State private var isPublic = true
+    @State private var isSubmitting = false
+    @State private var showingSuccessAlert = false
+    @EnvironmentObject private var localizationManager: LocalizationManager
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    
+    private let maxTitleLength = 100
+    private let maxDescriptionLength = 500
+    private let maxTags = 5
+    
+    var isFormValid: Bool {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return !trimmedTitle.isEmpty &&
+               !trimmedDescription.isEmpty &&
+               title.count <= maxTitleLength &&
+               description.count <= maxDescriptionLength
+    }
+    
+    var body: some View {
+        ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Custom Back Button
+                    HStack {
+                        Button(action: {
+                            print("Custom back button tapped!")
+                            onDismiss()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 16, weight: .medium))
+                                Text("Back".localized)
+                                    .font(.system(size: 16, weight: .medium))
+                            }
+                            .foregroundColor(Color.accentGreen)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                        
+                        Spacer()
+                    }
+                    
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Spark a New Idea".localized)
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(Color.textPrimary)
+                        
+                        Text("Share your creative vision and find collaborators".localized)
+                            .font(.system(size: 16))
+                            .foregroundColor(Color.textSecondary)
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Title Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Idea Title".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text("\(title.count)/\(maxTitleLength)")
+                                .font(.system(size: 12))
+                                .foregroundColor(title.count > maxTitleLength ? Color.error : Color.textSecondary)
+                        }
+                        
+                        TextField("Enter your idea title...".localized, text: $title)
+                            .textFieldStyle(CustomTextFieldStyle())
+                            .onChange(of: title) { newValue in
+                                if newValue.count > maxTitleLength {
+                                    title = String(newValue.prefix(maxTitleLength))
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Description Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Description".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text("\(description.count)/\(maxDescriptionLength)")
+                                .font(.system(size: 12))
+                                .foregroundColor(description.count > maxDescriptionLength ? Color.error : Color.textSecondary)
+                        }
+                        
+                        TextEditor(text: $description)
+                            .frame(minHeight: 120)
+                            .padding(12)
+                            .background(Color.backgroundSecondary)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.textSecondary.opacity(0.2), lineWidth: 1)
+                            )
+                            .onChange(of: description) { newValue in
+                                if newValue.count > maxDescriptionLength {
+                                    description = String(newValue.prefix(maxDescriptionLength))
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Tags Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Tags".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text("\(tags.count)/\(maxTags)")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color.textSecondary)
+                        }
+                        
+                        // Add Tag Input
+                        if tags.count < maxTags {
+                            HStack {
+                                TextField("Add tags separated by commas...".localized, text: $newTag)
+                                    .textFieldStyle(CustomTextFieldStyle())
+                                
+                                Button(action: addTag) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(Color.accentGreen)
+                                }
+                                .disabled(newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            }
+                        }
+                        
+                        // Tags Display
+                        if !tags.isEmpty {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
+                                ForEach(tags, id: \.self) { tag in
+                                    TagView(tag: tag) {
+                                        removeTag(tag)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Suggested Tags
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Popular tags:".localized)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.textSecondary)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(suggestedTags, id: \.self) { tag in
+                                        if !tags.contains(tag) {
+                                            Button(action: { addSuggestedTag(tag) }) {
+                                                Text("#\(tag)")
+                                                    .font(.system(size: 12, weight: .medium))
+                                                    .foregroundColor(Color.accentGreen)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 4)
+                                                    .background(Color.accentGreen.opacity(0.1))
+                                                    .cornerRadius(8)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Privacy Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Privacy".localized)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color.textPrimary)
+                        
+                        VStack(spacing: 12) {
+                            PrivacyOption(
+                                title: "Make Public".localized,
+                                description: "Anyone can see and join this idea".localized,
+                                isSelected: isPublic,
+                                action: { isPublic = true }
+                            )
+                            
+                            PrivacyOption(
+                                title: "Private".localized,
+                                description: "Only invited collaborators can see your idea".localized,
+                                isSelected: !isPublic,
+                                action: { isPublic = false }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Submit Button
+                    VStack(spacing: 16) {
+                        // Debug info (remove this later)
+                        Text("Form valid: \(isFormValid ? "Yes" : "No")")
+                            .font(.system(size: 12))
+                            .foregroundColor(isFormValid ? Color.accentGreen : Color.error)
+                            .padding(.horizontal, 20)
+                        Button(action: {
+                            print("Button tapped! isFormValid: \(isFormValid), isSubmitting: \(isSubmitting)")
+                            submitIdea()
+                        }) {
+                            HStack {
+                                if isSubmitting {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                
+                                Text(isSubmitting ? "Sparking...".localized : "Create Idea".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(isFormValid && !isSubmitting ? Color.accentGreen : Color.textSecondary.opacity(0.3))
+                            .cornerRadius(12)
+                        }
+                        .disabled(!isFormValid || isSubmitting)
+                        .onTapGesture {
+                            print("Tap gesture detected!")
+                        }
+                        .padding(.horizontal, 20)
+                        
+                        Text("Your idea will be visible to the Synapse community and can attract collaborators".localized)
+                            .font(.system(size: 12))
+                            .foregroundColor(Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                }
+                .padding(.bottom, 40)
+            }
+            .background(Color.backgroundSecondary)
+            .alert("Idea created successfully!".localized, isPresented: $showingSuccessAlert) {
+                Button("Continue".localized) {
+                    resetForm()
+                    onDismiss()
+                }
+            } message: {
+                Text("Your idea has been shared with the community.".localized)
+            }
+    }
+    
+    private func addTag() {
+        let trimmedTag = newTag.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTag.isEmpty && !tags.contains(trimmedTag) && tags.count < maxTags {
+            tags.append(trimmedTag)
+            newTag = ""
+        }
+    }
+    
+    private func addSuggestedTag(_ tag: String) {
+        if !tags.contains(tag) && tags.count < maxTags {
+            tags.append(tag)
+        }
+    }
+    
+    private func removeTag(_ tag: String) {
+        tags.removeAll { $0 == tag }
+    }
+    
+    private func submitIdea() {
+        print("submitIdea() called")
+        print("isFormValid: \(isFormValid)")
+        print("title: '\(title)'")
+        print("description: '\(description)'")
+        
+        guard isFormValid else { 
+            print("Form validation failed")
+            return 
+        }
+        guard let currentUser = firebaseManager.currentUser else { 
+            print("No current user")
+            return 
+        }
+        
+        print("Starting submission...")
+        isSubmitting = true
+        
+        Task {
+            do {
+                print("Getting user profile...")
+                // Get user profile to get username
+                if let userData = try await firebaseManager.getUserProfile(userId: currentUser.uid) {
+                    let username = userData["username"] as? String ?? "Anonymous User"
+                    print("Username: \(username)")
+                    
+                    print("Creating idea spark...")
+                    let ideaSparkId = try await firebaseManager.createIdeaSpark(
+                        title: title,
+                        description: description,
+                        tags: tags,
+                        isPublic: isPublic,
+                        creatorId: currentUser.uid,
+                        creatorUsername: username
+                    )
+                    
+                    print("Idea created successfully!")
+                    await MainActor.run {
+                        isSubmitting = false
+                        showingSuccessAlert = true
+                        // Ensure the idea is properly saved before showing success
+                        print("Idea saved with ID: \(ideaSparkId)")
+                    }
+                } else {
+                    print("Failed to get user profile - this shouldn't happen now")
+                    await MainActor.run {
+                        isSubmitting = false
+                    }
+                }
+            } catch {
+                print("Error creating idea: \(error)")
+                print("Error details: \(error.localizedDescription)")
+                await MainActor.run {
+                    isSubmitting = false
+                    // You might want to show an error alert here
+                }
+            }
+        }
+    }
+    
+    private func resetForm() {
+        title = ""
+        description = ""
+        tags = []
+        newTag = ""
+        isPublic = true
+    }
+}
+
+
+
+// MARK: - Tag View
+struct TagView: View {
+    let tag: String
+    let onRemove: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("#\(tag)")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color.accentGreen)
+            
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color.textSecondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.accentGreen.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+
+
+// MARK: - Suggested Tags
+let suggestedTags = [
+    "AI", "MobileApp", "WebApp", "Sustainability", "Healthcare", "Education",
+    "Finance", "Entertainment", "SocialImpact", "Technology", "Design", "Marketing"
+]
+
+#Preview {
+    CreateIdeaView(onDismiss: {})
+        .environmentObject(LocalizationManager.shared)
+        .environmentObject(FirebaseManager.shared)
+} 
