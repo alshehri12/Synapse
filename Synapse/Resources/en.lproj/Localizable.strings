@@ -1,0 +1,251 @@
+/* Tab Bar */
+"Explore" = "Explore";
+"My Pods" = "My Pods";
+"Spark" = "Spark";
+"Notifications" = "Notifications";
+"Profile" = "Profile";
+
+/* Explore View */
+"Search ideas, tags, or users..." = "Search ideas, tags, or users...";
+"All" = "All";
+"Sparking" = "Sparking";
+"Incubating" = "Incubating";
+"Launched" = "Launched";
+"Completed" = "Completed";
+"No ideas found" = "No ideas found";
+"Be the first to spark an idea!" = "Be the first to spark an idea!";
+"Try adjusting your search or filters" = "Try adjusting your search or filters";
+"Join Pod" = "Join Pod";
+
+/* Create Idea View */
+"Spark a New Idea" = "Spark a New Idea";
+"Idea Title" = "Idea Title";
+"Enter your idea title..." = "Enter your idea title...";
+"Description" = "Description";
+"Describe your idea in detail..." = "Describe your idea in detail...";
+"Tags" = "Tags";
+"Add tags separated by commas..." = "Add tags separated by commas...";
+"Make Public" = "Make Public";
+"Anyone can see and join this idea" = "Anyone can see and join this idea";
+"Create Idea" = "Create Idea";
+"Cancel" = "Cancel";
+"Save Draft" = "Save Draft";
+"Idea created successfully!" = "Idea created successfully!";
+"Your idea has been shared with the community." = "Your idea has been shared with the community.";
+
+/* Delete Idea */
+"Delete Idea" = "Delete Idea";
+"Delete" = "Delete";
+"Are you sure you want to delete this idea? This action cannot be undone." = "Are you sure you want to delete this idea? This action cannot be undone.";
+
+/* Authentication */
+"Please verify your email with the OTP code before signing in." = "Please verify your email with the OTP code before signing in.";
+"Failed to send verification email. Please try again." = "Failed to send verification email. Please try again.";
+"User not found. Please try signing up again." = "User not found. Please try signing up again.";
+"Account data not found. Please contact support." = "Account data not found. Please contact support.";
+"Account not found. Please create a new account." = "Account not found. Please create a new account.";
+"User account not found. Please try signing up again." = "User account not found. Please try signing up again.";
+
+/* OTP Verification Updates */
+"Email Verified!" = "Email Verified!";
+"Your email has been verified successfully! Please return to the sign-in page to log into your account." = "Your email has been verified successfully! Please return to the sign-in page to log into your account.";
+"Continue" = "Continue";
+
+/* My Pods View */
+"Incubation Pods" = "Incubation Pods";
+"Create New Pod" = "Create New Pod";
+"Join Existing Pod" = "Join Existing Pod";
+"Pod Name" = "Pod Name";
+"Enter pod name..." = "Enter pod name...";
+"Pod Description" = "Pod Description";
+"Describe what this pod will work on..." = "Describe what this pod will work on...";
+"Make Pod Public" = "Make Pod Public";
+"Anyone can join this pod" = "Anyone can join this pod";
+"Create Pod" = "Create Pod";
+"Join Pod" = "Join Pod";
+"Enter pod code..." = "Enter pod code...";
+"No pods found" = "No pods found";
+"Join a pod to start collaborating!" = "Join a pod to start collaborating!";
+"Active" = "Active";
+"Planning" = "Planning";
+"On Hold" = "On Hold";
+"Members" = "Members";
+"Tasks" = "Tasks";
+
+/* Notifications View */
+"All Notifications" = "All Notifications";
+"Mark All as Read" = "Mark All as Read";
+"No notifications" = "No notifications";
+"You're all caught up!" = "You're all caught up!";
+"New message in" = "New message in";
+"Task assigned to you" = "Task assigned to you";
+"Task completed" = "Task completed";
+"Join request for" = "Join request for";
+"Join request accepted" = "Join request accepted";
+"liked your idea" = "liked your idea";
+"commented on your idea" = "commented on your idea";
+
+/* Profile View */
+"Edit Profile" = "Edit Profile";
+"Your Impact" = "Your Impact";
+"Ideas Sparked" = "Ideas Sparked";
+"Projects Contributed" = "Projects Contributed";
+"Skills & Interests" = "Skills & Interests";
+"Skills" = "Skills";
+"Add a skill..." = "Add a skill...";
+"Interests" = "Interests";
+"Add an interest..." = "Add an interest...";
+"Member since" = "Member since";
+"Account" = "Account";
+"Account Settings" = "Account Settings";
+"Privacy" = "Privacy";
+"App" = "App";
+"Help & Support" = "Help & Support";
+"Terms of Service" = "Terms of Service";
+"Privacy Policy" = "Privacy Policy";
+"Sign Out" = "Sign Out";
+"Settings" = "Settings";
+"Done" = "Done";
+
+/* Task Status */
+"To Do" = "To Do";
+"In Progress" = "In Progress";
+"Completed" = "Completed";
+"Cancelled" = "Cancelled";
+
+/* Task Priority */
+"Low" = "Low";
+"Medium" = "Medium";
+"High" = "High";
+"Urgent" = "Urgent";
+
+/* Common Actions */
+"Save" = "Save";
+"Delete" = "Delete";
+"Edit" = "Edit";
+"Share" = "Share";
+"Like" = "Like";
+"Comment" = "Comment";
+"Follow" = "Follow";
+"Unfollow" = "Unfollow";
+"Accept" = "Accept";
+"Decline" = "Decline";
+"Block" = "Block";
+"Report" = "Report";
+
+/* Error Messages */
+"Error" = "Error";
+"Something went wrong" = "Something went wrong";
+"Please try again" = "Please try again";
+"Network error" = "Network error";
+"Please check your connection" = "Please check your connection";
+"Invalid input" = "Invalid input";
+"Please check your information" = "Please check your information";
+
+/* Success Messages */
+"Success" = "Success";
+"Operation completed successfully" = "Operation completed successfully";
+"Changes saved" = "Changes saved";
+"Profile updated" = "Profile updated";
+
+/* Language Settings */
+"Language" = "Language";
+"Select your preferred language" = "Select your preferred language";
+
+/* Authentication */
+"Welcome to Synapse" = "Welcome to Synapse";
+"Connect, collaborate, and bring your ideas to life" = "Connect, collaborate, and bring your ideas to life";
+"Create Account" = "Create Account";
+"Sign In" = "Sign In";
+"Browse Anonymously" = "Browse Anonymously";
+"By continuing, you agree to our Terms of Service and Privacy Policy" = "By continuing, you agree to our Terms of Service and Privacy Policy";
+"Error" = "Error";
+"An error occurred" = "An error occurred";
+"OK" = "OK";
+"Loading..." = "Loading...";
+"Welcome Back" = "Welcome Back";
+"Sign in to your account" = "Sign in to your account";
+"Join the Synapse community" = "Join the Synapse community";
+"Username" = "Username";
+"Enter username" = "Enter username";
+"Email" = "Email";
+"Enter email" = "Enter email";
+"Password" = "Password";
+"Enter password" = "Enter password";
+"Confirm Password" = "Confirm Password";
+"Confirm password" = "Confirm password";
+"Passwords don't match" = "Passwords don't match";
+"Creating Account..." = "Creating Account...";
+"Signing In..." = "Signing In...";
+"Email already in use" = "Email already in use";
+"Invalid email format" = "Invalid email format";
+"Password is too weak" = "Password is too weak";
+"Incorrect password" = "Incorrect password";
+"User not found" = "User not found";
+"Network error. Please check your connection" = "Network error. Please check your connection";
+"Authentication failed" = "Authentication failed";
+"Account not found. Please check your email or create a new account" = "Account not found. Please check your email or create a new account";
+"Too many failed attempts. Please try again later" = "Too many failed attempts. Please try again later";
+"This account has been disabled" = "This account has been disabled";
+"Please sign in again for security reasons" = "Please sign in again for security reasons";
+"Authentication failed. Please check your credentials" = "Authentication failed. Please check your credentials";
+
+/* Username Validation */
+"Username must be at least 3 characters" = "Username must be at least 3 characters";
+"Username must be less than 20 characters" = "Username must be less than 20 characters";
+"Username can only contain letters, numbers, and underscores" = "Username can only contain letters, numbers, and underscores";
+"Username is already taken" = "Username is already taken";
+"Error checking username availability" = "Error checking username availability";
+"Continue with Google" = "Continue with Google";
+
+/* OTP Verification */
+"Verify Your Email" = "Verify Your Email";
+"We've sent a 6-digit verification code to" = "We've sent a 6-digit verification code to";
+"Enter the 6-digit code" = "Enter the 6-digit code";
+"Verify Code" = "Verify Code";
+"Resend Code" = "Resend Code";
+"Resend code in" = "Resend code in";
+"Didn't receive the code? Check your spam folder." = "Didn't receive the code? Check your spam folder.";
+"Email verified successfully! You can now sign in." = "Email verified successfully! You can now sign in.";
+"Invalid OTP code" = "Invalid OTP code";
+"OTP code has expired. Please request a new one." = "OTP code has expired. Please request a new one.";
+"Invalid OTP code. Please try again." = "Invalid OTP code. Please try again.";
+"Failed to send OTP email. Please try again." = "Failed to send OTP email. Please try again.";
+"Please verify your email with OTP before signing in." = "Please verify your email with OTP before signing in.";
+"Idea Details" = "Idea Details";
+"Close" = "Close";
+"Add a comment..." = "Add a comment...";
+"Comments" = "Comments";
+"No comments yet" = "No comments yet";
+"Be the first to share your thoughts!" = "Be the first to share your thoughts!";
+"Liked" = "Liked";
+"Like" = "Like";
+"Share" = "Share";
+"Create Pod from Idea" = "Create Pod from Idea";
+"Transform this idea into a collaborative project" = "Transform this idea into a collaborative project";
+"Pod Name" = "Pod Name";
+"Enter pod name..." = "Enter pod name...";
+"Pod Description" = "Pod Description";
+"Create Pod" = "Create Pod";
+"Creating Pod..." = "Creating Pod...";
+"Error Creating Idea" = "Error Creating Idea";
+"Activity Feed" = "Activity Feed";
+"No activity yet" = "No activity yet";
+"Be the first to spark some activity!" = "Be the first to spark some activity!";
+"Select Idea" = "Select Idea";
+"No ideas match your search" = "No ideas match your search";
+"Create an idea first" = "Create an idea first";
+"Unread" = "Unread";
+"Mentions" = "Mentions";
+"Tasks" = "Tasks";
+"Pods" = "Pods";
+"No unread notifications" = "No unread notifications";
+"No mentions notifications" = "No mentions notifications";
+"No tasks notifications" = "No tasks notifications";
+"No pods notifications" = "No pods notifications";
+"Loading trending ideas..." = "Loading trending ideas...";
+"Loading popular pods..." = "Loading popular pods...";
+"Loading top contributors..." = "Loading top contributors...";
+"No trending ideas yet" = "No trending ideas yet";
+"No popular pods yet" = "No popular pods yet";
+"No top contributors yet" = "No top contributors yet"; 
