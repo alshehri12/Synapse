@@ -61,6 +61,12 @@ class FirebaseManager: ObservableObject {
             let result = try await auth.createUser(withEmail: email, password: password)
             print("✅ Firebase user created: \(result.user.uid)")
             
+            // Set the user's display name in Firebase Auth
+            let changeRequest = result.user.createProfileChangeRequest()
+            changeRequest.displayName = username
+            try await changeRequest.commitChanges()
+            print("✅ Display name set to: \(username)")
+            
             // Create user profile in Firestore
             try await createUserProfile(userId: result.user.uid, email: email, username: username)
             print("✅ User profile created in Firestore")

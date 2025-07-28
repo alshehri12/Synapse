@@ -66,6 +66,13 @@ class GoogleSignInManager: ObservableObject {
             let authResult = try await Auth.auth().signIn(with: credential)
             print("Firebase authentication successful")
             
+            // Set the user's display name in Firebase Auth
+            let username = result.user.profile?.name ?? "Google User"
+            let changeRequest = authResult.user.createProfileChangeRequest()
+            changeRequest.displayName = username
+            try await changeRequest.commitChanges()
+            print("✅ Display name set to: \(username)")
+            
             // Create or update user profile
             try await createOrUpdateUserProfile(from: result.user, authResult: authResult)
             print("User profile updated successfully")
