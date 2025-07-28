@@ -101,6 +101,12 @@ class FirebaseManager: ObservableObject {
             print("✅ Email and password are correct!")
             print("👤 User signed in: \(result.user.uid)")
             
+            // Check if displayName is missing and update it for existing users
+            if result.user.displayName == nil || result.user.displayName?.isEmpty == true {
+                print("⚠️ DisplayName is missing, updating from Firestore...")
+                try await updateDisplayNameFromFirestore(for: result.user)
+            }
+            
             // Success - user credentials are valid
             print("🎉 Sign-in successful!")
             
@@ -120,6 +126,32 @@ class FirebaseManager: ObservableObject {
             print("⚠️ Showing error to user: \(errorMessage)")
             print("🔒 User signed out to prevent state conflicts")
             throw error
+        }
+    }
+    
+    // MARK: - Helper Methods for DisplayName Updates
+    
+    private func updateDisplayNameFromFirestore(for user: User) async throws {
+        do {
+            // Fetch user document from Firestore
+            let userDoc = try await db.collection("users").document(user.uid).getDocument()
+            
+            guard userDoc.exists, 
+                  let data = userDoc.data(),
+                  let username = data["username"] as? String else {
+                print("❌ Could not find username in Firestore for user: \(user.uid)")
+                return
+            }
+            
+            // Update Firebase Auth profile with username
+            let changeRequest = user.createProfileChangeRequest()
+            changeRequest.displayName = username
+            try await changeRequest.commitChanges()
+            print("✅ DisplayName updated to: \(username) for existing user")
+            
+        } catch {
+            print("❌ Error updating displayName from Firestore: \(error.localizedDescription)")
+            // Don't throw the error - sign-in should still succeed even if displayName update fails
         }
     }
     
