@@ -248,4 +248,9 @@
 "Loading top contributors..." = "جاري تحميل أفضل المساهمين...";
 "No trending ideas yet" = "لا توجد أفكار رائجة بعد";
 "No popular pods yet" = "لا توجد مجموعات شائعة بعد";
-"No top contributors yet" = "لا يوجد أفضل مساهمين بعد"; 
+"No top contributors yet" = "لا يوجد أفضل مساهمين بعد";
+
+/* Account Creation Success */
+"Account Created!" = "تم إنشاء الحساب!";
+"User has been created successfully!" = "تم إنشاء المستخدم بنجاح!";
+"Sign In" = "تسجيل الدخول"; 

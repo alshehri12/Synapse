@@ -13,6 +13,8 @@ struct AuthenticationView: View {
     @State private var showingSignUp = false
     @State private var showingLogin = false
     @State private var showingError = false
+    @State private var showingSuccess = false
+    @State private var showingEmailVerification = false
     
     var body: some View {
         NavigationView {
@@ -175,6 +177,7 @@ struct SignUpView: View {
     @State private var username = ""
     @State private var isSubmitting = false
     @State private var showingError = false
+    @State private var showingSuccess = false
     @State private var showingEmailVerification = false
     @State private var usernameError = ""
     @State private var isCheckingUsername = false
@@ -317,16 +320,18 @@ struct SignUpView: View {
             } message: {
                 Text(firebaseManager.authError ?? "An error occurred".localized)
             }
+            .alert("Account Created!".localized, isPresented: $showingSuccess) {
+                Button("OK".localized) {
+                    dismiss()
+                }
+            } message: {
+                Text("User has been created successfully!".localized)
+            }
             .onChange(of: firebaseManager.authError) { _, error in
                 showingError = error != nil
             }
-            .onChange(of: firebaseManager.currentUser) { _, user in
-                // If user is now signed in after sign-up, dismiss the view
-                if user != nil {
-                    print("✅ SignUpView: User signed in after account creation, dismissing view")
-                    dismiss()
-                }
-            }
+            // Removed the onChange handler that automatically dismisses the view
+            // when a user is signed in, since we now want users to return to login
         }
     }
     
@@ -389,6 +394,7 @@ struct SignUpView: View {
                 
                 DispatchQueue.main.async {
                     self.isSubmitting = false
+                    self.showingSuccess = true
                 }
                 
             } catch {

@@ -248,4 +248,9 @@
 "Loading top contributors..." = "Loading top contributors...";
 "No trending ideas yet" = "No trending ideas yet";
 "No popular pods yet" = "No popular pods yet";
-"No top contributors yet" = "No top contributors yet"; 
+"No top contributors yet" = "No top contributors yet";
+
+/* Account Creation Success */
+"Account Created!" = "Account Created!";
+"User has been created successfully!" = "User has been created successfully!";
+"Sign In" = "Sign In"; 

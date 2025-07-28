@@ -65,7 +65,11 @@ class FirebaseManager: ObservableObject {
             try await createUserProfile(userId: result.user.uid, email: email, username: username)
             print("✅ User profile created in Firestore")
             
-            print("🎉 Sign-up completed successfully - user is now signed in!")
+            // IMMEDIATELY sign out to prevent auto-navigation to main app
+            try auth.signOut()
+            print("🔄 User immediately signed out after account creation")
+            
+            print("🎉 Sign-up completed successfully!")
             
         } catch {
             print("❌ Sign-up failed: \(error.localizedDescription)")

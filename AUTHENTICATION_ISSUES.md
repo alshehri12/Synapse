@@ -3,16 +3,23 @@
 ## **Problem Summary**
 After implementing the authentication fixes, there are still critical issues preventing users from properly signing in to the app.
 
-## **🔴 Issue #1: User Creation Flow Problem**
+## **🔴 Issue #1: Account Creation Flow Needs Enhancement**
 **Current Behavior:**
-- When a user creates an account, the app immediately takes them inside the app
-- This bypasses the email verification step
+- When a user creates an account, they briefly see the app interior before being signed out
+- User gets success popup and returns to login screen (working)
+- Sign-out happens but there's a timing gap that shows the main app momentarily
 
 **Expected Behavior:**
-- After creating an account, user should be taken back to the Sign-in page
-- User must sign in again with their email and password after email verification
+- After creating an account, user should see success popup immediately
+- No glimpse of app interior should be visible during the account creation process
+- Clean transition from signup → success message → login screen
 
-**Impact:** Users skip email verification process
+**Technical Context:**
+- Firebase `auth.createUser()` automatically signs in the user
+- Even with immediate `auth.signOut()`, there's a brief moment where auth state listener triggers navigation
+- Need to implement a different approach to prevent initial authentication state from triggering navigation
+
+**Impact:** Minor UX issue - brief flash of app interior during account creation
 
 ---
 
@@ -43,41 +50,17 @@ From database analysis, we have 6 users:
 
 ## **🛠️ Technical Context**
 **Recent Changes Made:**
-- Fixed sign-in logic to handle mixed data structures
-- Added support for boolean/integer `isEmailVerified` storage  
-- Auto-verification for Google users
+- Fixed account creation to show success popup and return to login screen
+- Added immediate sign-out after account creation to prevent auto-login
 - Enhanced error handling and debugging
+- Account creation flow working but needs timing enhancement
 
 **Files Involved:**
 - `Synapse/Managers/FirebaseManager.swift`
 - `Synapse/Views/Authentication/AuthenticationView.swift`
+- `Synapse/App/SynapseApp.swift` (authentication state management)
 
-## **🎯 Action Items for Tomorrow**
-1. **Fix user creation flow** - redirect to sign-in page after account creation
-2. **Debug sign-in crashes** - identify why all sign-in attempts fail
-3. **Test email verification flow** - ensure OTP verification works
-4. **Test error handling** - verify proper error messages are shown
-5. **Test with existing database users** - ensure backward compatibility
-
-## **⚠️ Priority**
-**HIGH PRIORITY** - Authentication is completely broken, preventing app usage
-
-## **🧪 Testing Needed**
-- [ ] Test account creation flow
-- [ ] Test sign-in with existing users (Ali, Masuadozel)  
-- [ ] Test Google sign-in (Abdulrahman)
-- [ ] Test error scenarios (wrong password, etc.)
-- [ ] Test OTP verification flow
-
-## **🔧 Debug Steps to Take**
-1. Add more detailed logging to sign-in process
-2. Check if the issue is in Firebase authentication or local validation
-3. Test with development OTP bypass (123456)
-4. Verify Firestore user document structure matches expectations
-5. Check if the issue is related to auth state listener
-
----
-**Created:** $(date '+%Y-%m-%d %H:%M:%S')  
-**Status:** Open  
-**Priority:** Critical  
-**Assignee:** Development Team 
+## **🎯 Priority Issues**
+1. **HIGH:** Fix sign-in functionality (complete system failure)
+2. **MEDIUM:** Enhance account creation flow timing to prevent app interior glimpse
+3. **LOW:** Additional UX improvements and error handling 
