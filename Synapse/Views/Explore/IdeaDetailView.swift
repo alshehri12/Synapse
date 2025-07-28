@@ -302,8 +302,8 @@ struct IdeaDetailView: View {
                               let authorId = data["authorId"] as? String,
                               let authorUsername = data["authorUsername"] as? String,
                               let content = data["content"] as? String,
-                              let createdAt = (data["createdAt"] as? Timestamp)?.dateValue(),
-                              let likes = data["likes"] as? Int else {
+                              let createdAt = (data["timestamp"] as? Timestamp)?.dateValue() else {
+                            print("⚠️ Failed to parse comment: \(data)")
                             return nil
                         }
                         
@@ -313,12 +313,14 @@ struct IdeaDetailView: View {
                             authorUsername: authorUsername,
                             content: content,
                             createdAt: createdAt,
-                            likes: likes
+                            likes: 0  // Default value since likes aren't implemented for comments yet
                         )
                     }
                     isLoadingComments = false
+                    print("✅ Loaded \(comments.count) comments successfully")
                 }
             } catch {
+                print("❌ Error loading comments: \(error.localizedDescription)")
                 await MainActor.run {
                     isLoadingComments = false
                 }
@@ -359,12 +361,14 @@ struct IdeaDetailView: View {
         Task {
             do {
                 let username = currentUser.displayName ?? "Anonymous User"
+                print("💬 Submitting comment: '\(commentText)' by \(username)")
                 _ = try await firebaseManager.addCommentToIdea(
                     ideaId: idea.id,
                     content: commentText,
                     authorId: currentUser.uid,
                     authorUsername: username
                 )
+                print("✅ Comment submitted successfully, reloading comments...")
                 
                 await MainActor.run {
                     newComment = ""
@@ -372,6 +376,7 @@ struct IdeaDetailView: View {
                     loadComments() // Reload comments to show the new one
                 }
             } catch {
+                print("❌ Error submitting comment: \(error.localizedDescription)")
                 await MainActor.run {
                     isSubmittingComment = false
                 }
