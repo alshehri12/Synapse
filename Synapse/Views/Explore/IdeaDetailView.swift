@@ -451,6 +451,9 @@ struct IdeaDetailView: View {
     private func loadExistingPods() {
         isLoadingPods = true
         
+        print("🔄 UI: Starting to load existing pods...")
+        print("💡 UI: Idea details - ID: '\(idea.id)', Title: '\(idea.title)', Author: '\(idea.authorId)'")
+        
         Task {
             do {
                 let pods = try await firebaseManager.getPodsByIdeaId(ideaId: idea.id)
@@ -458,6 +461,15 @@ struct IdeaDetailView: View {
                     existingPods = pods
                     isLoadingPods = false
                     print("📊 UI: Loaded \(pods.count) existing pods for idea '\(idea.title)'")
+                    
+                    if pods.isEmpty {
+                        print("⚠️ UI: No pods found - will show 'No Pods Yet' button")
+                    } else {
+                        print("✅ UI: Found pods - will show 'Join Pod' button")
+                        for pod in pods {
+                            print("  🏠 Pod: '\(pod.name)' (ID: \(pod.id), ideaId: '\(pod.ideaId)')")
+                        }
+                    }
                 }
             } catch {
                 await MainActor.run {

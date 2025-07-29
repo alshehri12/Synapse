@@ -676,10 +676,31 @@ class FirebaseManager: ObservableObject {
             "tasks": []
         ]
         
+        print("💾 DEBUG: Storing pod with data:")
+        print("  📛 name: '\(name)'")
+        print("  💡 ideaId: '\(ideaId)'")
+        print("  👤 creatorId: '\(currentUser.uid)'")
+        print("  🌍 isPublic: \(isPublic)")
+        
         let docRef = try await db.collection("pods").addDocument(data: podData)
+        print("📝 DEBUG: Pod document created with ID: \(docRef.documentID)")
         
         // Create the creator as the first member with admin permissions
         try await addPodMemberDetails(podId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
+        
+        // Verify the pod was stored correctly
+        let verifyDoc = try await db.collection("pods").document(docRef.documentID).getDocument()
+        if let verifyData = verifyDoc.data() {
+            let storedIdeaId = verifyData["ideaId"] as? String ?? "NO_IDEA_ID"
+            let storedIsPublic = verifyData["isPublic"] as? Bool ?? false
+            print("✅ VERIFICATION: Pod stored correctly - ideaId: '\(storedIdeaId)', isPublic: \(storedIsPublic)")
+            
+            if storedIdeaId != ideaId {
+                print("🚨 CRITICAL: ideaId mismatch! Expected: '\(ideaId)', Stored: '\(storedIdeaId)'")
+            }
+        } else {
+            print("❌ VERIFICATION: Could not read back the created pod!")
+        }
         
         print("🎉 SUCCESS: Pod created from idea by authorized user")
         return docRef.documentID
@@ -1390,20 +1411,45 @@ class FirebaseManager: ObservableObject {
     // Method to get pods for a specific idea
     func getPodsByIdeaId(ideaId: String) async throws -> [IncubationPod] {
         do {
-            print("🔍 DEBUG: Fetching pods for ideaId: \(ideaId)")
+            print("🔍 DEBUG: Fetching pods for ideaId: '\(ideaId)'")
+            print("🔍 DEBUG: Query conditions - ideaId: '\(ideaId)', isPublic: true")
+            
+            // First, let's check ALL pods to see what's in the collection
+            let allPodsSnapshot = try await db.collection("pods").getDocuments()
+            print("📊 DEBUG: Total pods in collection: \(allPodsSnapshot.documents.count)")
+            
+            for doc in allPodsSnapshot.documents {
+                let data = doc.data()
+                let storedIdeaId = data["ideaId"] as? String ?? "NO_IDEA_ID"
+                let isPublic = data["isPublic"] as? Bool ?? false
+                let podName = data["name"] as? String ?? "NO_NAME"
+                print("  📄 Pod '\(podName)': ideaId='\(storedIdeaId)', isPublic=\(isPublic), match=\(storedIdeaId == ideaId)")
+            }
+            
+            // Now do the actual query
             let snapshot = try await db.collection("pods")
                 .whereField("ideaId", isEqualTo: ideaId)
                 .whereField("isPublic", isEqualTo: true)
                 .order(by: "createdAt", descending: true)
                 .getDocuments()
             
-            print("📊 DEBUG: Found \(snapshot.documents.count) pods for idea \(ideaId)")
+            print("📊 DEBUG: Query result - Found \(snapshot.documents.count) pods for idea '\(ideaId)'")
+            
+            if snapshot.documents.isEmpty {
+                print("⚠️ DEBUG: No pods found! Possible reasons:")
+                print("  1. ideaId mismatch during creation/query")
+                print("  2. Pod created with isPublic=false")
+                print("  3. Firestore indexing delay")
+                print("  4. Query conditions too restrictive")
+            }
             
             var pods: [IncubationPod] = []
             
             for document in snapshot.documents {
                 let data = document.data()
                 let podId = document.documentID
+                
+                print("🔄 DEBUG: Processing found pod '\(data["name"] as? String ?? "Unknown")' (ID: \(podId))")
                 
                 // Fetch members with full details
                 let members = try await fetchPodMembers(podId: podId)
@@ -1426,12 +1472,13 @@ class FirebaseManager: ObservableObject {
                     status: status
                 )
                 pods.append(pod)
-                print("✅ Loaded pod '\(pod.name)' for idea \(ideaId)")
+                print("✅ Loaded pod '\(pod.name)' for idea '\(ideaId)'")
             }
             
+            print("📝 DEBUG: Returning \(pods.count) pods to UI")
             return pods
         } catch {
-            print("❌ ERROR: Failed to fetch pods for idea \(ideaId): \(error.localizedDescription)")
+            print("❌ ERROR: Failed to fetch pods for idea '\(ideaId)': \(error.localizedDescription)")
             throw error
         }
     }
