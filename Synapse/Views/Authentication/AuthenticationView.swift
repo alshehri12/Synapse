@@ -19,115 +19,11 @@ struct AuthenticationView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 40) {
-                // Language Switcher at the top
-                HStack {
-                    Spacer()
-                    LanguageSwitcher()
-                        .padding(.top, 20)
-                        .padding(.trailing, 20)
-                }
-                
-                // Header
-                VStack(spacing: 16) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 80))
-                        .foregroundColor(Color.accentGreen)
-                    
-                    Text("Welcome to Synapse".localized)
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(Color.textPrimary)
-                    
-                    Text("Connect, collaborate, and bring your ideas to life".localized)
-                        .font(.system(size: 16))
-                        .foregroundColor(Color.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                
+                headerSection
                 Spacer()
-                
-                // Action Buttons
-                VStack(spacing: 16) {
-                    // Custom Google Sign-In Button
-                    CustomGoogleSignInButton(action: signInWithGoogle)
-                    
-                    // Divider
-                    HStack {
-                        Rectangle()
-                            .fill(Color.textSecondary.opacity(0.3))
-                            .frame(height: 1)
-                        
-                        Text("or".localized)
-                            .font(.system(size: 14))
-                            .foregroundColor(Color.textSecondary)
-                            .padding(.horizontal, 16)
-                        
-                        Rectangle()
-                            .fill(Color.textSecondary.opacity(0.3))
-                            .frame(height: 1)
-                    }
-                    .padding(.vertical, 8)
-                    
-                    Button(action: { showingSignUp = true }) {
-                        HStack {
-                            Image(systemName: "person.badge.plus")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Create Account".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentGreen)
-                        .cornerRadius(12)
-                    }
-                    
-                    Button(action: { showingLogin = true }) {
-                        HStack {
-                            Image(systemName: "person")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Sign In".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundColor(Color.accentGreen)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentGreen.opacity(0.1))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.accentGreen, lineWidth: 1)
-                        )
-                    }
-                    
-                    Button(action: signInAnonymously) {
-                        HStack {
-                            Image(systemName: "eye")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Browse Anonymously".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundColor(Color.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.backgroundPrimary)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.textSecondary.opacity(0.3), lineWidth: 1)
-                        )
-                    }
-                }
-                .padding(.horizontal, 40)
-                
+                actionButtonsSection
                 Spacer()
-                
-                // Footer
-                Text("By continuing, you agree to our Terms of Service and Privacy Policy".localized)
-                    .font(.system(size: 12))
-                    .foregroundColor(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                footerSection
             }
             .padding(.vertical, 40)
             .background(Color.backgroundSecondary)
@@ -139,6 +35,145 @@ struct AuthenticationView: View {
             }
         }
     }
+    
+    // MARK: - View Components
+    
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            // Language Switcher at the top
+            HStack {
+                Spacer()
+                LanguageSwitcher()
+                    .padding(.top, 20)
+                    .padding(.trailing, 20)
+            }
+            
+            // Main Header
+            appHeaderContent
+        }
+    }
+    
+    private var appHeaderContent: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 80))
+                .foregroundColor(Color.accentGreen)
+            
+            Text("Welcome to Synapse".localized)
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(Color.textPrimary)
+            
+            Text("Connect, collaborate, and bring your ideas to life".localized)
+                .font(.system(size: 16))
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+    }
+    
+    private var actionButtonsSection: some View {
+        VStack(spacing: 16) {
+            // Custom Google Sign-In Button
+            CustomGoogleSignInButton(action: signInWithGoogle)
+            
+            // Divider
+            orDivider
+            
+            // Sign Up Button
+            signUpButton
+            
+            // Sign In Button
+            signInButton
+            
+            // Browse Anonymously Button
+            browseAnonymouslyButton
+        }
+        .padding(.horizontal, 40)
+    }
+    
+    private var orDivider: some View {
+        HStack {
+            Rectangle()
+                .fill(Color.textSecondary.opacity(0.3))
+                .frame(height: 1)
+            
+            Text("or".localized)
+                .font(.system(size: 14))
+                .foregroundColor(Color.textSecondary)
+                .padding(.horizontal, 16)
+            
+            Rectangle()
+                .fill(Color.textSecondary.opacity(0.3))
+                .frame(height: 1)
+        }
+        .padding(.vertical, 8)
+    }
+    
+    private var signUpButton: some View {
+        Button(action: { showingSignUp = true }) {
+            HStack {
+                Image(systemName: "person.badge.plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Create Account".localized)
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.accentGreen)
+            .cornerRadius(12)
+        }
+    }
+    
+    private var signInButton: some View {
+        Button(action: { showingLogin = true }) {
+            HStack {
+                Image(systemName: "person")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Sign In".localized)
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(Color.accentGreen)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.accentGreen.opacity(0.1))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.accentGreen, lineWidth: 1)
+            )
+        }
+    }
+    
+    private var browseAnonymouslyButton: some View {
+        Button(action: signInAnonymously) {
+            HStack {
+                Image(systemName: "eye")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Browse Anonymously".localized)
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(Color.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.backgroundPrimary)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.textSecondary.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+    
+    private var footerSection: some View {
+        Text("By continuing, you agree to our Terms of Service and Privacy Policy".localized)
+            .font(.system(size: 12))
+            .foregroundColor(Color.textSecondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
+    }
+    
+    // MARK: - Actions
     
     private func signInAnonymously() {
         Task {
@@ -817,150 +852,172 @@ struct EmailVerificationRequiredView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 32) {
-                // Header
-                VStack(spacing: 16) {
-                    Image(systemName: "envelope.badge.shield.half.filled")
-                        .font(.system(size: 80))
-                        .foregroundColor(Color.accentGreen)
-                    
-                    Text("Email Verification Required".localized)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                    
-                    Text("To continue using Synapse, please verify your email address.".localized)
-                        .font(.body)
-                        .foregroundColor(Color.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                    
-                    Text(email)
-                        .font(.headline)
-                        .foregroundColor(Color.textPrimary)
+            mainContent
+                .onAppear {
+                    startTimer()
+                    // Send OTP automatically when view appears
+                    Task {
+                        try? await firebaseManager.sendOtpEmail(email: email)
+                    }
+                }
+                .onChange(of: firebaseManager.isOtpVerified) { _, isVerified in
+                    if isVerified {
+                        showingSuccess = true
+                    }
+                }
+                .onChange(of: firebaseManager.authError) { _, error in
+                    showingError = error != nil
+                }
+                .alert("Error".localized, isPresented: $showingError) {
+                    Button("OK".localized) {
+                        firebaseManager.clearAuthError()
+                    }
+                } message: {
+                    Text(firebaseManager.authError ?? "An error occurred".localized)
+                }
+                .alert("Email Verified!".localized, isPresented: $showingSuccess) {
+                    Button("Continue".localized) {
+                        // The app will automatically navigate to main content
+                        // when isEmailVerified becomes true
+                    }
+                } message: {
+                    Text("Your email has been verified successfully! Welcome to Synapse!".localized)
+                }
+        }
+    }
+    
+    private var mainContent: some View {
+        VStack(spacing: 32) {
+            headerSection
+            otpInputSection
+            resendSection
+            Spacer()
+            signOutButton
+        }
+        .padding(24)
+        .background(Color.backgroundSecondary)
+        .navigationBarHidden(true)
+    }
+    
+    // MARK: - View Components
+    
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "envelope.badge.shield.half.filled")
+                .font(.system(size: 80))
+                .foregroundColor(Color.accentGreen)
+            
+            Text("Email Verification Required".localized)
+                .font(.title)
+                .fontWeight(.bold)
+                .multilineTextAlignment(.center)
+            
+            Text("To continue using Synapse, please verify your email address.".localized)
+                .font(.body)
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+            
+            Text(email)
+                .font(.headline)
+                .foregroundColor(Color.textPrimary)
+                .fontWeight(.semibold)
+        }
+    }
+    
+    private var otpInputSection: some View {
+        VStack(spacing: 20) {
+            Text("Enter the 6-digit verification code sent to your email".localized)
+                .font(.subheadline)
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
+            
+            HStack(spacing: 12) {
+                ForEach(0..<6, id: \.self) { index in
+                    OtpDigitField(
+                        index: index,
+                        otpCode: $otpCode,
+                        isVerifying: isVerifying
+                    )
+                }
+            }
+            
+            if !otpCode.isEmpty && otpCode.count == 6 {
+                verifyButton
+            }
+        }
+    }
+    
+    private var verifyButton: some View {
+        Button(action: verifyOtp) {
+            HStack {
+                if isVerifying {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.8)
+                } else {
+                    Text("Verify Email".localized)
                         .fontWeight(.semibold)
                 }
-                
-                // OTP Input
-                VStack(spacing: 20) {
-                    Text("Enter the 6-digit verification code sent to your email".localized)
-                        .font(.subheadline)
-                        .foregroundColor(Color.textSecondary)
-                        .multilineTextAlignment(.center)
-                    
-                    HStack(spacing: 12) {
-                        ForEach(0..<6, id: \.self) { index in
-                            OtpDigitField(
-                                index: index,
-                                otpCode: $otpCode,
-                                isVerifying: isVerifying
-                            )
-                        }
-                    }
-                    
-                    if !otpCode.isEmpty && otpCode.count == 6 {
-                        Button(action: verifyOtp) {
-                            HStack {
-                                if isVerifying {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Text("Verify Email".localized)
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.accentGreen)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                        }
-                        .disabled(isVerifying)
-                        .padding(.horizontal, 20)
-                    }
-                }
-                
-                // Resend Section
-                VStack(spacing: 16) {
-                    if canResend {
-                        Button(action: resendOtp) {
-                            HStack {
-                                if isResending {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Text("Resend Verification Code".localized)
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                            .foregroundColor(Color.accentGreen)
-                        }
-                        .disabled(isResending)
-                    } else {
-                        HStack {
-                            Text("Resend code in".localized)
-                                .foregroundColor(Color.textSecondary)
-                            Text("\(timeRemaining)s")
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color.accentGreen)
-                        }
-                        .font(.subheadline)
-                    }
-                    
-                    Text("Didn't receive the code? Check your spam folder.".localized)
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                
-                Spacer()
-                
-                // Sign Out Option
-                Button(action: signOut) {
-                    Text("Sign Out".localized)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color.error)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.accentGreen)
+            .foregroundColor(.white)
+            .cornerRadius(12)
+        }
+        .disabled(isVerifying)
+        .padding(.horizontal, 20)
+    }
+    
+    private var resendSection: some View {
+        VStack(spacing: 16) {
+            if canResend {
+                resendButton
+            } else {
+                resendTimerDisplay
+            }
+            
+            Text("Didn't receive the code? Check your spam folder.".localized)
+                .font(.caption)
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+    
+    private var resendButton: some View {
+        Button(action: resendOtp) {
+            HStack {
+                if isResending {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                        .scaleEffect(0.8)
+                } else {
+                    Text("Resend Verification Code".localized)
+                        .fontWeight(.semibold)
                 }
             }
-            .padding(24)
-            .background(Color.backgroundSecondary)
-            .navigationBarHidden(true)
-            .onAppear {
-                startTimer()
-                // Send OTP automatically when view appears
-                Task {
-                    try? await firebaseManager.sendOtpEmail(email: email)
-                }
-            }
-            .onChange(of: firebaseManager.isOtpVerified) { _, isVerified in
-                if isVerified {
-                    showingSuccess = true
-                    // Check verification status after successful OTP verification
-                    Task {
-                        await firebaseManager.checkEmailVerificationStatus()
-                    }
-                }
-            }
-            .onChange(of: firebaseManager.authError) { _, error in
-                showingError = error != nil
-            }
-            .alert("Error".localized, isPresented: $showingError) {
-                Button("OK".localized) {
-                    firebaseManager.clearAuthError()
-                }
-            } message: {
-                Text(firebaseManager.authError ?? "An error occurred".localized)
-            }
-            .alert("Email Verified!".localized, isPresented: $showingSuccess) {
-                Button("Continue".localized) {
-                    // The app will automatically navigate to main content
-                    // when isEmailVerified becomes true
-                }
-            } message: {
-                Text("Your email has been verified successfully! Welcome to Synapse!".localized)
-            }
+            .foregroundColor(Color.accentGreen)
+        }
+        .disabled(isResending)
+    }
+    
+    private var resendTimerDisplay: some View {
+        HStack {
+            Text("Resend code in".localized)
+                .foregroundColor(Color.textSecondary)
+            Text("\(timeRemaining)s")
+                .fontWeight(.semibold)
+                .foregroundColor(Color.accentGreen)
+        }
+        .font(.subheadline)
+    }
+    
+    private var signOutButton: some View {
+        Button(action: signOut) {
+            Text("Sign Out".localized)
+                .fontWeight(.medium)
+                .foregroundColor(Color.error)
         }
     }
     

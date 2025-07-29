@@ -20,9 +20,12 @@ struct IdeaDetailView: View {
     @State private var isLoadingComments = false
     @State private var isSubmittingComment = false
     @State private var showingCreatePod = false
+    @State private var showingJoinPod = false
     @State private var showingShareSheet = false
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
+    @State private var existingPods: [IncubationPod] = []
+    @State private var isLoadingPods = false
     
     var body: some View {
         NavigationView {
@@ -152,21 +155,78 @@ struct IdeaDetailView: View {
                         
                         Spacer()
                         
-                        Button(action: { showingCreatePod = true }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "person.3")
-                                    .font(.system(size: 16))
-                                Text("Join Pod".localized)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                        // Show different buttons based on ownership and pod existence
+                        if let currentUser = firebaseManager.currentUser {
+                            if currentUser.uid == idea.authorId {
+                                // User is the idea owner - can create pod
+                                Button(action: { showingCreatePod = true }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "plus.circle")
+                                            .font(.system(size: 16))
+                                        Text("Create Pod".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.accentGreen)
+                                    .cornerRadius(20)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                }
+                            } else {
+                                // User is NOT the idea owner
+                                if isLoadingPods {
+                                    // Show loading state
+                                    HStack(spacing: 6) {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .scaleEffect(0.8)
+                                        Text("Loading...".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.textSecondary.opacity(0.6))
+                                    .cornerRadius(20)
+                                } else if !existingPods.isEmpty {
+                                    // Pods exist - can join
+                                    Button(action: { showingJoinPod = true }) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "person.3")
+                                                .font(.system(size: 16))
+                                            Text("Join Pod".localized)
+                                                .font(.system(size: 14, weight: .medium))
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.8)
+                                        }
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(Color.accentBlue)
+                                        .cornerRadius(20)
+                                        .fixedSize(horizontal: true, vertical: false)
+                                    }
+                                } else {
+                                    // No pods exist - show disabled message
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "person.3.slash")
+                                            .font(.system(size: 16))
+                                        Text("No Pods Yet".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.textSecondary.opacity(0.6))
+                                    .cornerRadius(20)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                }
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.accentGreen)
-                            .cornerRadius(20)
-                            .fixedSize(horizontal: true, vertical: false)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -271,9 +331,13 @@ struct IdeaDetailView: View {
             .onAppear {
                 loadComments()
                 checkIfLiked()
+                loadExistingPods()
             }
             .sheet(isPresented: $showingCreatePod) {
                 CreatePodFromIdeaView(idea: idea)
+            }
+            .sheet(isPresented: $showingJoinPod) {
+                JoinPodView(availablePods: existingPods)
             }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheet(items: [idea.title, idea.description])
@@ -379,6 +443,27 @@ struct IdeaDetailView: View {
                 print("❌ Error submitting comment: \(error.localizedDescription)")
                 await MainActor.run {
                     isSubmittingComment = false
+                }
+            }
+        }
+    }
+    
+    private func loadExistingPods() {
+        isLoadingPods = true
+        
+        Task {
+            do {
+                let pods = try await firebaseManager.getPodsByIdeaId(ideaId: idea.id)
+                await MainActor.run {
+                    existingPods = pods
+                    isLoadingPods = false
+                    print("📊 UI: Loaded \(pods.count) existing pods for idea '\(idea.title)'")
+                }
+            } catch {
+                await MainActor.run {
+                    existingPods = []
+                    isLoadingPods = false
+                    print("❌ UI: Failed to load pods for idea '\(idea.title)': \(error.localizedDescription)")
                 }
             }
         }
@@ -600,6 +685,174 @@ struct CreatePodFromIdeaView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Join Pod View
+struct JoinPodView: View {
+    let availablePods: [IncubationPod]
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @State private var selectedPod: IncubationPod?
+    @State private var isJoining = false
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Join a Pod".localized)
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(Color.textPrimary)
+                        
+                        Text("Select a pod to join and start collaborating".localized)
+                            .font(.system(size: 16))
+                            .foregroundColor(Color.textSecondary)
+                    }
+                    .padding(.top, 20)
+                    
+                    // Available Pods
+                    LazyVStack(spacing: 16) {
+                        ForEach(availablePods) { pod in
+                            PodJoinCard(
+                                pod: pod,
+                                isSelected: selectedPod?.id == pod.id,
+                                onSelect: { selectedPod = pod }
+                            )
+                        }
+                    }
+                    
+                    // Join Button
+                    Button(action: joinSelectedPod) {
+                        HStack {
+                            if isJoining {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "person.badge.plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            
+                            Text(isJoining ? "Joining Pod...".localized : "Join Selected Pod".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(selectedPod != nil && !isJoining ? Color.accentBlue : Color.textSecondary.opacity(0.3))
+                        .cornerRadius(12)
+                    }
+                    .disabled(selectedPod == nil || isJoining)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .background(Color.backgroundSecondary)
+            .navigationTitle("Join Pod".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel".localized) {
+                        dismiss()
+                    }
+                }
+            }
+            .alert("Join Pod Result".localized, isPresented: $showingAlert) {
+                Button("OK".localized) {
+                    if alertMessage.contains("successfully") {
+                        dismiss()
+                    }
+                }
+            } message: {
+                Text(alertMessage)
+            }
+        }
+    }
+    
+    private func joinSelectedPod() {
+        guard let pod = selectedPod,
+              let currentUser = firebaseManager.currentUser else { return }
+        
+        isJoining = true
+        
+        Task {
+            do {
+                try await firebaseManager.addMemberToPod(podId: pod.id, userId: currentUser.uid, role: "Member")
+                await MainActor.run {
+                    isJoining = false
+                    alertMessage = "Successfully joined pod '\(pod.name)'!".localized
+                    showingAlert = true
+                }
+            } catch {
+                await MainActor.run {
+                    isJoining = false
+                    alertMessage = "Failed to join pod: \(error.localizedDescription)".localized
+                    showingAlert = true
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Pod Join Card
+struct PodJoinCard: View {
+    let pod: IncubationPod
+    let isSelected: Bool
+    let onSelect: () -> Void
+    
+    var body: some View {
+        Button(action: onSelect) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(pod.name)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color.textPrimary)
+                            .multilineTextAlignment(.leading)
+                        
+                        Text(pod.description)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color.textSecondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(isSelected ? Color.accentBlue : Color.textSecondary)
+                }
+                
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.3")
+                            .font(.system(size: 12))
+                        Text("\(pod.members.count) members".localized)
+                            .font(.system(size: 12))
+                    }
+                    
+                    Spacer()
+                    
+                    Text("Created \(pod.createdAt.timeAgoDisplay())".localized)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.textSecondary)
+                }
+                .foregroundColor(Color.textSecondary)
+            }
+            .padding(16)
+            .background(Color.backgroundPrimary)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.accentBlue : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

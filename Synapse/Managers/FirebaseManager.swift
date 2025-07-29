@@ -506,10 +506,23 @@ class FirebaseManager: ObservableObject {
                 .whereField("members", arrayContains: userId)
                 .getDocuments()
             
-            return snapshot.documents.compactMap { document in
+            var pods: [IncubationPod] = []
+            
+            for document in snapshot.documents {
                 let data = document.data()
-                return IncubationPod(
-                    id: document.documentID,
+                let podId = document.documentID
+                
+                // Fetch members with full details
+                print("🔍 DEBUG: Processing pod '\(data["name"] as? String ?? "Unknown")' (ID: \(podId))")
+                let members = try await fetchPodMembers(podId: podId)
+                print("👥 DEBUG: Fetched \(members.count) members for pod '\(data["name"] as? String ?? "Unknown")'")
+                
+                // Map status string to enum
+                let statusString = data["status"] as? String ?? "planning"
+                let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
+                
+                let pod = IncubationPod(
+                    id: podId,
                     ideaId: data["ideaId"] as? String ?? "",
                     name: data["name"] as? String ?? "",
                     description: data["description"] as? String ?? "",
@@ -517,11 +530,20 @@ class FirebaseManager: ObservableObject {
                     isPublic: data["isPublic"] as? Bool ?? false,
                     createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                     updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    members: [], // Will need to be populated separately
-                    tasks: [], // Will need to be populated separately
-                    status: .planning // Will need to be mapped from string
+                    members: members, // Now properly populated!
+                    tasks: [], // TODO: Implement task fetching
+                    status: status
                 )
+                pods.append(pod)
+                print("✅ Loaded pod '\(pod.name)' with \(members.count) members")
+                
+                // Debug: Print member details
+                for member in members {
+                    print("  👤 Member: \(member.username) (\(member.role)) - \(member.permissions.map { $0.rawValue }.joined(separator: ", "))")
+                }
             }
+            
+            return pods
         } catch {
             throw error
         }
@@ -616,6 +638,10 @@ class FirebaseManager: ObservableObject {
         ]
         
         let docRef = try await db.collection("pods").addDocument(data: podData)
+        
+        // Create the creator as the first member with admin permissions
+        try await addPodMemberDetails(podId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
+        
         return docRef.documentID
     }
     
@@ -623,6 +649,19 @@ class FirebaseManager: ObservableObject {
         guard let currentUser = auth.currentUser else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
         }
+        
+        // SECURITY CHECK: Verify that the current user is the owner of the idea
+        print("🔒 SECURITY: Checking if user \(currentUser.uid) can create pod from idea \(ideaId)")
+        let ideaDoc = try await db.collection("ideaSparks").document(ideaId).getDocument()
+        
+        guard let ideaData = ideaDoc.data(),
+              let ideaAuthorId = ideaData["authorId"] as? String,
+              ideaAuthorId == currentUser.uid else {
+            print("❌ SECURITY: User \(currentUser.uid) is NOT the owner of idea \(ideaId)")
+            throw NSError(domain: "FirebaseManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Only the idea owner can create pods from this idea".localized])
+        }
+        
+        print("✅ SECURITY: User \(currentUser.uid) is confirmed owner of idea \(ideaId)")
         
         let podData: [String: Any] = [
             "name": name,
@@ -638,7 +677,129 @@ class FirebaseManager: ObservableObject {
         ]
         
         let docRef = try await db.collection("pods").addDocument(data: podData)
+        
+        // Create the creator as the first member with admin permissions
+        try await addPodMemberDetails(podId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
+        
+        print("🎉 SUCCESS: Pod created from idea by authorized user")
         return docRef.documentID
+    }
+    
+    // Helper method to add member details to pod's members subcollection
+    private func addPodMemberDetails(podId: String, userId: String, role: String, permissions: [PodMember.Permission]) async throws {
+        // Get user profile
+        guard let userProfileData = try await getUserProfile(userId: userId) else {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User profile not found"])
+        }
+        
+        let username = userProfileData["username"] as? String ?? "Unknown User"
+        
+        let memberData: [String: Any] = [
+            "userId": userId,
+            "username": username,
+            "role": role,
+            "joinedAt": Timestamp(date: Date()),
+            "permissions": permissions.map { $0.rawValue }
+        ]
+        
+        try await db.collection("pods").document(podId).collection("members").document(userId).setData(memberData)
+        print("✅ Added member details for user \(username) to pod \(podId)")
+    }
+    
+    // Method to fetch pod members from subcollection
+    private func fetchPodMembers(podId: String) async throws -> [PodMember] {
+        do {
+            print("🔍 DEBUG: Fetching members for pod: \(podId)")
+            let snapshot = try await db.collection("pods").document(podId).collection("members").getDocuments()
+            
+            print("📊 DEBUG: Found \(snapshot.documents.count) member documents in subcollection")
+            
+            if snapshot.documents.isEmpty {
+                print("⚠️ DEBUG: No members found in subcollection for pod \(podId)")
+                // Fallback: try to get members from main pod document
+                return try await fetchMembersFromMainDocument(podId: podId)
+            }
+            
+            let members = snapshot.documents.compactMap { document in
+                let data = document.data()
+                print("👤 DEBUG: Processing member document \(document.documentID): \(data)")
+                
+                let permissionsArray = data["permissions"] as? [String] ?? []
+                let permissions = permissionsArray.compactMap { PodMember.Permission(rawValue: $0) }
+                
+                let member = PodMember(
+                    id: document.documentID,
+                    userId: data["userId"] as? String ?? "",
+                    username: data["username"] as? String ?? "",
+                    role: data["role"] as? String ?? "",
+                    joinedAt: (data["joinedAt"] as? Timestamp)?.dateValue() ?? Date(),
+                    permissions: permissions
+                )
+                
+                print("✅ DEBUG: Created member object: \(member.username) (\(member.role))")
+                return member
+            }
+            
+            print("📝 DEBUG: Returning \(members.count) members for pod \(podId)")
+            return members
+        } catch {
+            print("❌ Failed to fetch pod members: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
+    // Fallback method to create members from main pod document
+    private func fetchMembersFromMainDocument(podId: String) async throws -> [PodMember] {
+        do {
+            print("🔄 DEBUG: Falling back to main document for pod \(podId)")
+            let podDoc = try await db.collection("pods").document(podId).getDocument()
+            
+            guard let data = podDoc.data(),
+                  let memberIds = data["members"] as? [String] else {
+                print("❌ DEBUG: No members array found in main pod document")
+                return []
+            }
+            
+            print("👥 DEBUG: Found \(memberIds.count) member IDs in main document: \(memberIds)")
+            
+            var members: [PodMember] = []
+            
+            for userId in memberIds {
+                do {
+                    // Get user profile to create member
+                    let userProfileData = try await getUserProfile(userId: userId)
+                    
+                    // Determine role based on whether user is the creator
+                    let creatorId = data["creatorId"] as? String ?? ""
+                    let role = (userId == creatorId) ? "Creator" : "Member"
+                    let permissions: [PodMember.Permission] = (userId == creatorId) ? [.admin, .edit, .view, .comment] : [.view, .comment]
+                    
+                    let member = PodMember(
+                        id: userId,
+                        userId: userId,
+                        username: userProfileData?["username"] as? String ?? "Unknown User",
+                        role: role,
+                        joinedAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                        permissions: permissions
+                    )
+                    
+                    members.append(member)
+                    print("✅ DEBUG: Created fallback member: \(member.username) (\(member.role))")
+                    
+                    // Optionally, create the subcollection entry for future use
+                    try await addPodMemberDetails(podId: podId, userId: userId, role: role, permissions: permissions)
+                    
+                } catch {
+                    print("❌ DEBUG: Failed to create member for userId \(userId): \(error.localizedDescription)")
+                }
+            }
+            
+            print("📝 DEBUG: Created \(members.count) fallback members")
+            return members
+        } catch {
+            print("❌ DEBUG: Failed to fetch members from main document: \(error.localizedDescription)")
+            return []
+        }
     }
     
     func updatePod(podId: String, data: [String: Any]) async throws {
@@ -647,6 +808,45 @@ class FirebaseManager: ObservableObject {
             updateData["updatedAt"] = Timestamp(date: Date())
             try await db.collection("pods").document(podId).updateData(updateData)
         } catch {
+            throw error
+        }
+    }
+    
+    // Method to add a new member to an existing pod
+    func addMemberToPod(podId: String, userId: String, role: String = "Member") async throws {
+        do {
+            // First, add the user ID to the pod's members array
+            try await db.collection("pods").document(podId).updateData([
+                "members": FieldValue.arrayUnion([userId]),
+                "updatedAt": Timestamp(date: Date())
+            ])
+            
+            // Then add detailed member information to the subcollection
+            let permissions: [PodMember.Permission] = [.view, .comment] // Default permissions for new members
+            try await addPodMemberDetails(podId: podId, userId: userId, role: role, permissions: permissions)
+            
+            print("✅ Successfully added member \(userId) to pod \(podId)")
+        } catch {
+            print("❌ Failed to add member to pod: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    // Method to remove a member from a pod
+    func removeMemberFromPod(podId: String, userId: String) async throws {
+        do {
+            // Remove from the pod's members array
+            try await db.collection("pods").document(podId).updateData([
+                "members": FieldValue.arrayRemove([userId]),
+                "updatedAt": Timestamp(date: Date())
+            ])
+            
+            // Remove from the members subcollection
+            try await db.collection("pods").document(podId).collection("members").document(userId).delete()
+            
+            print("✅ Successfully removed member \(userId) from pod \(podId)")
+        } catch {
+            print("❌ Failed to remove member from pod: \(error.localizedDescription)")
             throw error
         }
     }
@@ -1151,10 +1351,21 @@ class FirebaseManager: ObservableObject {
                 .limit(to: 50)
                 .getDocuments()
             
-            return snapshot.documents.compactMap { document in
+            var pods: [IncubationPod] = []
+            
+            for document in snapshot.documents {
                 let data = document.data()
-                return IncubationPod(
-                    id: document.documentID,
+                let podId = document.documentID
+                
+                // Fetch members with full details
+                let members = try await fetchPodMembers(podId: podId)
+                
+                // Map status string to enum
+                let statusString = data["status"] as? String ?? "planning"
+                let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
+                
+                let pod = IncubationPod(
+                    id: podId,
                     ideaId: data["ideaId"] as? String ?? "",
                     name: data["name"] as? String ?? "",
                     description: data["description"] as? String ?? "",
@@ -1162,12 +1373,65 @@ class FirebaseManager: ObservableObject {
                     isPublic: data["isPublic"] as? Bool ?? false,
                     createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                     updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    members: [], // Will need to be populated separately
-                    tasks: [], // Will need to be populated separately
-                    status: .planning // Will need to be mapped from string
+                    members: members, // Now properly populated!
+                    tasks: [], // TODO: Implement task fetching
+                    status: status
                 )
+                pods.append(pod)
+                print("✅ Loaded public pod '\(pod.name)' with \(members.count) members")
             }
+            
+            return pods
         } catch {
+            throw error
+        }
+    }
+    
+    // Method to get pods for a specific idea
+    func getPodsByIdeaId(ideaId: String) async throws -> [IncubationPod] {
+        do {
+            print("🔍 DEBUG: Fetching pods for ideaId: \(ideaId)")
+            let snapshot = try await db.collection("pods")
+                .whereField("ideaId", isEqualTo: ideaId)
+                .whereField("isPublic", isEqualTo: true)
+                .order(by: "createdAt", descending: true)
+                .getDocuments()
+            
+            print("📊 DEBUG: Found \(snapshot.documents.count) pods for idea \(ideaId)")
+            
+            var pods: [IncubationPod] = []
+            
+            for document in snapshot.documents {
+                let data = document.data()
+                let podId = document.documentID
+                
+                // Fetch members with full details
+                let members = try await fetchPodMembers(podId: podId)
+                
+                // Map status string to enum
+                let statusString = data["status"] as? String ?? "planning"
+                let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
+                
+                let pod = IncubationPod(
+                    id: podId,
+                    ideaId: data["ideaId"] as? String ?? "",
+                    name: data["name"] as? String ?? "",
+                    description: data["description"] as? String ?? "",
+                    creatorId: data["creatorId"] as? String ?? "",
+                    isPublic: data["isPublic"] as? Bool ?? false,
+                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                    updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
+                    members: members,
+                    tasks: [], // TODO: Implement task fetching
+                    status: status
+                )
+                pods.append(pod)
+                print("✅ Loaded pod '\(pod.name)' for idea \(ideaId)")
+            }
+            
+            return pods
+        } catch {
+            print("❌ ERROR: Failed to fetch pods for idea \(ideaId): \(error.localizedDescription)")
             throw error
         }
     }
@@ -1253,139 +1517,47 @@ class FirebaseManager: ObservableObject {
     
     // MARK: - Debug Methods
     
-    func testAuthenticationFlow() async {
-        print("\n🧪 ===== TESTING AUTHENTICATION FLOW =====")
-        print("📱 Project: synapse-4578e")
-        print("🔐 Current Firebase Auth user: \(auth.currentUser?.uid ?? "None")")
-        print("📧 Current local isEmailVerified: \(isEmailVerified)")
-        print("📤 Current isOtpSent: \(isOtpSent)")
-        print("✅ Current isOtpVerified: \(isOtpVerified)")
+    func testPodMemberFunctionality(podId: String) async {
+        print("\n🧪 ===== TESTING POD MEMBER FUNCTIONALITY =====")
+        print("📱 Testing pod: \(podId)")
         
-        // Test database connectivity
         do {
-            let testDoc = try await db.collection("test").document("connectivity").getDocument()
-            print("✅ Firestore connectivity: OK")
-        } catch {
-            print("❌ Firestore connectivity: FAILED - \(error)")
-        }
-        
-        // Test functions connectivity
-        do {
-            let result = try await functions.httpsCallable("test").call()
-            print("✅ Cloud Functions connectivity: OK")
-        } catch {
-            print("⚠️ Cloud Functions connectivity: Not available (expected)")
-        }
-        
-        print("🏁 ===== AUTHENTICATION FLOW TEST COMPLETE =====\n")
-    }
-    
-    func debugUserState(email: String) async {
-        print("\n🔍 ===== DEBUGGING USER STATE FOR: \(email) =====")
-        
-        // Check if user exists in Firebase Auth
-        print("🔍 Checking Firebase Auth...")
-        if let currentUser = auth.currentUser {
-            print("✅ Firebase Auth user: \(currentUser.uid)")
-            print("📧 Email: \(currentUser.email ?? "N/A")")
-            print("🔍 Firebase isEmailVerified: \(currentUser.isEmailVerified)")
-        } else {
-            print("❌ No Firebase Auth user signed in")
-        }
-        
-        // Check if user exists in Firestore
-        do {
-            print("🔍 Checking Firestore user document...")
-            let userSnapshot = try await db.collection("users")
-                .whereField("email", isEqualTo: email)
-                .getDocuments()
+            // Test fetching pod members
+            print("🔍 Fetching pod members...")
+            let members = try await fetchPodMembers(podId: podId)
+            print("✅ Found \(members.count) members:")
             
-            if let userDoc = userSnapshot.documents.first {
-                print("✅ Firestore user found: \(userDoc.documentID)")
-                let data = userDoc.data()
-                print("📧 Email: \(data["email"] ?? "N/A")")
-                print("👤 Username: \(data["username"] ?? "N/A")")
-                print("🔍 isEmailVerified: \(data["isEmailVerified"] ?? "N/A")")
-                print("🔑 authProvider: \(data["authProvider"] ?? "N/A")")
-                print("📅 createdAt: \(data["createdAt"] ?? "N/A")")
-            } else {
-                print("❌ No Firestore user found with email: \(email)")
+            for member in members {
+                print("  👤 \(member.username) (\(member.role)) - \(member.permissions.map { $0.rawValue }.joined(separator: ", "))")
             }
-        } catch {
-            print("❌ Error checking Firestore: \(error)")
-        }
-        
-        // Check for existing OTP
-        do {
-            print("🔍 Checking for existing OTP...")
-            let otpDoc = try await db.collection("otp_codes").document(email).getDocument()
-            if otpDoc.exists, let data = otpDoc.data() {
-                print("✅ OTP found for email")
-                print("🔢 OTP: \(data["otp"] ?? "N/A")")
-                print("📅 Created: \(data["createdAt"] ?? "N/A")")
-                print("⏰ Expires: \(data["expiresAt"] ?? "N/A")")
-                
-                if let expiresAt = data["expiresAt"] as? Timestamp {
-                    let isExpired = Date() > expiresAt.dateValue()
-                    print("⏰ Is Expired: \(isExpired)")
-                }
-            } else {
-                print("❌ No OTP found for email")
-            }
-        } catch {
-            print("❌ Error checking OTP: \(error)")
-        }
-        
-        print("🏁 ===== USER STATE DEBUG COMPLETE =====\n")
-    }
-    
-    // MARK: - Email Verification Check
-    
-    func checkEmailVerificationStatus() async {
-        guard let currentUser = auth.currentUser else {
-            DispatchQueue.main.async {
-                self.isEmailVerified = false
-            }
-            return
-        }
-        
-        do {
-            let userDoc = try await db.collection("users").document(currentUser.uid).getDocument()
             
-            if let userData = userDoc.data() {
-                let authProvider = userData["authProvider"] as? String ?? "email"
+            // Test pod document structure
+            print("\n🔍 Checking pod document structure...")
+            let podDoc = try await db.collection("pods").document(podId).getDocument()
+            if let data = podDoc.data() {
+                let memberIds = data["members"] as? [String] ?? []
+                print("✅ Pod document has \(memberIds.count) member IDs: \(memberIds)")
                 
-                if authProvider == "google" {
-                    // Google users are automatically verified
-                    DispatchQueue.main.async {
-                        self.isEmailVerified = true
-                    }
+                // Check if members subcollection exists
+                let membersSnapshot = try await db.collection("pods").document(podId).collection("members").getDocuments()
+                print("✅ Members subcollection has \(membersSnapshot.documents.count) documents")
+                
+                if memberIds.count == membersSnapshot.documents.count {
+                    print("✅ Member arrays are synchronized!")
                 } else {
-                    // Check email verification status for email users
-                    let isEmailVerified: Bool
-                    if let boolValue = userData["isEmailVerified"] as? Bool {
-                        isEmailVerified = boolValue
-                    } else if let intValue = userData["isEmailVerified"] as? Int {
-                        isEmailVerified = intValue == 1
-                    } else {
-                        isEmailVerified = false
-                    }
-                    
-                    DispatchQueue.main.async {
-                        self.isEmailVerified = isEmailVerified
-                    }
+                    print("⚠️ Member arrays are NOT synchronized!")
+                    print("   - Pod.members array: \(memberIds.count) members")
+                    print("   - Members subcollection: \(membersSnapshot.documents.count) documents")
                 }
             } else {
-                DispatchQueue.main.async {
-                    self.isEmailVerified = false
-                }
+                print("❌ Pod document not found!")
             }
+            
         } catch {
-            print("Error checking email verification status: \(error)")
-            DispatchQueue.main.async {
-                self.isEmailVerified = false
-            }
+            print("❌ Error testing pod members: \(error.localizedDescription)")
         }
+        
+        print("🏁 ===== POD MEMBER TEST COMPLETE =====\n")
     }
     
     // MARK: - Debug Test Method
