@@ -1426,11 +1426,10 @@ class FirebaseManager: ObservableObject {
                 print("  📄 Pod '\(podName)': ideaId='\(storedIdeaId)', isPublic=\(isPublic), match=\(storedIdeaId == ideaId)")
             }
             
-            // Now do the actual query
+            // Now do the actual query (simplified to avoid composite index requirement)
             let snapshot = try await db.collection("pods")
                 .whereField("ideaId", isEqualTo: ideaId)
                 .whereField("isPublic", isEqualTo: true)
-                .order(by: "createdAt", descending: true)
                 .getDocuments()
             
             print("📊 DEBUG: Query result - Found \(snapshot.documents.count) pods for idea '\(ideaId)'")
@@ -1474,6 +1473,9 @@ class FirebaseManager: ObservableObject {
                 pods.append(pod)
                 print("✅ Loaded pod '\(pod.name)' for idea '\(ideaId)'")
             }
+            
+            // Sort by creation date (newest first) since we removed the order clause
+            pods.sort { $0.createdAt > $1.createdAt }
             
             print("📝 DEBUG: Returning \(pods.count) pods to UI")
             return pods

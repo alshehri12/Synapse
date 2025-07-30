@@ -212,7 +212,7 @@ struct IdeaDetailView: View {
                                 } else {
                                     // No pods exist - show disabled message
                                     HStack(spacing: 6) {
-                                        Image(systemName: "person.3.slash")
+                                        Image(systemName: "person.3.fill")
                                             .font(.system(size: 16))
                                         Text("No Pods Yet".localized)
                                             .font(.system(size: 14, weight: .medium))
