@@ -84,9 +84,6 @@ struct AuthenticationView: View {
             
             // Sign In Button
             signInButton
-            
-            // Browse Anonymously Button
-            browseAnonymouslyButton
         }
         .padding(.horizontal, 40)
     }
@@ -145,25 +142,7 @@ struct AuthenticationView: View {
         }
     }
     
-    private var browseAnonymouslyButton: some View {
-        Button(action: signInAnonymously) {
-            HStack {
-                Image(systemName: "eye")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("Browse Anonymously".localized)
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .foregroundColor(Color.textSecondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.backgroundPrimary)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.textSecondary.opacity(0.3), lineWidth: 1)
-            )
-        }
-    }
+
     
     private var footerSection: some View {
         Text("By continuing, you agree to our Terms of Service and Privacy Policy".localized)
@@ -175,15 +154,7 @@ struct AuthenticationView: View {
     
     // MARK: - Actions
     
-    private func signInAnonymously() {
-        Task {
-            do {
-                try await firebaseManager.signInAnonymously()
-            } catch {
-                // Error is handled by FirebaseManager
-            }
-        }
-    }
+
     
     private func signInWithGoogle() {
         Task {

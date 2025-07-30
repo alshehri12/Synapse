@@ -16,9 +16,7 @@ struct PodDetailView: View {
     @State private var selectedTab = 0
     @State private var showingTaskSheet = false
     @State private var showingMemberSheet = false
-    @State private var showingChat = false
     @State private var showingSettings = false
-    @State private var showingAnalytics = false
     
     var body: some View {
         NavigationView {
@@ -137,14 +135,6 @@ struct PodDetailView: View {
                             Label("Invite Member".localized, systemImage: "person.badge.plus")
                         }
                         
-                        Button(action: { showingChat = true }) {
-                            Label("Open Chat".localized, systemImage: "message")
-                        }
-                        
-                        Button(action: { showingAnalytics = true }) {
-                            Label("Analytics".localized, systemImage: "chart.bar")
-                        }
-                        
                         Divider()
                         
                         Button(action: { showingSettings = true }) {
@@ -162,14 +152,8 @@ struct PodDetailView: View {
             .sheet(isPresented: $showingMemberSheet) {
                 InviteMemberView(pod: pod)
             }
-            .sheet(isPresented: $showingChat) {
-                PodChatView(pod: pod)
-            }
             .sheet(isPresented: $showingSettings) {
                 PodSettingsView(pod: pod)
-            }
-            .sheet(isPresented: $showingAnalytics) {
-                PodAnalyticsView(pod: pod)
             }
         }
     }

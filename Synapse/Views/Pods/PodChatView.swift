@@ -15,10 +15,7 @@ struct PodChatView: View {
     @State private var messageText = ""
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
-    @State private var showingReplyTo: ChatMessage?
     @State private var showingMessageOptions: ChatMessage?
-    @State private var showingEditMessage: ChatMessage?
-    @State private var editingMessageText = ""
     @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
@@ -77,34 +74,11 @@ struct PodChatView: View {
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
         }
-        .sheet(item: $showingEditMessage) { message in
-            EditMessageView(
-                message: message,
-                editedText: $editingMessageText,
-                onSave: {
-                    if !editingMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        chatManager.editMessage(message.id, newContent: editingMessageText, podId: pod.id)
-                    }
-                    showingEditMessage = nil
-                    editingMessageText = ""
-                },
-                onCancel: {
-                    showingEditMessage = nil
-                    editingMessageText = ""
-                }
-            )
-        }
+
         .actionSheet(item: $showingMessageOptions) { message in
             ActionSheet(
                 title: Text("Message Options"),
                 buttons: [
-                    .default(Text("Reply")) {
-                        showingReplyTo = message
-                    },
-                    .default(Text("Edit")) {
-                        showingEditMessage = message
-                        editingMessageText = message.content
-                    },
                     .destructive(Text("Delete")) {
                         chatManager.deleteMessage(message.id, podId: pod.id)
                     },
@@ -261,17 +235,9 @@ struct MessageBubble: View {
                         )
                         .cornerRadius(16)
                     
-                    HStack(spacing: 4) {
-                        Text(message.timestamp, style: .time)
-                            .font(.system(size: 11))
-                            .foregroundColor(Color.textSecondary)
-                        
-                        if message.isEdited {
-                            Text("edited")
-                                .font(.system(size: 11))
-                                .foregroundColor(Color.textSecondary)
-                        }
-                    }
+                    Text(message.timestamp, style: .time)
+                        .font(.system(size: 11))
+                        .foregroundColor(Color.textSecondary)
                 }
             }
             
@@ -406,71 +372,7 @@ struct ImagePicker: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Edit Message View
-struct EditMessageView: View {
-    let message: ChatMessage
-    @Binding var editedText: String
-    let onSave: () -> Void
-    let onCancel: () -> Void
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                // Original message preview
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Original Message")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color.textSecondary)
-                    
-                    Text(message.content)
-                        .font(.system(size: 16))
-                        .foregroundColor(Color.textSecondary)
-                        .padding(12)
-                        .background(Color.backgroundSecondary)
-                        .cornerRadius(8)
-                }
-                .padding(.horizontal, 20)
-                
-                // Edit text field
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Edit Message")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color.textPrimary)
-                    
-                    TextEditor(text: $editedText)
-                        .frame(minHeight: 100)
-                        .padding(12)
-                        .background(Color.backgroundSecondary)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.textSecondary.opacity(0.2), lineWidth: 1)
-                        )
-                }
-                .padding(.horizontal, 20)
-                
-                Spacer()
-            }
-            .padding(.top, 20)
-            .navigationTitle("Edit Message")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        onCancel()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        onSave()
-                    }
-                    .disabled(editedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-        }
-    }
-}
+
 
 #Preview {
     PodChatView(pod: mockPods[0])

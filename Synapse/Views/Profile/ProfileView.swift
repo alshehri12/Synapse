@@ -290,66 +290,25 @@ struct SkillsInterestsSection: View {
     }
 }
 
-// MARK: - Menu Section
+// MARK: - Menu Section  
 struct MenuSection: View {
-    @State private var showingMyIdeas = false
-    @State private var showingMyCollaborations = false
-    @State private var showingFavorites = false
-    @State private var showingAnalytics = false
-    
     var body: some View {
-        VStack(spacing: 0) {
-            MenuRow(
-                icon: "heart",
-                title: "My Ideas",
-                subtitle: "View your sparked ideas",
-                action: { showingMyIdeas = true }
-            )
+        VStack(spacing: 16) {
+            Text("Quick Access")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
             
-            Divider()
-                .padding(.leading, 56)
-            
-            MenuRow(
-                icon: "person.3",
-                title: "My Collaborations",
-                subtitle: "Projects you're working on",
-                action: { showingMyCollaborations = true }
-            )
-            
-            Divider()
-                .padding(.leading, 56)
-            
-            MenuRow(
-                icon: "star",
-                title: "Favorites",
-                subtitle: "Ideas you've saved",
-                action: { showingFavorites = true }
-            )
-            
-            Divider()
-                .padding(.leading, 56)
-            
-            MenuRow(
-                icon: "chart.bar",
-                title: "Analytics",
-                subtitle: "Your activity insights",
-                action: { showingAnalytics = true }
-            )
-        }
-        .background(Color.backgroundPrimary)
-        .cornerRadius(16)
-        .padding(.horizontal, 20)
-        .sheet(isPresented: $showingMyIdeas) {
-            MyIdeasView()
-        }
-        .sheet(isPresented: $showingMyCollaborations) {
-            MyCollaborationsView()
-        }
-        .sheet(isPresented: $showingFavorites) {
-            FavoritesView()
-        }
-        .sheet(isPresented: $showingAnalytics) {
-            UserAnalyticsView()
+            Text("Visit the Explore tab to view your ideas, or My Pods to see your collaborations.")
+                .font(.system(size: 14))
+                .foregroundColor(Color.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.backgroundPrimary)
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
         }
     }
 }
@@ -404,9 +363,6 @@ struct EditProfileView: View {
     @State private var newSkill = ""
     @State private var newInterest = ""
     @State private var isSaving = false
-    @State private var showingImagePicker = false
-    @State private var selectedImage: UIImage?
-    @State private var isUploadingImage = false
     
     init(user: UserProfile) {
         self.user = user
@@ -430,12 +386,6 @@ struct EditProfileView: View {
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundColor(.white)
                             )
-                        
-                        Button("Change Photo") {
-                            showingImagePicker = true
-                        }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color.accentGreen)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, 20)
@@ -552,51 +502,11 @@ struct EditProfileView: View {
                     .disabled(isSaving)
                 }
             }
-            .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(selectedImage: $selectedImage)
-                    .onDisappear {
-                        if let image = selectedImage {
-                            uploadProfileImage(image)
-                        }
-                    }
-            }
+
         }
     }
     
-    private func uploadProfileImage(_ image: UIImage) {
-        guard let currentUser = firebaseManager.currentUser else { return }
-        
-        isUploadingImage = true
-        
-        Task {
-            do {
-                // Convert image to data
-                guard let imageData = image.jpegData(compressionQuality: 0.7) else {
-                    await MainActor.run {
-                        isUploadingImage = false
-                    }
-                    return
-                }
-                
-                // Upload to Firebase Storage (you'll need to implement this)
-                // For now, we'll just update the profile without the image URL
-                // In a real implementation, you would:
-                // 1. Upload image to Firebase Storage
-                // 2. Get the download URL
-                // 3. Update the user profile with the URL
-                
-                await MainActor.run {
-                    isUploadingImage = false
-                    selectedImage = nil
-                }
-            } catch {
-                await MainActor.run {
-                    isUploadingImage = false
-                    selectedImage = nil
-                }
-            }
-        }
-    }
+
     
     private func addSkill() {
         let trimmedSkill = newSkill.trimmingCharacters(in: .whitespacesAndNewlines)
