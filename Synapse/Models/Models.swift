@@ -117,6 +117,15 @@ struct PodTask: Identifiable, Codable {
         case inProgress = "in_progress"
         case completed = "completed"
         case cancelled = "cancelled"
+        
+        var displayName: String {
+            switch self {
+            case .todo: return "To Do"
+            case .inProgress: return "In Progress"
+            case .completed: return "Completed"
+            case .cancelled: return "Cancelled"
+            }
+        }
     }
     
     enum TaskPriority: String, Codable, CaseIterable {
@@ -124,6 +133,15 @@ struct PodTask: Identifiable, Codable {
         case medium = "medium"
         case high = "high"
         case urgent = "urgent"
+        
+        var displayName: String {
+            switch self {
+            case .low: return "Low"
+            case .medium: return "Medium"
+            case .high: return "High"
+            case .urgent: return "Urgent"
+            }
+        }
     }
 }
 

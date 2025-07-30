@@ -904,6 +904,93 @@ class FirebaseManager: ObservableObject {
         return docRef.documentID
     }
     
+    // Update task status
+    func updateTaskStatus(podId: String, taskId: String, status: String) async throws {
+        guard currentUser != nil else {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
+        }
+        
+        print("🔄 Updating task \(taskId) status to: \(status)")
+        
+        try await db.collection("pods").document(podId).collection("tasks").document(taskId).updateData([
+            "status": status,
+            "updatedAt": FieldValue.serverTimestamp()
+        ])
+        
+        print("✅ Task status updated successfully")
+    }
+    
+    // Update task priority
+    func updateTaskPriority(podId: String, taskId: String, priority: String) async throws {
+        guard currentUser != nil else {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
+        }
+        
+        print("🔄 Updating task \(taskId) priority to: \(priority)")
+        
+        try await db.collection("pods").document(podId).collection("tasks").document(taskId).updateData([
+            "priority": priority,
+            "updatedAt": FieldValue.serverTimestamp()
+        ])
+        
+        print("✅ Task priority updated successfully")
+    }
+    
+    // Delete task
+    func deleteTask(podId: String, taskId: String) async throws {
+        guard currentUser != nil else {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
+        }
+        
+        print("🗑️ Deleting task: \(taskId)")
+        
+        try await db.collection("pods").document(podId).collection("tasks").document(taskId).delete()
+        
+        print("✅ Task deleted successfully")
+    }
+    
+    // Fetch tasks for a specific pod
+    func getPodTasks(podId: String) async throws -> [PodTask] {
+        print("📋 Fetching tasks for pod: \(podId)")
+        
+        let snapshot = try await db.collection("pods").document(podId).collection("tasks")
+            .order(by: "createdAt", descending: false)
+            .getDocuments()
+        
+        var tasks: [PodTask] = []
+        
+        for document in snapshot.documents {
+            let data = document.data()
+            let taskId = document.documentID
+            
+            // Parse task status
+            let statusString = data["status"] as? String ?? "todo"
+            let status = PodTask.TaskStatus(rawValue: statusString) ?? .todo
+            
+            // Parse task priority  
+            let priorityString = data["priority"] as? String ?? "medium"
+            let priority = PodTask.TaskPriority(rawValue: priorityString) ?? .medium
+            
+            let task = PodTask(
+                id: taskId,
+                title: data["title"] as? String ?? "",
+                description: data["description"] as? String,
+                assignedTo: data["assignedTo"] as? String,
+                assignedToUsername: data["assignedToUsername"] as? String,
+                dueDate: (data["dueDate"] as? Timestamp)?.dateValue(),
+                createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
+                status: status,
+                priority: priority
+            )
+            
+            tasks.append(task)
+        }
+        
+        print("✅ Fetched \(tasks.count) tasks for pod \(podId)")
+        return tasks
+    }
+    
     // MARK: - Idea Management Methods
     
     // Delete an idea spark

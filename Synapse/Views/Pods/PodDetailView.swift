@@ -9,7 +9,7 @@ import SwiftUI
 import Firebase
 import FirebaseAuth
 struct PodDetailView: View {
-    let pod: IncubationPod
+    @State private var currentPod: IncubationPod
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
@@ -19,6 +19,11 @@ struct PodDetailView: View {
     @State private var showingMemberSheet = false
     @State private var showingSettings = false
     @State private var showingFullScreenChat = false
+    @State private var isRefreshingTasks = false
+    
+    init(pod: IncubationPod) {
+        self._currentPod = State(initialValue: pod)
+    }
     
     var body: some View {
         NavigationView {
@@ -27,20 +32,20 @@ struct PodDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     // Pod Info
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(pod.name)
+                        Text(currentPod.name)
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(Color.textPrimary)
                         
-                        Text(pod.description)
+                        Text(currentPod.description)
                             .font(.system(size: 16))
                             .foregroundColor(Color.textSecondary)
                         
                         HStack {
-                            PodStatusBadge(status: pod.status)
+                            PodStatusBadge(status: currentPod.status)
                             
                             Spacer()
                             
-                            Text("Created \(pod.createdAt.timeAgoDisplay())")
+                            Text("Created \(currentPod.createdAt.timeAgoDisplay())")
                                 .font(.system(size: 12))
                                 .foregroundColor(Color.textSecondary)
                         }
@@ -50,14 +55,14 @@ struct PodDetailView: View {
                     HStack(spacing: 20) {
                         StatCard(
                             title: "Members".localized,
-                            value: "\(pod.members.count)",
+                            value: "\(currentPod.members.count)",
                             icon: "person.3",
                             color: Color.accentGreen
                         )
                         
                         StatCard(
                             title: "Tasks".localized,
-                            value: "\(pod.tasks.count)",
+                            value: "\(currentPod.tasks.count)",
                             icon: "checklist",
                             color: Color.accentBlue
                         )
@@ -104,13 +109,13 @@ struct PodDetailView: View {
                 
                 // Tab Content
                 TabView(selection: $selectedTab) {
-                    OverviewTab(pod: pod)
+                    OverviewTab(pod: currentPod)
                         .tag(0)
                     
-                    TasksTab(pod: pod, showingTaskSheet: $showingTaskSheet)
+                    TasksTab(pod: currentPod, showingTaskSheet: $showingTaskSheet, onTaskUpdated: refreshTasks)
                         .tag(1)
                     
-                    MembersTab(pod: pod, showingMemberSheet: $showingMemberSheet)
+                    MembersTab(pod: currentPod, showingMemberSheet: $showingMemberSheet)
                         .tag(2)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
@@ -145,23 +150,53 @@ struct PodDetailView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingTaskSheet) {
-                CreateTaskView(pod: pod)
+            .sheet(isPresented: $showingTaskSheet, onDismiss: refreshTasks) {
+                CreateTaskView(pod: currentPod)
             }
             .sheet(isPresented: $showingMemberSheet) {
-                InviteMemberView(pod: pod)
+                InviteMemberView(pod: currentPod)
             }
             .sheet(isPresented: $showingSettings) {
-                PodSettingsView(pod: pod)
+                PodSettingsView(pod: currentPod)
             }
             .fullScreenCover(isPresented: $showingFullScreenChat) {
-                FullScreenChatView(pod: pod)
+                FullScreenChatView(pod: currentPod)
             }
         }
     }
     
     private var completedTasksCount: Int {
-        pod.tasks.filter { $0.status == .completed }.count
+        currentPod.tasks.filter { $0.status == .completed }.count
+    }
+    
+    private func refreshTasks() {
+        isRefreshingTasks = true
+        Task {
+            do {
+                let updatedTasks = try await firebaseManager.getPodTasks(podId: currentPod.id)
+                await MainActor.run {
+                    currentPod = IncubationPod(
+                        id: currentPod.id,
+                        ideaId: currentPod.ideaId,
+                        name: currentPod.name,
+                        description: currentPod.description,
+                        creatorId: currentPod.creatorId,
+                        isPublic: currentPod.isPublic,
+                        createdAt: currentPod.createdAt,
+                        updatedAt: currentPod.updatedAt,
+                        members: currentPod.members,
+                        tasks: updatedTasks,
+                        status: currentPod.status
+                    )
+                    isRefreshingTasks = false
+                }
+            } catch {
+                await MainActor.run {
+                    isRefreshingTasks = false
+                }
+                print("❌ Failed to refresh tasks: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
@@ -249,20 +284,20 @@ struct OverviewTab: View {
     }
     
     private var overallProgress: Double {
-        guard !pod.tasks.isEmpty else { return 0 }
-        return Double(completedCount) / Double(pod.tasks.count)
+        guard !currentPod.tasks.isEmpty else { return 0 }
+        return Double(completedCount) / Double(currentPod.tasks.count)
     }
     
     private var todoCount: Int {
-        pod.tasks.filter { $0.status == .todo }.count
+        currentPod.tasks.filter { $0.status == .todo }.count
     }
     
     private var inProgressCount: Int {
-        pod.tasks.filter { $0.status == .inProgress }.count
+        currentPod.tasks.filter { $0.status == .inProgress }.count
     }
     
     private var completedCount: Int {
-        pod.tasks.filter { $0.status == .completed }.count
+        currentPod.tasks.filter { $0.status == .completed }.count
     }
     
     private var recentActivities: [ActivityItem] {
@@ -275,6 +310,7 @@ struct OverviewTab: View {
 struct TasksTab: View {
     let pod: IncubationPod
     @Binding var showingTaskSheet: Bool
+    let onTaskUpdated: () -> Void
     @State private var selectedFilter: PodTask.TaskStatus? = nil
     
     var body: some View {
@@ -311,7 +347,7 @@ struct TasksTab: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(filteredTasks) { task in
-                            TaskRow(task: task)
+                            TaskRow(task: task, pod: pod, onTaskUpdated: onTaskUpdated)
                                 .padding(.horizontal, 20)
                         }
                     }
@@ -468,7 +504,7 @@ struct FullScreenChatView: View {
                     )
                 }
             }
-            .navigationTitle(pod.name)
+            .navigationTitle(currentPod.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -488,7 +524,7 @@ struct FullScreenChatView: View {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 8, height: 8)
-                        Text("\(pod.members.count)")
+                        Text("\(currentPod.members.count)")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(Color.textSecondary)
                     }
@@ -557,6 +593,59 @@ struct TaskStatusCard: View {
     }
 }
 
+// MARK: - Badge Components
+struct TaskStatusBadge: View {
+    let status: PodTask.TaskStatus
+    
+    var body: some View {
+        Text(status.displayName)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(statusColor)
+            .cornerRadius(8)
+    }
+    
+    private var statusColor: Color {
+        switch status {
+        case .todo: return Color.textSecondary
+        case .inProgress: return Color.accentOrange
+        case .completed: return Color.success
+        case .cancelled: return Color.error
+        }
+    }
+}
+
+struct PriorityBadge: View {
+    let priority: PodTask.TaskPriority
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(priorityColor)
+                .frame(width: 8, height: 8)
+            
+            Text(priority.displayName)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(priorityColor)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(priorityColor.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    private var priorityColor: Color {
+        switch priority {
+        case .low: return Color.accentGreen
+        case .medium: return Color.accentBlue
+        case .high: return Color.accentOrange
+        case .urgent: return Color.error
+        }
+    }
+}
+
 struct FilterButton: View {
     let title: String
     let isSelected: Bool
@@ -577,16 +666,33 @@ struct FilterButton: View {
 
 struct TaskRow: View {
     let task: PodTask
+    let pod: IncubationPod
+    let onTaskUpdated: () -> Void
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @State private var showingStatusPicker = false
+    @State private var showingPriorityPicker = false
+    @State private var showingDeleteAlert = false
+    @State private var isUpdating = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
+                // Completion checkbox
+                Button(action: toggleTaskCompletion) {
+                    Image(systemName: task.status == .completed ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(task.status == .completed ? Color.success : Color.textSecondary)
+                        .animation(.easeInOut(duration: 0.2), value: task.status == .completed)
+                }
+                .disabled(isUpdating)
+                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color.textPrimary)
+                        .foregroundColor(task.status == .completed ? Color.textSecondary : Color.textPrimary)
+                        .strikethrough(task.status == .completed, color: Color.textSecondary)
                     
-                    if let description = task.description {
+                    if let description = task.description, !description.isEmpty {
                         Text(description)
                             .font(.system(size: 14))
                             .foregroundColor(Color.textSecondary)
@@ -597,13 +703,22 @@ struct TaskRow: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    PriorityBadge(priority: task.priority)
-                    TaskStatusBadge(status: task.status)
+                    // Interactive Priority Badge
+                    Button(action: { showingPriorityPicker = true }) {
+                        PriorityBadge(priority: task.priority)
+                    }
+                    .disabled(isUpdating)
+                    
+                    // Interactive Status Badge
+                    Button(action: { showingStatusPicker = true }) {
+                        TaskStatusBadge(status: task.status)
+                    }
+                    .disabled(isUpdating)
                 }
             }
             
             HStack {
-                if let assignedTo = task.assignedToUsername {
+                if let assignedTo = task.assignedToUsername, !assignedTo.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "person")
                             .font(.system(size: 12))
@@ -621,18 +736,122 @@ struct TaskRow: View {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.system(size: 12))
-                            .foregroundColor(Color.textSecondary)
+                            .foregroundColor(isOverdue ? Color.error : Color.textSecondary)
                         
                         Text(dueDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.system(size: 12))
-                            .foregroundColor(Color.textSecondary)
+                            .foregroundColor(isOverdue ? Color.error : Color.textSecondary)
                     }
                 }
+                
+                // Delete button (only show for task creators or pod admins)
+                Button(action: { showingDeleteAlert = true }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.error.opacity(0.7))
+                }
+                .disabled(isUpdating)
             }
         }
         .padding(16)
         .background(Color.backgroundPrimary)
         .cornerRadius(12)
+        .opacity(isUpdating ? 0.6 : 1.0)
+        .overlay(
+            isUpdating ? 
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                .scaleEffect(0.8)
+            : nil
+        )
+        .confirmationDialog("Change Status", isPresented: $showingStatusPicker) {
+            ForEach(PodTask.TaskStatus.allCases, id: \.self) { status in
+                Button(status.displayName) {
+                    updateTaskStatus(status)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+        .confirmationDialog("Change Priority", isPresented: $showingPriorityPicker) {
+            ForEach(PodTask.TaskPriority.allCases, id: \.self) { priority in
+                Button(priority.displayName) {
+                    updateTaskPriority(priority)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+        .alert("Delete Task", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteTask()
+            }
+        } message: {
+            Text("Are you sure you want to delete this task? This action cannot be undone.")
+        }
+    }
+    
+    private var isOverdue: Bool {
+        guard let dueDate = task.dueDate else { return false }
+        return dueDate < Date() && task.status != .completed
+    }
+    
+    private func toggleTaskCompletion() {
+        let newStatus: PodTask.TaskStatus = task.status == .completed ? .todo : .completed
+        updateTaskStatus(newStatus)
+    }
+    
+    private func updateTaskStatus(_ status: PodTask.TaskStatus) {
+        isUpdating = true
+        Task {
+            do {
+                try await firebaseManager.updateTaskStatus(podId: pod.id, taskId: task.id, status: status.rawValue)
+                await MainActor.run {
+                    isUpdating = false
+                    onTaskUpdated() // Refresh tasks in parent view
+                }
+            } catch {
+                await MainActor.run {
+                    isUpdating = false
+                }
+                print("❌ Failed to update task status: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func updateTaskPriority(_ priority: PodTask.TaskPriority) {
+        isUpdating = true
+        Task {
+            do {
+                try await firebaseManager.updateTaskPriority(podId: pod.id, taskId: task.id, priority: priority.rawValue)
+                await MainActor.run {
+                    isUpdating = false
+                    onTaskUpdated() // Refresh tasks in parent view
+                }
+            } catch {
+                await MainActor.run {
+                    isUpdating = false
+                }
+                print("❌ Failed to update task priority: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func deleteTask() {
+        isUpdating = true
+        Task {
+            do {
+                try await firebaseManager.deleteTask(podId: pod.id, taskId: task.id)
+                await MainActor.run {
+                    isUpdating = false
+                    onTaskUpdated() // Refresh tasks in parent view
+                }
+            } catch {
+                await MainActor.run {
+                    isUpdating = false
+                }
+                print("❌ Failed to delete task: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
@@ -676,52 +895,6 @@ struct MemberRow: View {
         .padding(16)
         .background(Color.backgroundPrimary)
         .cornerRadius(12)
-    }
-}
-
-struct PriorityBadge: View {
-    let priority: PodTask.TaskPriority
-    
-    var priorityColor: Color {
-        switch priority {
-        case .low: return Color.textSecondary
-        case .medium: return Color.accentOrange
-        case .high: return Color.accentBlue
-        case .urgent: return Color.error
-        }
-    }
-    
-    var body: some View {
-        Text(priority.rawValue.localized.capitalized)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundColor(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(priorityColor)
-            .cornerRadius(6)
-    }
-}
-
-struct TaskStatusBadge: View {
-    let status: PodTask.TaskStatus
-    
-    var statusColor: Color {
-        switch status {
-        case .todo: return Color.textSecondary
-        case .inProgress: return Color.accentOrange
-        case .completed: return Color.success
-        case .cancelled: return Color.error
-        }
-    }
-    
-    var body: some View {
-        Text(status.rawValue.localized.capitalized)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundColor(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(statusColor)
-            .cornerRadius(6)
     }
 }
 
