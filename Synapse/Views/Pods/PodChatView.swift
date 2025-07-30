@@ -31,7 +31,6 @@ struct PodChatView: View {
                             MessageBubble(
                                 message: message,
                                 isFromCurrentUser: message.senderId == Auth.auth().currentUser?.uid,
-                                onReply: { showingReplyTo = message },
                                 onLongPress: { showingMessageOptions = message }
                             )
                             .id(message.id)
@@ -51,13 +50,6 @@ struct PodChatView: View {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
                         }
                     }
-                }
-            }
-            
-            // Reply preview
-            if let replyTo = showingReplyTo {
-                ReplyPreviewView(message: replyTo) {
-                    showingReplyTo = nil
                 }
             }
             
@@ -185,12 +177,10 @@ struct PodChatView: View {
         
         chatManager.sendMessage(
             messageText,
-            replyTo: showingReplyTo?.id,
             podId: pod.id
         )
         
         messageText = ""
-        showingReplyTo = nil
         chatManager.stopTyping(podId: pod.id)
     }
 }
@@ -199,7 +189,6 @@ struct PodChatView: View {
 struct MessageBubble: View {
     let message: ChatMessage
     let isFromCurrentUser: Bool
-    let onReply: () -> Void
     let onLongPress: () -> Void
     
     var body: some View {
@@ -209,14 +198,6 @@ struct MessageBubble: View {
             }
             
             VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
-                // Reply preview
-                if let replyTo = message.replyTo {
-                    ReplyPreviewView(message: message) {
-                        // Handle reply tap
-                    }
-                    .frame(maxWidth: 250)
-                }
-                
                 // Message content
                 VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 2) {
                     if !isFromCurrentUser {
@@ -297,42 +278,7 @@ struct TypingIndicatorView: View {
     }
 }
 
-// MARK: - Reply Preview
-struct ReplyPreviewView: View {
-    let message: ChatMessage
-    let onDismiss: () -> Void
-    
-    var body: some View {
-        HStack {
-            Rectangle()
-                .fill(Color.accentGreen)
-                .frame(width: 3)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(message.senderName)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color.accentGreen)
-                
-                Text(message.content)
-                    .font(.system(size: 14))
-                    .foregroundColor(Color.textSecondary)
-                    .lineLimit(2)
-            }
-            
-            Spacer()
-            
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.caption)
-                    .foregroundColor(Color.textSecondary)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.backgroundSecondary)
-        .cornerRadius(8)
-    }
-}
+
 
 // MARK: - Image Picker
 struct ImagePicker: UIViewControllerRepresentable {
