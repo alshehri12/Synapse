@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import FirebaseAuth
+import UIKit
 
 struct PodChatView: View {
     let pod: IncubationPod
@@ -16,52 +17,69 @@ struct PodChatView: View {
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
     @State private var showingMessageOptions: ChatMessage?
+    @State private var keyboardHeight: CGFloat = 0
     @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            chatHeader
-            
-            // Messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(chatManager.messages) { message in
-                            MessageBubble(
-                                message: message,
-                                isFromCurrentUser: message.senderId == Auth.auth().currentUser?.uid,
-                                onLongPress: { showingMessageOptions = message }
-                            )
-                            .id(message.id)
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                // Header
+                chatHeader
+                
+                // Messages - Adjust height based on keyboard
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(chatManager.messages) { message in
+                                MessageBubble(
+                                    message: message,
+                                    isFromCurrentUser: message.senderId == Auth.auth().currentUser?.uid,
+                                    onLongPress: { showingMessageOptions = message }
+                                )
+                                .id(message.id)
+                            }
+                            
+                            // Typing indicators
+                            if !chatManager.typingUsers.isEmpty {
+                                TypingIndicatorView(users: chatManager.typingUsers)
+                            }
+                            
+                            // Extra bottom padding when keyboard is shown
+                            if keyboardHeight > 0 {
+                                Rectangle()
+                                    .fill(Color.clear)
+                                    .frame(height: 20)
+                            }
                         }
-                        
-                        // Typing indicators
-                        if !chatManager.typingUsers.isEmpty {
-                            TypingIndicatorView(users: chatManager.typingUsers)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    }
+                    .frame(height: geometry.size.height - 140 - keyboardHeight) // Account for header + input + keyboard
+                    .onChange(of: chatManager.messages.count) { _ in
+                        scrollToBottom(proxy: proxy)
+                    }
+                    .onChange(of: keyboardHeight) { _ in
+                        // Scroll to bottom when keyboard appears/disappears
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            scrollToBottom(proxy: proxy)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
                 }
-                .onChange(of: chatManager.messages.count) { _ in
-                    if let lastMessage = chatManager.messages.last {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                        }
-                    }
-                }
+                
+                Spacer(minLength: 0)
+                
+                // Input area - Fixed at bottom
+                messageInputArea
             }
-            
-            // Input area
-            messageInputArea
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            chatManager.joinChatRoom(podId: pod.id)
-        }
-        .onDisappear {
-            chatManager.leaveChatRoom(podId: pod.id)
+            .navigationBarHidden(true)
+            .onAppear {
+                chatManager.joinChatRoom(podId: pod.id)
+                setupKeyboardObservers()
+            }
+            .onDisappear {
+                chatManager.leaveChatRoom(podId: pod.id)
+                removeKeyboardObservers()
+            }
         }
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
@@ -143,6 +161,7 @@ struct PodChatView: View {
                     .background(Color.backgroundSecondary)
                     .cornerRadius(20)
                     .focused($isTextFieldFocused)
+                    .lineLimit(1...4) // Limit text field expansion
                     .onChange(of: messageText) { _ in
                         if !messageText.isEmpty {
                             chatManager.startTyping(podId: pod.id)
@@ -169,6 +188,7 @@ struct PodChatView: View {
                 alignment: .top
             )
         }
+        .background(Color.backgroundPrimary) // Ensure consistent background
     }
     
     // MARK: - Actions
@@ -182,6 +202,44 @@ struct PodChatView: View {
         
         messageText = ""
         chatManager.stopTyping(podId: pod.id)
+    }
+    
+    // MARK: - Keyboard Handling
+    private func scrollToBottom(proxy: ScrollViewReader) {
+        if let lastMessage = chatManager.messages.last {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+            }
+        }
+    }
+    
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillShowNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    keyboardHeight = keyboardFrame.height
+                }
+            }
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillHideNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) {
+                keyboardHeight = 0
+            }
+        }
+    }
+    
+    private func removeKeyboardObservers() {
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 }
 
