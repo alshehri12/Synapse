@@ -6,7 +6,8 @@
 //
 
 import SwiftUI
-
+import Firebase
+import FirebaseAuth
 struct PodDetailView: View {
     let pod: IncubationPod
     @Environment(\.dismiss) private var dismiss
@@ -17,6 +18,7 @@ struct PodDetailView: View {
     @State private var showingTaskSheet = false
     @State private var showingMemberSheet = false
     @State private var showingSettings = false
+    @State private var showingFullScreenChat = false
     
     var body: some View {
         NavigationView {
@@ -93,8 +95,8 @@ struct PodDetailView: View {
                     
                     TabButton(
                         title: "Chat".localized,
-                        isSelected: selectedTab == 3,
-                        action: { selectedTab = 3 }
+                        isSelected: false, // Never selected since it opens modal
+                        action: { showingFullScreenChat = true }
                     )
                 }
                 .background(Color.backgroundPrimary)
@@ -110,9 +112,6 @@ struct PodDetailView: View {
                     
                     MembersTab(pod: pod, showingMemberSheet: $showingMemberSheet)
                         .tag(2)
-                    
-                    ChatTab(pod: pod)
-                        .tag(3)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
@@ -154,6 +153,9 @@ struct PodDetailView: View {
             }
             .sheet(isPresented: $showingSettings) {
                 PodSettingsView(pod: pod)
+            }
+            .fullScreenCover(isPresented: $showingFullScreenChat) {
+                FullScreenChatView(pod: pod)
             }
         }
     }
@@ -345,12 +347,190 @@ struct MembersTab: View {
     }
 }
 
-// MARK: - Chat Tab
-struct ChatTab: View {
+// MARK: - Full Screen Chat
+struct FullScreenChatView: View {
     let pod: IncubationPod
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var chatManager = ChatManager.shared
+    @State private var messageText = ""
+    @State private var showingImagePicker = false
+    @State private var selectedImage: UIImage?
+    @State private var showingMessageOptions: ChatMessage?
+    @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
-        PodChatView(pod: pod)
+        NavigationView {
+            VStack(spacing: 0) {
+                // Messages Area
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            // Welcome message for empty chat
+                            if chatManager.messages.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "bubble.left.and.bubble.right")
+                                        .font(.system(size: 50))
+                                        .foregroundColor(Color.textSecondary.opacity(0.6))
+                                    
+                                    Text("Start the conversation!")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(Color.textPrimary)
+                                    
+                                    Text("Send a message to get things started")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(Color.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 100)
+                            }
+                            
+                            ForEach(chatManager.messages) { message in
+                                MessageBubble(
+                                    message: message,
+                                    isFromCurrentUser: message.senderId == Auth.auth().currentUser?.uid,
+                                    onLongPress: { showingMessageOptions = message }
+                                )
+                                .id(message.id)
+                            }
+                            
+                            // Typing indicators
+                            if !chatManager.typingUsers.isEmpty {
+                                TypingIndicatorView(users: chatManager.typingUsers)
+                                    .padding(.top, 4)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                    }
+                    .onChange(of: chatManager.messages.count) { _ in
+                        scrollToBottom(proxy: proxy)
+                    }
+                }
+                
+                // Input Area - Simplified without complex keyboard handling
+                VStack(spacing: 0) {
+                    HStack(spacing: 16) {
+                        // Attachment button
+                        Button(action: {
+                            showingImagePicker = true
+                        }) {
+                            Image(systemName: "paperclip")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(Color.accentGreen)
+                                .frame(width: 36, height: 36)
+                                .background(Color.accentGreen.opacity(0.1))
+                                .cornerRadius(18)
+                        }
+                        
+                        // Text field
+                        HStack {
+                            TextField("Type a message...", text: $messageText, axis: .vertical)
+                                .textFieldStyle(PlainTextFieldStyle())
+                                .font(.system(size: 16))
+                                .foregroundColor(Color.textPrimary)
+                                .focused($isTextFieldFocused)
+                                .lineLimit(1...4)
+                                .onChange(of: messageText) { _ in
+                                    if !messageText.isEmpty {
+                                        chatManager.startTyping(podId: pod.id)
+                                    } else {
+                                        chatManager.stopTyping(podId: pod.id)
+                                    }
+                                }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.backgroundPrimary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(isTextFieldFocused ? Color.accentGreen.opacity(0.5) : Color.border, lineWidth: 1.5)
+                        )
+                        .cornerRadius(24)
+                        
+                        // Send button
+                        Button(action: sendMessage) {
+                            Image(systemName: messageText.isEmpty ? "arrow.up.circle" : "arrow.up.circle.fill")
+                                .font(.system(size: 28, weight: .medium))
+                                .foregroundColor(messageText.isEmpty ? Color.textSecondary : Color.accentGreen)
+                                .scaleEffect(messageText.isEmpty ? 0.9 : 1.0)
+                                .animation(.easeInOut(duration: 0.2), value: messageText.isEmpty)
+                        }
+                        .disabled(messageText.isEmpty)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color.backgroundPrimary)
+                    .overlay(
+                        Rectangle()
+                            .frame(height: 0.5)
+                            .foregroundColor(Color.border.opacity(0.3)),
+                        alignment: .top
+                    )
+                }
+            }
+            .navigationTitle(pod.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .foregroundColor(Color.accentGreen)
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                        Text("\(pod.members.count)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color.textSecondary)
+                    }
+                }
+            }
+            .onAppear {
+                chatManager.joinChatRoom(podId: pod.id)
+            }
+            .onDisappear {
+                chatManager.leaveChatRoom(podId: pod.id)
+            }
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePicker(selectedImage: $selectedImage)
+            }
+            .actionSheet(item: $showingMessageOptions) { message in
+                ActionSheet(
+                    title: Text("Message Options"),
+                    buttons: [
+                        .destructive(Text("Delete")) {
+                            chatManager.deleteMessage(message.id, podId: pod.id)
+                        },
+                        .cancel()
+                    ]
+                )
+            }
+        }
+    }
+    
+    private func sendMessage() {
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        chatManager.sendMessage(messageText, podId: pod.id)
+        messageText = ""
+        chatManager.stopTyping(podId: pod.id)
+    }
+    
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        if let lastMessage = chatManager.messages.last {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+            }
+        }
     }
 }
 
