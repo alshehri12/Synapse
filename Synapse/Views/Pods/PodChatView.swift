@@ -54,7 +54,7 @@ struct PodChatView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                     }
-                    .frame(height: geometry.size.height - 140 - keyboardHeight) // Account for header + input + keyboard
+                    .frame(height: calculateChatHeight(screenHeight: geometry.size.height))
                     .onChange(of: chatManager.messages.count) { _ in
                         scrollToBottom(proxy: proxy)
                     }
@@ -213,6 +213,18 @@ struct PodChatView: View {
         }
     }
     
+    private func calculateChatHeight(screenHeight: CGFloat) -> CGFloat {
+        // Conservative calculation to prevent negative heights
+        let headerHeight: CGFloat = 80  // Chat header
+        let inputHeight: CGFloat = 80   // Input area with padding
+        let safetyMargin: CGFloat = 40  // Extra safety margin
+        
+        let availableHeight = screenHeight - headerHeight - inputHeight - keyboardHeight - safetyMargin
+        let minimumHeight: CGFloat = 100 // Minimum viable chat height
+        
+        return max(minimumHeight, availableHeight)
+    }
+    
     private func setupKeyboardObservers() {
         NotificationCenter.default.addObserver(
             forName: UIResponder.keyboardWillShowNotification,
@@ -220,6 +232,7 @@ struct PodChatView: View {
             queue: .main
         ) { notification in
             if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                print("🔧 Keyboard will show - Height: \(keyboardFrame.height)")
                 withAnimation(.easeInOut(duration: 0.3)) {
                     keyboardHeight = keyboardFrame.height
                 }
@@ -231,6 +244,7 @@ struct PodChatView: View {
             object: nil,
             queue: .main
         ) { _ in
+            print("🔧 Keyboard will hide")
             withAnimation(.easeInOut(duration: 0.3)) {
                 keyboardHeight = 0
             }
