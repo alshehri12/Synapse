@@ -26,6 +26,7 @@ struct IdeaDetailView: View {
     @State private var isDeleting = false
     @State private var existingPods: [IncubationPod] = []
     @State private var isLoadingPods = false
+    @State private var isUserInPod = false
     
     var body: some View {
         NavigationView {
@@ -191,6 +192,22 @@ struct IdeaDetailView: View {
                                     .padding(.vertical, 8)
                                     .background(Color.textSecondary.opacity(0.6))
                                     .cornerRadius(20)
+                                } else if isUserInPod {
+                                    // User already in pod - show status
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 16))
+                                        Text("Already in Pod".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.accentGreen.opacity(0.8))
+                                    .cornerRadius(20)
+                                    .fixedSize(horizontal: true, vertical: false)
                                 } else if !existingPods.isEmpty {
                                     // Pods exist - can join
                                     Button(action: { showingJoinPod = true }) {
@@ -333,10 +350,16 @@ struct IdeaDetailView: View {
                 checkIfLiked()
                 loadExistingPods()
             }
-            .sheet(isPresented: $showingCreatePod) {
+            .sheet(isPresented: $showingCreatePod, onDismiss: {
+                // Refresh pod status after potential creation
+                loadExistingPods()
+            }) {
                 CreatePodFromIdeaView(idea: idea)
             }
-            .sheet(isPresented: $showingJoinPod) {
+            .sheet(isPresented: $showingJoinPod, onDismiss: {
+                // Refresh pod status after potential join
+                loadExistingPods()
+            }) {
                 JoinPodView(availablePods: existingPods)
             }
             .sheet(isPresented: $showingShareSheet) {
@@ -457,15 +480,28 @@ struct IdeaDetailView: View {
         Task {
             do {
                 let pods = try await firebaseManager.getPodsByIdeaId(ideaId: idea.id)
+                
+                // Check if current user is already in any pod for this idea
+                let currentUserId = firebaseManager.currentUser?.uid ?? ""
+                let userInPod = pods.contains { pod in
+                    pod.members.contains { member in
+                        member.userId == currentUserId
+                    }
+                }
+                
                 await MainActor.run {
                     existingPods = pods
+                    isUserInPod = userInPod
                     isLoadingPods = false
                     print("📊 UI: Loaded \(pods.count) existing pods for idea '\(idea.title)'")
+                    print("👤 UI: User membership status - isUserInPod: \(userInPod)")
                     
                     if pods.isEmpty {
                         print("⚠️ UI: No pods found - will show 'No Pods Yet' button")
+                    } else if userInPod {
+                        print("✅ UI: User already in pod - will show 'Already in Pod' button")
                     } else {
-                        print("✅ UI: Found pods - will show 'Join Pod' button")
+                        print("✅ UI: Found pods, user not member - will show 'Join Pod' button")
                         for pod in pods {
                             print("  🏠 Pod: '\(pod.name)' (ID: \(pod.id), ideaId: '\(pod.ideaId)')")
                         }
@@ -474,6 +510,7 @@ struct IdeaDetailView: View {
             } catch {
                 await MainActor.run {
                     existingPods = []
+                    isUserInPod = false
                     isLoadingPods = false
                     print("❌ UI: Failed to load pods for idea '\(idea.title)': \(error.localizedDescription)")
                 }
