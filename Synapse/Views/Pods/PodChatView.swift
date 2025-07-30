@@ -205,7 +205,7 @@ struct PodChatView: View {
     }
     
     // MARK: - Keyboard Handling
-    private func scrollToBottom(proxy: ScrollViewReader) {
+    private func scrollToBottom(proxy: ScrollViewProxy) {
         if let lastMessage = chatManager.messages.last {
             withAnimation(.easeInOut(duration: 0.3)) {
                 proxy.scrollTo(lastMessage.id, anchor: .bottom)
