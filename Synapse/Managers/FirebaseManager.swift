@@ -517,6 +517,10 @@ class FirebaseManager: ObservableObject {
                 let members = try await fetchPodMembers(podId: podId)
                 print("👥 DEBUG: Fetched \(members.count) members for pod '\(data["name"] as? String ?? "Unknown")'")
                 
+                // Fetch tasks for this pod
+                let tasks = try await getPodTasks(podId: podId)
+                print("📋 DEBUG: Fetched \(tasks.count) tasks for pod '\(data["name"] as? String ?? "Unknown")'")
+                
                 // Map status string to enum
                 let statusString = data["status"] as? String ?? "planning"
                 let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
@@ -531,7 +535,7 @@ class FirebaseManager: ObservableObject {
                     createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                     updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
                     members: members, // Now properly populated!
-                    tasks: [], // TODO: Implement task fetching
+                    tasks: tasks, // ✅ Now properly loaded from Firebase!
                     status: status
                 )
                 pods.append(pod)
@@ -885,6 +889,15 @@ class FirebaseManager: ObservableObject {
     func createTask(podId: String, title: String, description: String?, assignedTo: String?, assignedToUsername: String?, dueDate: Date?, priority: String) async throws -> String {
         guard let currentUser = auth.currentUser else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
+        }
+        
+        // Verify current user is pod admin/creator
+        let podDoc = try await db.collection("pods").document(podId).getDocument()
+        guard podDoc.exists,
+              let podData = podDoc.data(),
+              let creatorId = podData["creatorId"] as? String,
+              creatorId == currentUser.uid else {
+            throw NSError(domain: "FirebaseManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Only pod administrators can create tasks".localized])
         }
         
         let taskData: [String: Any] = [
@@ -1468,6 +1481,9 @@ class FirebaseManager: ObservableObject {
                 // Fetch members with full details
                 let members = try await fetchPodMembers(podId: podId)
                 
+                // Fetch tasks for this pod
+                let tasks = try await getPodTasks(podId: podId)
+                
                 // Map status string to enum
                 let statusString = data["status"] as? String ?? "planning"
                 let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
@@ -1482,7 +1498,7 @@ class FirebaseManager: ObservableObject {
                     createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                     updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
                     members: members, // Now properly populated!
-                    tasks: [], // TODO: Implement task fetching
+                    tasks: tasks, // ✅ Now properly loaded from Firebase!
                     status: status
                 )
                 pods.append(pod)

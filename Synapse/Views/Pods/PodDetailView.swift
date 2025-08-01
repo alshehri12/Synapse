@@ -122,6 +122,10 @@ struct PodDetailView: View {
             }
             .background(Color.backgroundSecondary)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                // Ensure tasks are loaded when view appears
+                refreshTasks()
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close".localized) {
@@ -131,15 +135,18 @@ struct PodDetailView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button(action: { showingTaskSheet = true }) {
-                            Label("Add Task".localized, systemImage: "plus.circle")
+                        // Only pod creator/admin can create tasks
+                        if currentPod.creatorId == firebaseManager.currentUser?.uid {
+                            Button(action: { showingTaskSheet = true }) {
+                                Label("Add Task".localized, systemImage: "plus.circle")
+                            }
+                            
+                            Button(action: { showingMemberSheet = true }) {
+                                Label("Invite Member".localized, systemImage: "person.badge.plus")
+                            }
+                            
+                            Divider()
                         }
-                        
-                        Button(action: { showingMemberSheet = true }) {
-                            Label("Invite Member".localized, systemImage: "person.badge.plus")
-                        }
-                        
-                        Divider()
                         
                         Button(action: { showingSettings = true }) {
                             Label("Pod Settings".localized, systemImage: "gear")
@@ -284,25 +291,62 @@ struct OverviewTab: View {
     }
     
     private var overallProgress: Double {
-        guard !currentPod.tasks.isEmpty else { return 0 }
-        return Double(completedCount) / Double(currentPod.tasks.count)
+        guard !pod.tasks.isEmpty else { return 0 }
+        return Double(completedCount) / Double(pod.tasks.count)
     }
     
     private var todoCount: Int {
-        currentPod.tasks.filter { $0.status == .todo }.count
+        pod.tasks.filter { $0.status == .todo }.count
     }
     
     private var inProgressCount: Int {
-        currentPod.tasks.filter { $0.status == .inProgress }.count
+        pod.tasks.filter { $0.status == .inProgress }.count
     }
     
     private var completedCount: Int {
-        currentPod.tasks.filter { $0.status == .completed }.count
+        pod.tasks.filter { $0.status == .completed }.count
     }
     
     private var recentActivities: [ActivityItem] {
-        // TODO: Implement real activity tracking
-        return []
+        var activities: [ActivityItem] = []
+        
+        // Get recently completed tasks (last 7 days)
+        let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        let recentCompletedTasks = pod.tasks
+            .filter { $0.status == .completed }
+            .filter { $0.updatedAt > sevenDaysAgo }
+            .sorted { $0.updatedAt > $1.updatedAt }
+            .prefix(3) // Show last 3 completed tasks
+        
+        for task in recentCompletedTasks {
+            activities.append(ActivityItem(
+                type: "task_completed",
+                message: "Task '\(task.title)' was completed",
+                timestamp: task.updatedAt,
+                user: task.assignedToUsername ?? "Someone"
+            ))
+        }
+        
+        // Get recently created tasks (last 7 days)
+        let recentCreatedTasks = pod.tasks
+            .filter { $0.createdAt > Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date() }
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(2) // Show last 2 created tasks
+        
+        for task in recentCreatedTasks {
+            // Only add if not already shown as completed
+            if !activities.contains(where: { $0.message.contains(task.title) }) {
+                activities.append(ActivityItem(
+                    type: "task_created",
+                    message: "New task '\(task.title)' was created",
+                    timestamp: task.createdAt,
+                    user: task.assignedToUsername ?? "Someone"
+                ))
+            }
+        }
+        
+        // Sort all activities by timestamp (most recent first)
+        return activities.sorted { $0.timestamp > $1.timestamp }
     }
 }
 
@@ -504,7 +548,7 @@ struct FullScreenChatView: View {
                     )
                 }
             }
-            .navigationTitle(currentPod.name)
+            .navigationTitle(pod.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -524,7 +568,7 @@ struct FullScreenChatView: View {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 8, height: 8)
-                        Text("\(currentPod.members.count)")
+                        Text("\(pod.members.count)")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(Color.textSecondary)
                     }
