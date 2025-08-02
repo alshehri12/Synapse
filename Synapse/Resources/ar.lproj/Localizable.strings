@@ -8,9 +8,8 @@
 /* Explore View */
 "Search ideas, tags, or users..." = "ابحث عن أفكار أو علامات أو مستخدمين...";
 "All" = "الكل";
-"Sparking" = "قيد الإطلاق";
-"Incubating" = "قيد الحضانة";
-"Launched" = "تم الإطلاق";
+"Fresh" = "جديد";
+"Active" = "نشط";
 "Completed" = "مكتمل";
 "No ideas found" = "لم يتم العثور على أفكار";
 "Be the first to spark an idea!" = "كن أول من يطلق فكرة جديدة!";
@@ -67,7 +66,6 @@
 "No pods found" = "لم يتم العثور على حاضنات";
 "Join a pod to start collaborating!" = "انضم لحاضنة لتبدأ التعاون!";
 "Active" = "نشط";
-"Planning" = "قيد التخطيط";
 "On Hold" = "معلق";
 "Members" = "الأعضاء";
 "Tasks" = "المهام";

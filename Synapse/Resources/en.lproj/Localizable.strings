@@ -8,9 +8,8 @@
 /* Explore View */
 "Search ideas, tags, or users..." = "Search ideas, tags, or users...";
 "All" = "All";
-"Sparking" = "Sparking";
-"Incubating" = "Incubating";
-"Launched" = "Launched";
+"Fresh" = "Fresh";
+"Active" = "Active";
 "Completed" = "Completed";
 "No ideas found" = "No ideas found";
 "Be the first to spark an idea!" = "Be the first to spark an idea!";
@@ -67,7 +66,6 @@
 "No pods found" = "No pods found";
 "Join a pod to start collaborating!" = "Join a pod to start collaborating!";
 "Active" = "Active";
-"Planning" = "Planning";
 "On Hold" = "On Hold";
 "Members" = "Members";
 "Tasks" = "Tasks";

@@ -21,10 +21,9 @@ struct ExploreView: View {
     
     enum IdeaFilter: String, CaseIterable {
         case all = "All"
-        case sparking = "Sparking"
-        case incubating = "Incubating"
-        case launched = "Launched"
-        case completed = "Completed"
+        case sparking = "Fresh"
+        case active = "Active"
+        case done = "Completed"
     }
     
     var filteredIdeas: [IdeaSpark] {
@@ -35,8 +34,16 @@ struct ExploreView: View {
                    idea.tags.contains { $0.localizedCaseInsensitiveContains(searchText) }
         }
         
-        if selectedFilter == .all { return filtered }
-        return filtered.filter { $0.status.rawValue == selectedFilter.rawValue.lowercased() }
+        switch selectedFilter {
+        case .all:
+            return filtered
+        case .sparking:
+            return filtered.filter { $0.status == .sparking }
+        case .active:
+            return filtered.filter { $0.status == .incubating }
+        case .done:
+            return filtered.filter { $0.status == .launched || $0.status == .completed }
+        }
     }
     
     var body: some View {

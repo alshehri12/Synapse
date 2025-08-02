@@ -28,15 +28,9 @@ struct MyPodsView: View {
                     )
                     
                     TabButton(
-                        title: "Planning".localized,
+                        title: "Completed".localized,
                         isSelected: selectedTab == 1,
                         action: { selectedTab = 1 }
-                    )
-                    
-                    TabButton(
-                        title: "Completed".localized,
-                        isSelected: selectedTab == 2,
-                        action: { selectedTab = 2 }
                     )
                 }
                 .background(Color.backgroundPrimary)
@@ -92,14 +86,14 @@ struct MyPodsView: View {
     }
     
     var filteredPods: [IncubationPod] {
-        let status: IncubationPod.PodStatus
         switch selectedTab {
-        case 0: status = .active
-        case 1: status = .planning
-        case 2: status = .completed
-        default: status = .active
+        case 0: // Active tab - show both "active" and "planning" pods (old planning pods are now considered active)
+            return pods.filter { $0.status == .active || $0.status == .planning }
+        case 1: // Completed tab
+            return pods.filter { $0.status == .completed }
+        default:
+            return pods.filter { $0.status == .active || $0.status == .planning }
         }
-        return pods.filter { $0.status == status }
     }
     
     private func loadPods() {

@@ -634,7 +634,7 @@ class FirebaseManager: ObservableObject {
             "ideaId": ideaId ?? "",
             "creatorId": currentUser.uid,
             "isPublic": isPublic,
-            "status": "planning",
+            "status": "active",
             "createdAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp(),
             "members": [currentUser.uid],
@@ -673,7 +673,7 @@ class FirebaseManager: ObservableObject {
             "ideaId": ideaId,
             "creatorId": currentUser.uid,
             "isPublic": isPublic,
-            "status": "planning",
+            "status": "active",
             "createdAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp(),
             "members": [currentUser.uid],
@@ -705,6 +705,13 @@ class FirebaseManager: ObservableObject {
         } else {
             print("❌ VERIFICATION: Could not read back the created pod!")
         }
+        
+        // Update the idea status to "incubating" (Active) now that a pod has been created
+        try await db.collection("ideaSparks").document(ideaId).updateData([
+            "status": "incubating",
+            "updatedAt": FieldValue.serverTimestamp()
+        ])
+        print("✅ Updated idea status to 'incubating' (Active)")
         
         print("🎉 SUCCESS: Pod created from idea by authorized user")
         return docRef.documentID
@@ -1053,7 +1060,7 @@ class FirebaseManager: ObservableObject {
             "description": "This is a test idea to verify Firebase connectivity",
             "tags": ["test", "firebase"],
             "isPublic": true,
-            "status": "planning",
+            "status": "sparking",
             "createdAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp(),
             "likes": 0,
@@ -1178,7 +1185,7 @@ class FirebaseManager: ObservableObject {
             "description": description,
             "tags": tags,
             "isPublic": isPublic as Bool,  // Ensure it's stored as boolean
-            "status": "planning",
+            "status": "sparking",  // Start as "Fresh" (sparking) when created
             "createdAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp(),
             "likes": 0,
