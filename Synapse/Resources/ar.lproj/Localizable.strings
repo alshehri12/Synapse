@@ -251,4 +251,7 @@
 /* Account Creation Success */
 "Account Created!" = "تم إنشاء الحساب!";
 "User has been created successfully!" = "تم إنشاء المستخدم بنجاح!";
-"Sign In" = "تسجيل الدخول"; 
+"Sign In" = "تسجيل الدخول";
+
+/* Rate Limiting */
+"Please wait 30 seconds before creating another account" = "يرجى الانتظار 30 ثانية قبل إنشاء حساب آخر"; 

@@ -21,6 +21,7 @@ class FirebaseManager: ObservableObject {
     @Published var isOtpSent = false
     @Published var isOtpVerified = false
     @Published var isSigningUp = false  // Flag to prevent navigation during sign-up
+    @Published var lastSignUpAttempt: Date? = nil  // Track last sign-up attempt
     
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
@@ -57,9 +58,19 @@ class FirebaseManager: ObservableObject {
     // MARK: - Authentication Methods
     
     func signUp(email: String, password: String, username: String) async throws {
+        // Rate limiting: Prevent rapid sign-up attempts (anti-bot measure)
+        if let lastAttempt = lastSignUpAttempt {
+            let timeSinceLastAttempt = Date().timeIntervalSince(lastAttempt)
+            if timeSinceLastAttempt < 30 { // 30 second cooldown
+                throw NSError(domain: "FirebaseManager", code: -1, 
+                            userInfo: [NSLocalizedDescriptionKey: "Please wait 30 seconds before creating another account".localized])
+            }
+        }
+        
         // Set flag to prevent navigation during sign-up
         await MainActor.run {
             self.isSigningUp = true
+            self.lastSignUpAttempt = Date()
         }
         
         do {
