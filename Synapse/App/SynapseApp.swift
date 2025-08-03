@@ -21,15 +21,15 @@ struct SynapseApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if firebaseManager.currentUser != nil {
-                    // User is signed in - show main app
+                if firebaseManager.currentUser != nil && !firebaseManager.isSigningUp {
+                    // User is signed in and not in sign-up process - show main app
                     ContentView()
                         .environmentObject(localizationManager)
                         .environmentObject(firebaseManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
                 } else {
-                    // User is not signed in - show authentication
+                    // User is not signed in or is in sign-up process - show authentication
                     AuthenticationView()
                         .environmentObject(localizationManager)
                         .environmentObject(firebaseManager)

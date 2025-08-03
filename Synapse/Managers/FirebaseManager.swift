@@ -20,6 +20,7 @@ class FirebaseManager: ObservableObject {
     @Published var otpCode: String = ""
     @Published var isOtpSent = false
     @Published var isOtpVerified = false
+    @Published var isSigningUp = false  // Flag to prevent navigation during sign-up
     
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
@@ -56,6 +57,11 @@ class FirebaseManager: ObservableObject {
     // MARK: - Authentication Methods
     
     func signUp(email: String, password: String, username: String) async throws {
+        // Set flag to prevent navigation during sign-up
+        await MainActor.run {
+            self.isSigningUp = true
+        }
+        
         do {
             print("📝 Creating new user account...")
             let result = try await auth.createUser(withEmail: email, password: password)
@@ -77,9 +83,15 @@ class FirebaseManager: ObservableObject {
             
             print("🎉 Sign-up completed successfully!")
             
+            // Clear flag after sign-up is complete
+            await MainActor.run {
+                self.isSigningUp = false
+            }
+            
         } catch {
             print("❌ Sign-up failed: \(error.localizedDescription)")
-            DispatchQueue.main.async {
+            await MainActor.run {
+                self.isSigningUp = false
                 self.authError = self.localizedAuthError(error)
             }
             throw error
