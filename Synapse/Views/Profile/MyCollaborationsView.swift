@@ -11,7 +11,7 @@ import FirebaseFirestore
 struct MyCollaborationsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
-    @State private var pods: [IncubationPod] = []
+    @State private var pods: [IncubationProject] = []
     @State private var isLoading = true
     @State private var selectedTab = 0
     
@@ -84,8 +84,8 @@ struct MyCollaborationsView: View {
         }
     }
     
-    private var filteredPods: [IncubationPod] {
-        let statusMap = [IncubationPod.PodStatus.active, .planning, .completed]
+    private var filteredPods: [IncubationProject] {
+        let statusMap = [IncubationProject.ProjectStatus.active, .planning, .completed]
         let selectedStatus = statusMap[selectedTab]
         
         return pods.filter { pod in
@@ -125,7 +125,7 @@ struct MyCollaborationsView: View {
 }
 
 struct CollaborationCard: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

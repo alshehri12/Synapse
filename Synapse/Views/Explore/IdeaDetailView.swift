@@ -24,7 +24,7 @@ struct IdeaDetailView: View {
     @State private var showingShareSheet = false
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
-    @State private var existingPods: [IncubationPod] = []
+    @State private var existingPods: [IncubationProject] = []
     @State private var isLoadingPods = false
     @State private var isUserInPod = false
     
@@ -739,10 +739,10 @@ struct CreatePodFromIdeaView: View {
 
 // MARK: - Join Pod View
 struct JoinPodView: View {
-    let availablePods: [IncubationPod]
+    let availablePods: [IncubationProject]
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
-    @State private var selectedPod: IncubationPod?
+    @State private var selectedPod: IncubationProject?
     @State private var isJoining = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -830,7 +830,7 @@ struct JoinPodView: View {
         
         Task {
             do {
-                try await firebaseManager.addMemberToPod(podId: pod.id, userId: currentUser.uid, role: "Member")
+                try await firebaseManager.addMemberToProject(projectId: pod.id, userId: currentUser.uid, role: "Member")
                 await MainActor.run {
                     isJoining = false
                     alertMessage = "Successfully joined pod '\(pod.name)'!".localized
@@ -849,7 +849,7 @@ struct JoinPodView: View {
 
 // MARK: - Pod Join Card
 struct PodJoinCard: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     let isSelected: Bool
     let onSelect: () -> Void
     

@@ -9,7 +9,7 @@ import SwiftUI
 import Firebase
 import FirebaseAuth
 struct PodDetailView: View {
-    @State private var currentPod: IncubationPod
+    @State private var currentPod: IncubationProject
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
@@ -21,7 +21,7 @@ struct PodDetailView: View {
     @State private var showingFullScreenChat = false
     @State private var isRefreshingTasks = false
     
-    init(pod: IncubationPod) {
+    init(pod: IncubationProject) {
         self._currentPod = State(initialValue: pod)
     }
     
@@ -41,7 +41,7 @@ struct PodDetailView: View {
                             .foregroundColor(Color.textSecondary)
                         
                         HStack {
-                            PodStatusBadge(status: currentPod.status)
+                            ProjectStatusBadge(status: currentPod.status)
                             
                             Spacer()
                             
@@ -180,9 +180,9 @@ struct PodDetailView: View {
         isRefreshingTasks = true
         Task {
             do {
-                let updatedTasks = try await firebaseManager.getPodTasks(podId: currentPod.id)
+                let updatedTasks = try await firebaseManager.getProjectTasks(projectId: currentPod.id)
                 await MainActor.run {
-                    currentPod = IncubationPod(
+                    currentPod = IncubationProject(
                         id: currentPod.id,
                         ideaId: currentPod.ideaId,
                         name: currentPod.name,
@@ -209,7 +209,7 @@ struct PodDetailView: View {
 
 // MARK: - Overview Tab
 struct OverviewTab: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     
     var body: some View {
         ScrollView {
@@ -352,10 +352,10 @@ struct OverviewTab: View {
 
 // MARK: - Tasks Tab
 struct TasksTab: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @Binding var showingTaskSheet: Bool
     let onTaskUpdated: () -> Void
-    @State private var selectedFilter: PodTask.TaskStatus? = nil
+    @State private var selectedFilter: ProjectTask.TaskStatus? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -368,7 +368,7 @@ struct TasksTab: View {
                         action: { selectedFilter = nil }
                     )
                     
-                    ForEach(PodTask.TaskStatus.allCases, id: \.self) { status in
+                    ForEach(ProjectTask.TaskStatus.allCases, id: \.self) { status in
                         FilterButton(
                             title: status.rawValue.localized.capitalized,
                             isSelected: selectedFilter == status,
@@ -402,7 +402,7 @@ struct TasksTab: View {
         .background(Color.backgroundSecondary)
     }
     
-    private var filteredTasks: [PodTask] {
+    private var filteredTasks: [ProjectTask] {
         guard let filter = selectedFilter else { return pod.tasks }
         return pod.tasks.filter { $0.status == filter }
     }
@@ -410,7 +410,7 @@ struct TasksTab: View {
 
 // MARK: - Members Tab
 struct MembersTab: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @Binding var showingMemberSheet: Bool
     
     var body: some View {
@@ -429,7 +429,7 @@ struct MembersTab: View {
 
 // MARK: - Full Screen Chat
 struct FullScreenChatView: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
     @StateObject private var chatManager = ChatManager.shared
     @State private var messageText = ""
@@ -512,9 +512,9 @@ struct FullScreenChatView: View {
                                 .lineLimit(1...4)
                                 .onChange(of: messageText) { _ in
                                     if !messageText.isEmpty {
-                                        chatManager.startTyping(podId: pod.id)
+                                        chatManager.startTyping(projectId: pod.id)
                                     } else {
-                                        chatManager.stopTyping(podId: pod.id)
+                                        chatManager.stopTyping(projectId: pod.id)
                                     }
                                 }
                         }
@@ -575,10 +575,10 @@ struct FullScreenChatView: View {
                 }
             }
             .onAppear {
-                chatManager.joinChatRoom(podId: pod.id)
+                chatManager.joinChatRoom(projectId: pod.id)
             }
             .onDisappear {
-                chatManager.leaveChatRoom(podId: pod.id)
+                chatManager.leaveChatRoom(projectId: pod.id)
             }
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(selectedImage: $selectedImage)
@@ -588,7 +588,7 @@ struct FullScreenChatView: View {
                     title: Text("Message Options"),
                     buttons: [
                         .destructive(Text("Delete")) {
-                            chatManager.deleteMessage(message.id, podId: pod.id)
+                            chatManager.deleteMessage(message.id, projectId: pod.id)
                         },
                         .cancel()
                     ]
@@ -600,9 +600,9 @@ struct FullScreenChatView: View {
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        chatManager.sendMessage(messageText, podId: pod.id)
+        chatManager.sendMessage(messageText, projectId: pod.id)
         messageText = ""
-        chatManager.stopTyping(podId: pod.id)
+        chatManager.stopTyping(projectId: pod.id)
     }
     
     private func scrollToBottom(proxy: ScrollViewProxy) {
@@ -639,7 +639,7 @@ struct TaskStatusCard: View {
 
 // MARK: - Badge Components
 struct TaskStatusBadge: View {
-    let status: PodTask.TaskStatus
+    let status: ProjectTask.TaskStatus
     
     var body: some View {
         Text(status.displayName)
@@ -662,7 +662,7 @@ struct TaskStatusBadge: View {
 }
 
 struct PriorityBadge: View {
-    let priority: PodTask.TaskPriority
+    let priority: ProjectTask.TaskPriority
     
     var body: some View {
         HStack(spacing: 4) {
@@ -709,8 +709,8 @@ struct FilterButton: View {
 }
 
 struct TaskRow: View {
-    let task: PodTask
-    let pod: IncubationPod
+    let task: ProjectTask
+    let pod: IncubationProject
     let onTaskUpdated: () -> Void
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @State private var showingStatusPicker = false
@@ -809,7 +809,7 @@ struct TaskRow: View {
             : nil
         )
         .confirmationDialog("Change Status", isPresented: $showingStatusPicker) {
-            ForEach(PodTask.TaskStatus.allCases, id: \.self) { status in
+                                        ForEach(ProjectTask.TaskStatus.allCases, id: \.self) { status in
                 Button(status.displayName) {
                     updateTaskStatus(status)
                 }
@@ -817,7 +817,7 @@ struct TaskRow: View {
             Button("Cancel", role: .cancel) { }
         }
         .confirmationDialog("Change Priority", isPresented: $showingPriorityPicker) {
-            ForEach(PodTask.TaskPriority.allCases, id: \.self) { priority in
+                                        ForEach(ProjectTask.TaskPriority.allCases, id: \.self) { priority in
                 Button(priority.displayName) {
                     updateTaskPriority(priority)
                 }
@@ -840,15 +840,15 @@ struct TaskRow: View {
     }
     
     private func toggleTaskCompletion() {
-        let newStatus: PodTask.TaskStatus = task.status == .completed ? .todo : .completed
+        let newStatus: ProjectTask.TaskStatus = task.status == .completed ? .todo : .completed
         updateTaskStatus(newStatus)
     }
     
-    private func updateTaskStatus(_ status: PodTask.TaskStatus) {
+    private func updateTaskStatus(_ status: ProjectTask.TaskStatus) {
         isUpdating = true
         Task {
             do {
-                try await firebaseManager.updateTaskStatus(podId: pod.id, taskId: task.id, status: status.rawValue)
+                try await firebaseManager.updateTaskStatus(projectId: pod.id, taskId: task.id, status: status.rawValue)
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -862,11 +862,11 @@ struct TaskRow: View {
         }
     }
     
-    private func updateTaskPriority(_ priority: PodTask.TaskPriority) {
+    private func updateTaskPriority(_ priority: ProjectTask.TaskPriority) {
         isUpdating = true
         Task {
             do {
-                try await firebaseManager.updateTaskPriority(podId: pod.id, taskId: task.id, priority: priority.rawValue)
+                try await firebaseManager.updateTaskPriority(projectId: pod.id, taskId: task.id, priority: priority.rawValue)
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -884,7 +884,7 @@ struct TaskRow: View {
         isUpdating = true
         Task {
             do {
-                try await firebaseManager.deleteTask(podId: pod.id, taskId: task.id)
+                try await firebaseManager.deleteTask(projectId: pod.id, taskId: task.id)
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -900,7 +900,7 @@ struct TaskRow: View {
 }
 
 struct MemberRow: View {
-    let member: PodMember
+    let member: ProjectMember
     
     var body: some View {
         HStack(spacing: 12) {

@@ -1,6 +1,6 @@
 /* Tab Bar */
 "Explore" = "استكشف الأفكار";
-"My Pods" = "حاضناتي";
+"My Projects" = "مشاريعي";
 "Spark" = "أطلق فكرة";
 "Notifications" = "الإشعارات";
 "Profile" = "الملف الشخصي";
@@ -14,7 +14,7 @@
 "No ideas found" = "لم يتم العثور على أفكار";
 "Be the first to spark an idea!" = "كن أول من يطلق فكرة جديدة!";
 "Try adjusting your search or filters" = "جرب تعديل البحث أو المرشحات";
-"Join Pod" = "انضم للحاضنة";
+"Join Project" = "انضم للمشروع";
 
 /* Create Idea View */
 "Spark a New Idea" = "أطلق فكرة جديدة";
@@ -50,21 +50,21 @@
 "Your email has been verified successfully! Please return to the sign-in page to log into your account." = "تم تأكيد بريدك الإلكتروني بنجاح! يرجى العودة إلى صفحة تسجيل الدخول للوصول إلى حسابك.";
 "Continue" = "متابعة";
 
-/* My Pods View */
-"Incubation Pods" = "حاضنات المشاريع";
-"Create New Pod" = "أنشئ حاضنة جديدة";
-"Join Existing Pod" = "انضم لحاضنة موجودة";
-"Pod Name" = "اسم الحاضنة";
-"Enter pod name..." = "أدخل اسم الحاضنة...";
-"Pod Description" = "وصف الحاضنة";
-"Describe what this pod will work on..." = "صف ما ستعمل عليه هذه الحاضنة...";
-"Make Pod Public" = "اجعل الحاضنة عامة";
-"Anyone can join this pod" = "يمكن لأي شخص الانضمام لهذه الحاضنة";
-"Create Pod" = "أنشئ الحاضنة";
-"Join Pod" = "انضم للحاضنة";
-"Enter pod code..." = "أدخل رمز الحاضنة...";
-"No pods found" = "لم يتم العثور على حاضنات";
-"Join a pod to start collaborating!" = "انضم لحاضنة لتبدأ التعاون!";
+/* My Projects View */
+"Incubation Projects" = "المشاريع";
+"Create New Project" = "أنشئ مشروع جديد";
+"Join Existing Project" = "انضم لمشروع موجود";
+"Project Name" = "اسم المشروع";
+"Enter project name..." = "أدخل اسم المشروع...";
+"Project Description" = "وصف المشروع";
+"Describe what this project will work on..." = "صف ما سيعمل عليه هذا المشروع...";
+"Make Project Public" = "اجعل المشروع عام";
+"Anyone can join this project" = "يمكن لأي شخص الانضمام لهذا المشروع";
+"Create Project" = "أنشئ المشروع";
+"Join Project" = "انضم للمشروع";
+"Enter project code..." = "أدخل رمز المشروع...";
+"No projects found" = "لم يتم العثور على مشاريع";
+"Join a project to start collaborating!" = "انضم لمشروع لتبدأ التعاون!";
 "Active" = "نشط";
 "On Hold" = "معلق";
 "Members" = "الأعضاء";
@@ -219,13 +219,13 @@
 "Liked" = "أعجبني";
 "Like" = "إعجاب";
 "Share" = "مشاركة";
-"Create Pod from Idea" = "أنشئ حاضنة من الفكرة";
+"Create Project from Idea" = "أنشئ مشروع من الفكرة";
 "Transform this idea into a collaborative project" = "حول هذه الفكرة إلى مشروع تعاوني";
-"Pod Name" = "اسم الحاضنة";
-"Enter pod name..." = "أدخل اسم الحاضنة...";
-"Pod Description" = "وصف الحاضنة";
-"Create Pod" = "أنشئ الحاضنة";
-"Creating Pod..." = "جاري إنشاء الحاضنة...";
+"Project Name" = "اسم المشروع";
+"Enter project name..." = "أدخل اسم المشروع...";
+"Project Description" = "وصف المشروع";
+"Create Project" = "أنشئ المشروع";
+"Creating Project..." = "جاري إنشاء المشروع...";
 "Error Creating Idea" = "خطأ في إنشاء الفكرة";
 "Activity Feed" = "نشاط التطبيق";
 "No activity yet" = "لا يوجد نشاط بعد";
@@ -236,16 +236,16 @@
 "Unread" = "غير مقروء";
 "Mentions" = "الإشارات";
 "Tasks" = "المهام";
-"Pods" = "المجموعات";
+"Projects" = "المشاريع";
 "No unread notifications" = "لا توجد إشعارات غير مقروءة";
 "No mentions notifications" = "لا توجد إشعارات إشارات";
 "No tasks notifications" = "لا توجد إشعارات مهام";
-"No pods notifications" = "لا توجد إشعارات مجموعات";
+"No projects notifications" = "لا توجد إشعارات مشاريع";
 "Loading trending ideas..." = "جاري تحميل الأفكار الرائجة...";
-"Loading popular pods..." = "جاري تحميل المجموعات الشائعة...";
+"Loading popular projects..." = "جاري تحميل المشاريع الشائعة...";
 "Loading top contributors..." = "جاري تحميل أفضل المساهمين...";
 "No trending ideas yet" = "لا توجد أفكار رائجة بعد";
-"No popular pods yet" = "لا توجد مجموعات شائعة بعد";
+"No popular projects yet" = "لا توجد مشاريع شائعة بعد";
 "No top contributors yet" = "لا يوجد أفضل مساهمين بعد";
 
 /* Account Creation Success */

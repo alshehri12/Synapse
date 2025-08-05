@@ -11,7 +11,7 @@ import FirebaseAuth
 import UIKit
 
 struct PodChatView: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @StateObject private var chatManager = ChatManager.shared
     @State private var messageText = ""
     @State private var showingImagePicker = false
@@ -94,11 +94,11 @@ struct PodChatView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
-                chatManager.joinChatRoom(podId: pod.id)
+                chatManager.joinChatRoom(projectId: pod.id)
                 setupKeyboardObservers()
             }
             .onDisappear {
-                chatManager.leaveChatRoom(podId: pod.id)
+                chatManager.leaveChatRoom(projectId: pod.id)
                 removeKeyboardObservers()
             }
         }
@@ -111,7 +111,7 @@ struct PodChatView: View {
                 title: Text("Message Options"),
                 buttons: [
                     .destructive(Text("Delete")) {
-                        chatManager.deleteMessage(message.id, podId: pod.id)
+                        chatManager.deleteMessage(message.id, projectId: pod.id)
                     },
                     .cancel()
                 ]
@@ -224,9 +224,9 @@ struct PodChatView: View {
                         .lineLimit(1...4)
                         .onChange(of: messageText) { _ in
                             if !messageText.isEmpty {
-                                chatManager.startTyping(podId: pod.id)
-                            } else {
-                                chatManager.stopTyping(podId: pod.id)
+                                chatManager.startTyping(projectId: pod.id)
+                                                          } else {
+                                  chatManager.stopTyping(projectId: pod.id)
                             }
                         }
                     
@@ -278,11 +278,11 @@ struct PodChatView: View {
         
         chatManager.sendMessage(
             messageText,
-            podId: pod.id
+            projectId: pod.id
         )
         
         messageText = ""
-        chatManager.stopTyping(podId: pod.id)
+        chatManager.stopTyping(projectId: pod.id)
     }
     
     // MARK: - Keyboard Handling

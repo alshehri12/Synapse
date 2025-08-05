@@ -10,9 +10,8 @@ import FirebaseFirestore
 
 struct MyPodsView: View {
     @State private var selectedTab = 0
-    @State private var pods: [IncubationPod] = []
+    @State private var pods: [IncubationProject] = []
     @State private var isLoading = false
-    @State private var showingCreatePod = false
     @EnvironmentObject private var localizationManager: LocalizationManager
     @EnvironmentObject private var firebaseManager: FirebaseManager
     
@@ -67,25 +66,13 @@ struct MyPodsView: View {
             .background(Color.backgroundSecondary)
             .navigationTitle("My Pods".localized)
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingCreatePod = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(Color.accentGreen)
-                    }
-                }
-            }
-            .sheet(isPresented: $showingCreatePod) {
-                CreatePodView()
-            }
             .onAppear {
                 loadPods()
             }
         }
     }
     
-    var filteredPods: [IncubationPod] {
+    var filteredPods: [IncubationProject] {
         switch selectedTab {
         case 0: // Active tab - show both "active" and "planning" pods (old planning pods are now considered active)
             return pods.filter { $0.status == .active || $0.status == .planning }
@@ -155,7 +142,7 @@ struct TabButton: View {
 
 // MARK: - Pod Card
 struct PodCard: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @State private var showingPodDetail = false
     @State private var showingChat = false
     @State private var showingTasks = false
@@ -180,7 +167,7 @@ struct PodCard: View {
                     
                     Spacer()
                     
-                    PodStatusBadge(status: pod.status)
+                                            ProjectStatusBadge(status: pod.status)
                 }
                 
                 // Progress Section
@@ -281,8 +268,8 @@ struct PodCard: View {
 }
 
 // MARK: - Pod Status Badge
-struct PodStatusBadge: View {
-    let status: IncubationPod.PodStatus
+struct ProjectStatusBadge: View {
+    let status: IncubationProject.ProjectStatus
     
     var statusColor: Color {
         switch status {
@@ -306,7 +293,7 @@ struct PodStatusBadge: View {
 
 // MARK: - Member Avatar
 struct MemberAvatar: View {
-    let member: PodMember
+    let member: ProjectMember
     
     var body: some View {
         VStack(spacing: 2) {
@@ -354,8 +341,8 @@ struct QuickActionButton: View {
 
 
 // MARK: - Mock Data
-let mockPods: [IncubationPod] = [
-    IncubationPod(
+let mockPods: [IncubationProject] = [
+    IncubationProject(
         id: "1",
         ideaId: "idea1",
         name: "AI Study Assistant",
@@ -365,18 +352,18 @@ let mockPods: [IncubationPod] = [
         createdAt: Date().addingTimeInterval(-86400),
         updatedAt: Date().addingTimeInterval(-3600),
         members: [
-            PodMember(id: "1", userId: "user1", username: "AlexChen", role: "Lead Developer", joinedAt: Date().addingTimeInterval(-86400), permissions: [.admin]),
-            PodMember(id: "2", userId: "user2", username: "SarahKim", role: "UI Designer", joinedAt: Date().addingTimeInterval(-7200), permissions: [.edit]),
-            PodMember(id: "3", userId: "user3", username: "MarcusRodriguez", role: "Product Manager", joinedAt: Date().addingTimeInterval(-3600), permissions: [.edit])
+            ProjectMember(id: "1", userId: "user1", username: "AlexChen", role: "Lead Developer", joinedAt: Date().addingTimeInterval(-86400), permissions: [.admin]),
+            ProjectMember(id: "2", userId: "user2", username: "SarahKim", role: "UI Designer", joinedAt: Date().addingTimeInterval(-7200), permissions: [.edit]),
+            ProjectMember(id: "3", userId: "user3", username: "MarcusRodriguez", role: "Product Manager", joinedAt: Date().addingTimeInterval(-3600), permissions: [.edit])
         ],
         tasks: [
-            PodTask(id: "1", title: "Design user interface", description: "Create wireframes and mockups", assignedTo: "user2", assignedToUsername: "SarahKim", dueDate: Date().addingTimeInterval(86400), createdAt: Date().addingTimeInterval(-86400), updatedAt: Date().addingTimeInterval(-86400), status: .completed, priority: .high),
-            PodTask(id: "2", title: "Set up Firebase backend", description: "Configure authentication and database", assignedTo: "user1", assignedToUsername: "AlexChen", dueDate: Date().addingTimeInterval(172800), createdAt: Date().addingTimeInterval(-7200), updatedAt: Date().addingTimeInterval(-7200), status: .inProgress, priority: .high),
-            PodTask(id: "3", title: "Create project roadmap", description: "Define milestones and timeline", assignedTo: "user3", assignedToUsername: "MarcusRodriguez", dueDate: Date().addingTimeInterval(259200), createdAt: Date().addingTimeInterval(-3600), updatedAt: Date().addingTimeInterval(-3600), status: .todo, priority: .medium)
+            ProjectTask(id: "1", title: "Design user interface", description: "Create wireframes and mockups", assignedTo: "user2", assignedToUsername: "SarahKim", dueDate: Date().addingTimeInterval(86400), createdAt: Date().addingTimeInterval(-86400), updatedAt: Date().addingTimeInterval(-86400), status: .completed, priority: .high),
+            ProjectTask(id: "2", title: "Set up Firebase backend", description: "Configure authentication and database", assignedTo: "user1", assignedToUsername: "AlexChen", dueDate: Date().addingTimeInterval(172800), createdAt: Date().addingTimeInterval(-7200), updatedAt: Date().addingTimeInterval(-7200), status: .inProgress, priority: .high),
+            ProjectTask(id: "3", title: "Create project roadmap", description: "Define milestones and timeline", assignedTo: "user3", assignedToUsername: "MarcusRodriguez", dueDate: Date().addingTimeInterval(259200), createdAt: Date().addingTimeInterval(-3600), updatedAt: Date().addingTimeInterval(-3600), status: .todo, priority: .medium)
         ],
         status: .active
     ),
-    IncubationPod(
+    IncubationProject(
         id: "2",
         ideaId: "idea2",
         name: "Sustainable Food Network",
@@ -386,12 +373,12 @@ let mockPods: [IncubationPod] = [
         createdAt: Date().addingTimeInterval(-172800),
         updatedAt: Date().addingTimeInterval(-7200),
         members: [
-            PodMember(id: "4", userId: "user2", username: "SarahKim", role: "Project Lead", joinedAt: Date().addingTimeInterval(-172800), permissions: [.admin]),
-            PodMember(id: "5", userId: "user4", username: "EmmaWilson", role: "Marketing Specialist", joinedAt: Date().addingTimeInterval(-86400), permissions: [.edit])
+            ProjectMember(id: "4", userId: "user2", username: "SarahKim", role: "Project Lead", joinedAt: Date().addingTimeInterval(-172800), permissions: [.admin]),
+            ProjectMember(id: "5", userId: "user4", username: "EmmaWilson", role: "Marketing Specialist", joinedAt: Date().addingTimeInterval(-86400), permissions: [.edit])
         ],
         tasks: [
-            PodTask(id: "4", title: "Market research", description: "Analyze target audience and competitors", assignedTo: "user4", assignedToUsername: "EmmaWilson", dueDate: Date().addingTimeInterval(432000), createdAt: Date().addingTimeInterval(-86400), updatedAt: Date().addingTimeInterval(-86400), status: .todo, priority: .high),
-            PodTask(id: "5", title: "Partner outreach", description: "Contact local farmers and grocery stores", assignedTo: "user2", assignedToUsername: "SarahKim", dueDate: Date().addingTimeInterval(518400), createdAt: Date().addingTimeInterval(-7200), updatedAt: Date().addingTimeInterval(-7200), status: .todo, priority: .medium)
+            ProjectTask(id: "4", title: "Market research", description: "Analyze target audience and competitors", assignedTo: "user4", assignedToUsername: "EmmaWilson", dueDate: Date().addingTimeInterval(432000), createdAt: Date().addingTimeInterval(-86400), updatedAt: Date().addingTimeInterval(-86400), status: .todo, priority: .high),
+            ProjectTask(id: "5", title: "Partner outreach", description: "Contact local farmers and grocery stores", assignedTo: "user2", assignedToUsername: "SarahKim", dueDate: Date().addingTimeInterval(518400), createdAt: Date().addingTimeInterval(-7200), updatedAt: Date().addingTimeInterval(-7200), status: .todo, priority: .medium)
         ],
         status: .planning
     )

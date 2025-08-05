@@ -25,7 +25,7 @@ struct ContentView: View {
             MyPodsView()
                 .tabItem {
                     Image(systemName: "person.3")
-                    Text("My Pods".localized)
+                    Text("My Projects".localized)
                 }
                 .tag(1)
             

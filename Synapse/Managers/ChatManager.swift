@@ -22,47 +22,47 @@ class ChatManager: ObservableObject {
     private var messagesListener: ListenerRegistration?
     private var typingListener: ListenerRegistration?
     private var cancellables = Set<AnyCancellable>()
-    private var currentPodId: String?
+    private var currentProjectId: String?
     
     private init() {
         self.db = Firestore.firestore()
     }
     
     // MARK: - Chat Room Management
-    func joinChatRoom(podId: String) {
+    func joinChatRoom(projectId: String) {
         guard let userId = Auth.auth().currentUser?.uid else { 
             print("❌ ChatManager: No authenticated user")
             return 
         }
         
-        print("🔄 ChatManager: Joining chat room for pod: \(podId)")
+        print("🔄 ChatManager: Joining chat room for pod: \(projectId)")
         
         // Clear previous messages if switching pods
-        if currentPodId != podId {
+        if currentProjectId != projectId {
             DispatchQueue.main.async {
                 self.messages = []
                 self.typingUsers = []
             }
         }
         
-        currentPodId = podId
-        observeMessages(podId: podId)
-        observeTyping(podId: podId)
-        setUserOnline(userId: userId, podId: podId)
+                    currentProjectId = projectId
+            observeMessages(projectId: projectId)
+            observeTyping(projectId: projectId)
+            setUserOnline(userId: userId, projectId: projectId)
     }
     
-    func leaveChatRoom(podId: String) {
+    func leaveChatRoom(projectId: String) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
-        print("👋 ChatManager: Leaving chat room for pod: \(podId)")
+        print("👋 ChatManager: Leaving chat room for pod: \(projectId)")
         
         messagesListener?.remove()
         typingListener?.remove()
-        setUserOffline(userId: userId, podId: podId)
+        setUserOffline(userId: userId, projectId: projectId)
         
         messagesListener = nil
         typingListener = nil
-        currentPodId = nil
+        currentProjectId = nil
         
         DispatchQueue.main.async {
             self.messages = []
@@ -71,7 +71,7 @@ class ChatManager: ObservableObject {
     }
     
     // MARK: - Message Operations
-    func sendMessage(_ content: String, type: ChatMessage.MessageType = .text, replyTo: String? = nil, podId: String) {
+    func sendMessage(_ content: String, type: ChatMessage.MessageType = .text, replyTo: String? = nil, projectId: String) {
         guard let userId = Auth.auth().currentUser?.uid else { 
             print("❌ ChatManager: Cannot send message - no authenticated user")
             return 
@@ -83,7 +83,7 @@ class ChatManager: ObservableObject {
         // Create message data directly as dictionary to avoid encoding issues
         let messageData: [String: Any] = [
             "id": messageId,
-            "podId": podId,
+            "projectId": projectId,
             "senderId": userId,
             "senderName": Auth.auth().currentUser?.displayName ?? "Unknown User",
             "senderAvatar": Auth.auth().currentUser?.photoURL?.absoluteString ?? "",
@@ -94,9 +94,9 @@ class ChatManager: ObservableObject {
             "replyTo": replyTo ?? ""
         ]
         
-        print("📤 ChatManager: Sending message to pod \(podId): \(content)")
+        print("📤 ChatManager: Sending message to pod \(projectId): \(content)")
         
-        db.collection("chats").document(podId).collection("messages").document(messageId).setData(messageData) { [weak self] error in
+        db.collection("chats").document(projectId).collection("messages").document(messageId).setData(messageData) { [weak self] error in
             if let error = error {
                 print("❌ ChatManager: Failed to send message: \(error.localizedDescription)")
                 DispatchQueue.main.async {
@@ -108,10 +108,10 @@ class ChatManager: ObservableObject {
         }
     }
     
-    func deleteMessage(_ messageId: String, podId: String) {
-        print("🗑️ ChatManager: Deleting message \(messageId) from pod \(podId)")
+    func deleteMessage(_ messageId: String, projectId: String) {
+        print("🗑️ ChatManager: Deleting message \(messageId) from pod \(projectId)")
         
-        db.collection("chats").document(podId).collection("messages").document(messageId).delete { [weak self] error in
+        db.collection("chats").document(projectId).collection("messages").document(messageId).delete { [weak self] error in
             if let error = error {
                 print("❌ ChatManager: Failed to delete message: \(error.localizedDescription)")
                 DispatchQueue.main.async {
@@ -123,16 +123,16 @@ class ChatManager: ObservableObject {
         }
     }
     
-    func editMessage(_ messageId: String, newContent: String, podId: String) {
+    func editMessage(_ messageId: String, newContent: String, projectId: String) {
         let updates: [String: Any] = [
             "content": newContent,
             "isEdited": true,
             "timestamp": Timestamp(date: Date())
         ]
         
-        print("✏️ ChatManager: Editing message \(messageId) in pod \(podId)")
+        print("✏️ ChatManager: Editing message \(messageId) in pod \(projectId)")
         
-        db.collection("chats").document(podId).collection("messages").document(messageId).updateData(updates) { [weak self] error in
+        db.collection("chats").document(projectId).collection("messages").document(messageId).updateData(updates) { [weak self] error in
             if let error = error {
                 print("❌ ChatManager: Failed to edit message: \(error.localizedDescription)")
                 DispatchQueue.main.async {
@@ -145,7 +145,7 @@ class ChatManager: ObservableObject {
     }
     
     // MARK: - Typing Indicators
-    func startTyping(podId: String) {
+    func startTyping(projectId: String) {
         guard let userId = Auth.auth().currentUser?.uid,
               let userName = Auth.auth().currentUser?.displayName else { return }
         
@@ -155,17 +155,17 @@ class ChatManager: ObservableObject {
             "timestamp": Timestamp(date: Date())
         ]
         
-        db.collection("chats").document(podId).collection("typing").document(userId).setData(typingData) { error in
+        db.collection("chats").document(projectId).collection("typing").document(userId).setData(typingData) { error in
             if let error = error {
                 print("❌ ChatManager: Failed to set typing indicator: \(error.localizedDescription)")
             }
         }
     }
     
-    func stopTyping(podId: String) {
+    func stopTyping(projectId: String) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
-        db.collection("chats").document(podId).collection("typing").document(userId).delete { error in
+        db.collection("chats").document(projectId).collection("typing").document(userId).delete { error in
             if let error = error {
                 print("❌ ChatManager: Failed to remove typing indicator: \(error.localizedDescription)")
             }
@@ -173,10 +173,10 @@ class ChatManager: ObservableObject {
     }
     
     // MARK: - Real-time Observers
-    private func observeMessages(podId: String) {
-        print("👀 ChatManager: Setting up message listener for pod: \(podId)")
+    private func observeMessages(projectId: String) {
+        print("👀 ChatManager: Setting up message listener for pod: \(projectId)")
         
-        messagesListener = db.collection("chats").document(podId).collection("messages")
+        messagesListener = db.collection("chats").document(projectId).collection("messages")
             .order(by: "timestamp", descending: false)
             .limit(to: 100)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -211,7 +211,7 @@ class ChatManager: ObservableObject {
                         
                         // Create ChatMessage manually to avoid encoding issues
                         if let id = processedData["id"] as? String,
-                           let podId = processedData["podId"] as? String,
+                           let projectId = processedData["projectId"] as? String,
                            let senderId = processedData["senderId"] as? String,
                            let senderName = processedData["senderName"] as? String,
                            let content = processedData["content"] as? String,
@@ -222,7 +222,7 @@ class ChatManager: ObservableObject {
                             
                             let message = ChatMessage(
                                 id: id,
-                                podId: podId,
+                                projectId: projectId,
                                 senderId: senderId,
                                 senderName: senderName,
                                 senderAvatar: processedData["senderAvatar"] as? String,
@@ -251,10 +251,10 @@ class ChatManager: ObservableObject {
             }
     }
     
-    private func observeTyping(podId: String) {
+    private func observeTyping(projectId: String) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        typingListener = db.collection("chats").document(podId).collection("typing")
+        typingListener = db.collection("chats").document(projectId).collection("typing")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
@@ -305,21 +305,21 @@ class ChatManager: ObservableObject {
     }
     
     // MARK: - Online Status
-    private func setUserOnline(userId: String, podId: String) {
+    private func setUserOnline(userId: String, projectId: String) {
         let onlineData: [String: Any] = [
             "timestamp": Timestamp(date: Date()),
             "status": "online"
         ]
         
-        db.collection("pods").document(podId).collection("onlineUsers").document(userId).setData(onlineData) { error in
+        db.collection("pods").document(projectId).collection("onlineUsers").document(userId).setData(onlineData) { error in
             if let error = error {
                 print("❌ ChatManager: Failed to set user online: \(error.localizedDescription)")
             }
         }
     }
     
-    private func setUserOffline(userId: String, podId: String) {
-        db.collection("pods").document(podId).collection("onlineUsers").document(userId).delete { error in
+    private func setUserOffline(userId: String, projectId: String) {
+        db.collection("pods").document(projectId).collection("onlineUsers").document(userId).delete { error in
             if let error = error {
                 print("❌ ChatManager: Failed to set user offline: \(error.localizedDescription)")
             }

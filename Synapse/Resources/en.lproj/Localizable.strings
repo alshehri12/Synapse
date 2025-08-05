@@ -1,6 +1,6 @@
 /* Tab Bar */
 "Explore" = "Explore";
-"My Pods" = "My Pods";
+"My Projects" = "My Projects";
 "Spark" = "Spark";
 "Notifications" = "Notifications";
 "Profile" = "Profile";
@@ -14,7 +14,7 @@
 "No ideas found" = "No ideas found";
 "Be the first to spark an idea!" = "Be the first to spark an idea!";
 "Try adjusting your search or filters" = "Try adjusting your search or filters";
-"Join Pod" = "Join Pod";
+"Join Project" = "Join Project";
 
 /* Create Idea View */
 "Spark a New Idea" = "Spark a New Idea";
@@ -50,21 +50,21 @@
 "Your email has been verified successfully! Please return to the sign-in page to log into your account." = "Your email has been verified successfully! Please return to the sign-in page to log into your account.";
 "Continue" = "Continue";
 
-/* My Pods View */
-"Incubation Pods" = "Incubation Pods";
-"Create New Pod" = "Create New Pod";
-"Join Existing Pod" = "Join Existing Pod";
-"Pod Name" = "Pod Name";
-"Enter pod name..." = "Enter pod name...";
-"Pod Description" = "Pod Description";
-"Describe what this pod will work on..." = "Describe what this pod will work on...";
-"Make Pod Public" = "Make Pod Public";
-"Anyone can join this pod" = "Anyone can join this pod";
-"Create Pod" = "Create Pod";
-"Join Pod" = "Join Pod";
-"Enter pod code..." = "Enter pod code...";
-"No pods found" = "No pods found";
-"Join a pod to start collaborating!" = "Join a pod to start collaborating!";
+/* My Projects View */
+"Incubation Projects" = "Incubation Projects";
+"Create New Project" = "Create New Project";
+"Join Existing Project" = "Join Existing Project";
+"Project Name" = "Project Name";
+"Enter project name..." = "Enter project name...";
+"Project Description" = "Project Description";
+"Describe what this project will work on..." = "Describe what this project will work on...";
+"Make Project Public" = "Make Project Public";
+"Anyone can join this project" = "Anyone can join this project";
+"Create Project" = "Create Project";
+"Join Project" = "Join Project";
+"Enter project code..." = "Enter project code...";
+"No projects found" = "No projects found";
+"Join a project to start collaborating!" = "Join a project to start collaborating!";
 "Active" = "Active";
 "On Hold" = "On Hold";
 "Members" = "Members";
@@ -220,13 +220,13 @@
 "Liked" = "Liked";
 "Like" = "Like";
 "Share" = "Share";
-"Create Pod from Idea" = "Create Pod from Idea";
+"Create Project from Idea" = "Create Project from Idea";
 "Transform this idea into a collaborative project" = "Transform this idea into a collaborative project";
-"Pod Name" = "Pod Name";
-"Enter pod name..." = "Enter pod name...";
-"Pod Description" = "Pod Description";
-"Create Pod" = "Create Pod";
-"Creating Pod..." = "Creating Pod...";
+"Project Name" = "Project Name";
+"Enter project name..." = "Enter project name...";
+"Project Description" = "Project Description";
+"Create Project" = "Create Project";
+"Creating Project..." = "Creating Project...";
 "Error Creating Idea" = "Error Creating Idea";
 "Activity Feed" = "Activity Feed";
 "No activity yet" = "No activity yet";
@@ -237,16 +237,16 @@
 "Unread" = "Unread";
 "Mentions" = "Mentions";
 "Tasks" = "Tasks";
-"Pods" = "Pods";
+"Projects" = "Projects";
 "No unread notifications" = "No unread notifications";
 "No mentions notifications" = "No mentions notifications";
 "No tasks notifications" = "No tasks notifications";
-"No pods notifications" = "No pods notifications";
+"No projects notifications" = "No projects notifications";
 "Loading trending ideas..." = "Loading trending ideas...";
-"Loading popular pods..." = "Loading popular pods...";
+"Loading popular projects..." = "Loading popular projects...";
 "Loading top contributors..." = "Loading top contributors...";
 "No trending ideas yet" = "No trending ideas yet";
-"No popular pods yet" = "No popular pods yet";
+"No popular projects yet" = "No popular projects yet";
 "No top contributors yet" = "No top contributors yet";
 
 /* Account Creation Success */

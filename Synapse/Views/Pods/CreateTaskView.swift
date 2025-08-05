@@ -9,15 +9,15 @@ import SwiftUI
 import FirebaseFirestore
 
 struct CreateTaskView: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     @State private var taskTitle = ""
     @State private var taskDescription = ""
-    @State private var selectedAssignee: PodMember?
-    @State private var selectedPriority: PodTask.TaskPriority = .medium
+    @State private var selectedAssignee: ProjectMember?
+    @State private var selectedPriority: ProjectTask.TaskPriority = .medium
     @State private var dueDate = Date().addingTimeInterval(86400) // Tomorrow
     @State private var hasDueDate = true
     @State private var isLoading = false
@@ -151,7 +151,7 @@ struct CreateTaskView: View {
                             .foregroundColor(Color.textPrimary)
                         
                         HStack(spacing: 12) {
-                            ForEach(PodTask.TaskPriority.allCases, id: \.self) { priority in
+                            ForEach(ProjectTask.TaskPriority.allCases, id: \.self) { priority in
                                 PriorityOption(
                                     priority: priority,
                                     isSelected: selectedPriority == priority,
@@ -274,7 +274,7 @@ struct CreateTaskView: View {
         Task {
             do {
                 _ = try await firebaseManager.createTask(
-                    podId: pod.id,
+                    projectId: pod.id,
                     title: taskTitle.trimmingCharacters(in: .whitespacesAndNewlines),
                     description: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
                     assignedTo: selectedAssignee?.userId,
@@ -298,7 +298,7 @@ struct CreateTaskView: View {
 
 // MARK: - Priority Option
 struct PriorityOption: View {
-    let priority: PodTask.TaskPriority
+    let priority: ProjectTask.TaskPriority
     let isSelected: Bool
     let action: () -> Void
     

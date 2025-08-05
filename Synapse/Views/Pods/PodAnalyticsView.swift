@@ -1,5 +1,5 @@
 //
-//  PodAnalyticsView.swift
+//  ProjectAnalyticsView.swift
 //  Synapse
 //
 //  Created by Abdulrahman Alshehri on 18/01/1447 AH.
@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-struct PodAnalyticsView: View {
-    let pod: IncubationPod
+struct ProjectAnalyticsView: View {
+    let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
     @EnvironmentObject private var firebaseManager: FirebaseManager
     
     @State private var selectedTimeRange: TimeRange = .week
-    @State private var analytics: PodAnalytics?
+    @State private var analytics: ProjectAnalytics?
     @State private var isLoading = false
     
     enum TimeRange: String, CaseIterable {
@@ -102,10 +102,10 @@ struct PodAnalyticsView: View {
         
         Task {
             do {
-                let analyticsData = try await firebaseManager.getPodAnalytics(podId: pod.id)
+                let analyticsData = try await firebaseManager.getProjectAnalytics(projectId: pod.id)
                 
                 await MainActor.run {
-                    // Convert Firebase data to PodAnalytics model
+                    // Convert Firebase data to ProjectAnalytics model
                     let completionRate = analyticsData["completionRate"] as? Int ?? 0
                     let activeMembers = analyticsData["activeMembers"] as? Int ?? 0
                     let tasksCompleted = analyticsData["tasksCompleted"] as? Int ?? 0
@@ -134,7 +134,7 @@ struct PodAnalyticsView: View {
                         return TopContributor(username: username, tasksCompleted: tasksCompleted, contributionPercentage: contributionPercentage)
                     }
                     
-                    analytics = PodAnalytics(
+                                          analytics = ProjectAnalytics(
                         completionRate: completionRate,
                         activeMembers: activeMembers,
                         tasksCompleted: tasksCompleted,
@@ -149,7 +149,7 @@ struct PodAnalyticsView: View {
             } catch {
                 await MainActor.run {
                     // Fallback to mock data if there's an error
-                    analytics = mockPodAnalytics
+                    analytics = mockProjectAnalytics
                     isLoading = false
                 }
             }
@@ -159,7 +159,7 @@ struct PodAnalyticsView: View {
 
 // MARK: - Key Metrics Section
 struct KeyMetricsSection: View {
-    let analytics: PodAnalytics
+    let analytics: ProjectAnalytics
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -205,7 +205,7 @@ struct KeyMetricsSection: View {
 
 // MARK: - Progress Charts Section
 struct ProgressChartsSection: View {
-    let analytics: PodAnalytics
+    let analytics: ProjectAnalytics
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -295,7 +295,7 @@ struct ProgressChartsSection: View {
 
 // MARK: - Member Activity Section
 struct MemberActivitySection: View {
-    let analytics: PodAnalytics
+    let analytics: ProjectAnalytics
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -404,7 +404,7 @@ struct Contributor {
 }
 
 struct StatusDistribution {
-    let status: PodTask.TaskStatus
+            let status: ProjectTask.TaskStatus
     let count: Int
     let percentage: Int
 }
@@ -416,7 +416,7 @@ struct PerformanceTrend {
 }
 
 // MARK: - Mock Analytics Data
-let mockPodAnalytics = PodAnalytics(
+let mockProjectAnalytics = ProjectAnalytics(
     completionRate: 78,
     activeMembers: 5,
     tasksCompleted: 24,

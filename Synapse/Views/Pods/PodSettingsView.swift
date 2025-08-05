@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseFirestore
 
 struct PodSettingsView: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
@@ -20,6 +20,8 @@ struct PodSettingsView: View {
     @State private var showingDeleteAlert = false
     @State private var showingLeaveAlert = false
     @State private var isLoading = false
+    @State private var showingEditName = false
+    @State private var showingEditDescription = false
     
     var body: some View {
         NavigationView {
@@ -27,174 +29,34 @@ struct PodSettingsView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Header
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Pod Settings".localized)
+                        Text(isPodCreator ? "Pod Settings".localized : "Pod Information".localized)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(Color.textPrimary)
                         
-                        Text("Manage \(pod.name) settings and permissions".localized)
+                        Text(isPodCreator ? "Manage \(pod.name) settings".localized : "View \(pod.name) details".localized)
                             .font(.system(size: 16))
                             .foregroundColor(Color.textSecondary)
                     }
                     .padding(.horizontal, 20)
                     
-                    // General Settings
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("General".localized)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.textPrimary)
-                            .padding(.horizontal, 20)
-                        
-                        VStack(spacing: 0) {
-                            SettingRow(
-                                title: "Pod Name".localized,
-                                subtitle: pod.name,
-                                icon: "pencil",
-                                action: {}
-                            )
-                            
-                            Divider()
-                                .padding(.leading, 56)
-                            
-                            SettingRow(
-                                title: "Description".localized,
-                                subtitle: pod.description,
-                                icon: "text.quote",
-                                action: {}
-                            )
-                            
-                            Divider()
-                                .padding(.leading, 56)
-                            
-                            SettingRow(
-                                title: "Privacy".localized,
-                                subtitle: pod.isPublic ? "Public".localized : "Private".localized,
-                                icon: "lock",
-                                action: {}
-                            )
-                        }
-                        .background(Color.backgroundPrimary)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    // Permissions
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Permissions".localized)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.textPrimary)
-                            .padding(.horizontal, 20)
-                        
-                        VStack(spacing: 0) {
-                            SettingRow(
-                                title: "Member Permissions".localized,
-                                subtitle: "Manage who can edit and invite".localized,
-                                icon: "person.2",
-                                action: {}
-                            )
-                            
-                            Divider()
-                                .padding(.leading, 56)
-                            
-                            SettingRow(
-                                title: "Task Management".localized,
-                                subtitle: "Control task creation and assignment".localized,
-                                icon: "checklist",
-                                action: {}
-                            )
-                            
-                            Divider()
-                                .padding(.leading, 56)
-                            
-                            SettingRow(
-                                title: "Chat Settings".localized,
-                                subtitle: "Manage chat permissions and moderation".localized,
-                                icon: "message",
-                                action: {}
-                            )
-                        }
-                        .background(Color.backgroundPrimary)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    // Notifications
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Notifications".localized)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.textPrimary)
-                            .padding(.horizontal, 20)
-                        
-                        VStack(spacing: 0) {
-                            SettingRow(
-                                title: "New Messages".localized,
-                                subtitle: "Get notified of new chat messages".localized,
-                                icon: "bell",
-                                action: {},
-                                showToggle: true,
-                                isToggled: true
-                            )
-                            
-                            Divider()
-                                .padding(.leading, 56)
-                            
-                            SettingRow(
-                                title: "Task Updates".localized,
-                                subtitle: "Notifications for task changes".localized,
-                                icon: "checkmark.circle",
-                                action: {},
-                                showToggle: true,
-                                isToggled: true
-                            )
-                            
-                            Divider()
-                                .padding(.leading, 56)
-                            
-                            SettingRow(
-                                title: "Member Activity".localized,
-                                subtitle: "When members join or leave".localized,
-                                icon: "person.badge.plus",
-                                action: {},
-                                showToggle: true,
-                                isToggled: false
-                            )
-                        }
-                        .background(Color.backgroundPrimary)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    // Danger Zone
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Danger Zone".localized)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.error)
-                            .padding(.horizontal, 20)
-                        
-                        VStack(spacing: 0) {
-                            SettingRow(
-                                title: "Leave Pod".localized,
-                                subtitle: "Remove yourself from this pod".localized,
-                                icon: "person.fill.xmark",
-                                action: { showingLeaveAlert = true },
-                                isDestructive: true
-                            )
-                            
-                            if isPodCreator {
-                                Divider()
-                                    .padding(.leading, 56)
-                                
-                                SettingRow(
-                                    title: "Delete Pod".localized,
-                                    subtitle: "Permanently delete this pod and all its data".localized,
-                                    icon: "trash",
-                                    action: { showingDeleteAlert = true },
-                                    isDestructive: true
-                                )
-                            }
-                        }
-                        .background(Color.backgroundPrimary)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 20)
+                    if isPodCreator {
+                        // Pod Owner View
+                        PodOwnerSettingsView(
+                            pod: pod,
+                            podName: $podName,
+                            podDescription: $podDescription,
+                            isPublic: $isPublic,
+                            showingEditName: $showingEditName,
+                            showingEditDescription: $showingEditDescription,
+                            showingDeleteAlert: $showingDeleteAlert,
+                            showingLeaveAlert: $showingLeaveAlert
+                        )
+                    } else {
+                        // Regular Member View
+                        ProjectMemberView(
+                            pod: pod,
+                            showingLeaveAlert: $showingLeaveAlert
+                        )
                     }
                 }
                 .padding(.vertical, 20)
@@ -203,16 +65,18 @@ struct PodSettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel".localized) {
+                    Button(isPodCreator ? "Cancel".localized : "Done".localized) {
                         dismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save".localized) {
-                        saveSettings()
+                if isPodCreator && hasChanges {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Save".localized) {
+                            saveSettings()
+                        }
+                        .disabled(isLoading)
                     }
-                    .disabled(isLoading)
                 }
             }
             .alert("Leave Pod".localized, isPresented: $showingLeaveAlert) {
@@ -226,10 +90,27 @@ struct PodSettingsView: View {
             .alert("Delete Pod".localized, isPresented: $showingDeleteAlert) {
                 Button("Cancel".localized, role: .cancel) { }
                 Button("Delete".localized, role: .destructive) {
-                    deletePod()
+                                                deleteProject()
                 }
             } message: {
                 Text("This action cannot be undone. All data, tasks, and messages will be permanently deleted.".localized)
+            }
+            .sheet(isPresented: $showingEditName) {
+                EditTextView(
+                    title: "Edit Pod Name".localized,
+                    text: $podName,
+                    placeholder: "Pod name".localized,
+                    maxLength: 50
+                )
+            }
+            .sheet(isPresented: $showingEditDescription) {
+                EditTextView(
+                    title: "Edit Description".localized,
+                    text: $podDescription,
+                    placeholder: "Pod description".localized,
+                    maxLength: 200,
+                    isMultiline: true
+                )
             }
             .onAppear {
                 loadSettings()
@@ -239,6 +120,10 @@ struct PodSettingsView: View {
     
     private var isPodCreator: Bool {
         pod.creatorId == firebaseManager.currentUser?.uid
+    }
+    
+    private var hasChanges: Bool {
+        podName != pod.name || podDescription != pod.description || isPublic != pod.isPublic
     }
     
     private func loadSettings() {
@@ -253,13 +138,22 @@ struct PodSettingsView: View {
         Task {
             do {
                 var updateData: [String: Any] = [
-                    "name": podName,
-                    "description": podDescription,
-                    "isPublic": isPublic,
                     "updatedAt": Timestamp(date: Date())
                 ]
                 
-                try await firebaseManager.updatePod(podId: pod.id, data: updateData)
+                if podName != pod.name {
+                    updateData["name"] = podName
+                }
+                
+                if podDescription != pod.description {
+                    updateData["description"] = podDescription
+                }
+                
+                if isPublic != pod.isPublic {
+                    updateData["isPublic"] = isPublic
+                }
+                
+                try await firebaseManager.updateProject(projectId: pod.id, data: updateData)
                 
                 await MainActor.run {
                     isLoading = false
@@ -268,7 +162,6 @@ struct PodSettingsView: View {
             } catch {
                 await MainActor.run {
                     isLoading = false
-                    // Handle error - you could show an alert here
                     print("Error saving pod settings: \(error)")
                 }
             }
@@ -278,11 +171,10 @@ struct PodSettingsView: View {
     private func leavePod() {
         Task {
             do {
-                // Remove current user from pod members
                 let currentUserId = firebaseManager.currentUser?.uid ?? ""
-                var updatedMembers = pod.members.filter { $0.userId != currentUserId }
+                let updatedMembers = pod.members.filter { $0.userId != currentUserId }
                 
-                try await firebaseManager.updatePod(podId: pod.id, data: [
+                try await firebaseManager.updateProject(projectId: pod.id, data: [
                     "members": updatedMembers.map { member in
                         [
                             "id": member.id,
@@ -299,21 +191,21 @@ struct PodSettingsView: View {
                     dismiss()
                 }
             } catch {
-                // Handle error
+                print("Error leaving pod: \(error)")
             }
         }
     }
     
-    private func deletePod() {
+    private func deleteProject() {
         Task {
             do {
-                try await firebaseManager.deletePod(podId: pod.id)
+                try await firebaseManager.deleteProject(projectId: pod.id)
                 
                 await MainActor.run {
                     dismiss()
                 }
             } catch {
-                // Handle error
+                print("Error deleting pod: \(error)")
             }
         }
     }
@@ -345,6 +237,7 @@ struct SettingRow: View {
                     Text(subtitle)
                         .font(.system(size: 14))
                         .foregroundColor(Color.textSecondary)
+                        .multilineTextAlignment(.leading)
                 }
                 
                 Spacer()
@@ -352,6 +245,7 @@ struct SettingRow: View {
                 if showToggle {
                     Toggle("", isOn: .constant(isToggled))
                         .toggleStyle(SwitchToggleStyle(tint: Color.accentGreen))
+                        .allowsHitTesting(false)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .medium))
@@ -362,6 +256,310 @@ struct SettingRow: View {
             .padding(.vertical, 12)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Info Card
+struct InfoCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(color)
+                .frame(width: 24)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.textSecondary)
+                
+                Text(value)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+            }
+            
+            Spacer()
+        }
+        .padding(16)
+        .background(Color.backgroundPrimary)
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Edit Text View
+struct EditTextView: View {
+    let title: String
+    @Binding var text: String
+    let placeholder: String
+    let maxLength: Int
+    let isMultiline: Bool
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    init(title: String, text: Binding<String>, placeholder: String, maxLength: Int, isMultiline: Bool = false) {
+        self.title = title
+        self._text = text
+        self.placeholder = placeholder
+        self.maxLength = maxLength
+        self.isMultiline = isMultiline
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                if isMultiline {
+                    TextEditor(text: $text)
+                        .padding(12)
+                        .background(Color.backgroundSecondary)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.textSecondary.opacity(0.2), lineWidth: 1)
+                        )
+                        .frame(minHeight: 120)
+                } else {
+                    TextField(placeholder, text: $text)
+                        .textFieldStyle(CustomTextFieldStyle())
+                }
+                
+                HStack {
+                    Spacer()
+                    Text("\(text.count)/\(maxLength)")
+                        .font(.system(size: 12))
+                        .foregroundColor(text.count > maxLength ? Color.error : Color.textSecondary)
+                }
+                
+                Spacer()
+            }
+            .padding(20)
+            .background(Color.backgroundSecondary)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel".localized) {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save".localized) {
+                        dismiss()
+                    }
+                    .disabled(text.count > maxLength || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Pod Owner Settings View
+struct PodOwnerSettingsView: View {
+    let pod: IncubationProject
+    @Binding var podName: String
+    @Binding var podDescription: String
+    @Binding var isPublic: Bool
+    @Binding var showingEditName: Bool
+    @Binding var showingEditDescription: Bool
+    @Binding var showingDeleteAlert: Bool
+    @Binding var showingLeaveAlert: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            // Basic Settings
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Pod Settings".localized)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                    .padding(.horizontal, 20)
+                
+                VStack(spacing: 0) {
+                    SettingRow(
+                        title: "Pod Name".localized,
+                        subtitle: podName.isEmpty ? pod.name : podName,
+                        icon: "pencil",
+                        action: { showingEditName = true }
+                    )
+                    
+                    Divider()
+                        .padding(.leading, 56)
+                    
+                    SettingRow(
+                        title: "Description".localized,
+                        subtitle: podDescription.isEmpty ? pod.description : podDescription,
+                        icon: "text.quote",
+                        action: { showingEditDescription = true }
+                    )
+                    
+                    Divider()
+                        .padding(.leading, 56)
+                    
+                    SettingRow(
+                        title: "Privacy".localized,
+                        subtitle: isPublic ? "Public - Anyone can find and join".localized : "Private - Invite only".localized,
+                        icon: "lock",
+                        action: { isPublic.toggle() },
+                        showToggle: true,
+                        isToggled: isPublic
+                    )
+                }
+                .background(Color.backgroundPrimary)
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
+            }
+            
+            // Pod Information
+            PodInformationSection(pod: pod)
+            
+            // Actions
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Actions".localized)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.error)
+                    .padding(.horizontal, 20)
+                
+                VStack(spacing: 0) {
+                    SettingRow(
+                        title: "Leave Pod".localized,
+                        subtitle: "Remove yourself from this pod".localized,
+                        icon: "person.fill.xmark",
+                        action: { showingLeaveAlert = true },
+                        isDestructive: true
+                    )
+                    
+                    Divider()
+                        .padding(.leading, 56)
+                    
+                    SettingRow(
+                        title: "Delete Pod".localized,
+                        subtitle: "Permanently delete this pod and all its data".localized,
+                        icon: "trash",
+                        action: { showingDeleteAlert = true },
+                        isDestructive: true
+                    )
+                }
+                .background(Color.backgroundPrimary)
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+}
+
+// MARK: - Pod Member View
+struct ProjectMemberView: View {
+    let pod: IncubationProject
+    @Binding var showingLeaveAlert: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            // Pod Information
+            PodInformationSection(pod: pod)
+            
+            // Member Actions
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Actions".localized)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.error)
+                    .padding(.horizontal, 20)
+                
+                VStack(spacing: 0) {
+                    SettingRow(
+                        title: "Leave Pod".localized,
+                        subtitle: "Remove yourself from this pod".localized,
+                        icon: "person.fill.xmark",
+                        action: { showingLeaveAlert = true },
+                        isDestructive: true
+                    )
+                }
+                .background(Color.backgroundPrimary)
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
+            }
+            
+            // Additional Info for Members
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Note".localized)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                    .padding(.horizontal, 20)
+                
+                Text("Only the pod creator can modify settings. You can participate in tasks, chat, and collaborate on this pod.".localized)
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.textSecondary)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color.backgroundPrimary)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 20)
+            }
+        }
+    }
+}
+
+// MARK: - Pod Information Section
+struct PodInformationSection: View {
+    let pod: IncubationProject
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Pod Information".localized)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(Color.textPrimary)
+                .padding(.horizontal, 20)
+            
+            VStack(spacing: 12) {
+                InfoCard(
+                    title: "Members".localized,
+                    value: "\(pod.members.count)",
+                    icon: "person.3",
+                    color: Color.accentGreen
+                )
+                
+                InfoCard(
+                    title: "Tasks".localized,
+                    value: "\(pod.tasks.count)",
+                    icon: "checklist",
+                    color: Color.accentBlue
+                )
+                
+                InfoCard(
+                    title: "Created".localized,
+                    value: pod.createdAt.formatted(date: .abbreviated, time: .omitted),
+                    icon: "calendar",
+                    color: Color.accentOrange
+                )
+                
+                InfoCard(
+                    title: "Status".localized,
+                    value: pod.status.rawValue.capitalized.localized,
+                    icon: "circle.fill",
+                    color: statusColor(for: pod.status)
+                )
+                
+                InfoCard(
+                    title: "Privacy".localized,
+                    value: pod.isPublic ? "Public".localized : "Private".localized,
+                    icon: pod.isPublic ? "globe" : "lock",
+                    color: pod.isPublic ? Color.accentGreen : Color.accentOrange
+                )
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private func statusColor(for status: IncubationProject.ProjectStatus) -> Color {
+        switch status {
+        case .planning: return Color.accentOrange
+        case .active: return Color.accentGreen
+        case .completed: return Color.accentBlue
+        case .onHold: return Color.textSecondary
+        }
     }
 }
 

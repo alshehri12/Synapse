@@ -16,7 +16,7 @@ struct SearchView: View {
     @State private var searchText = ""
     @State private var selectedCategory: SearchCategory = .all
     @State private var ideas: [IdeaSpark] = []
-    @State private var pods: [IncubationPod] = []
+    @State private var pods: [IncubationProject] = []
     @State private var users: [UserProfile] = []
     @State private var isLoading = false
     @State private var showingFilters = false
@@ -29,7 +29,7 @@ struct SearchView: View {
         case tags = "Tags"
     }
     
-    var filteredResults: (ideas: [IdeaSpark], pods: [IncubationPod], users: [UserProfile]) {
+    var filteredResults: (ideas: [IdeaSpark], pods: [IncubationProject], users: [UserProfile]) {
         let filteredIdeas = ideas.filter { idea in
             if searchText.isEmpty { return true }
             return idea.title.localizedCaseInsensitiveContains(searchText) ||
@@ -196,7 +196,7 @@ struct SearchView: View {
 struct TrendingSection: View {
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @State private var trendingIdeas: [IdeaSpark] = []
-    @State private var popularPods: [IncubationPod] = []
+    @State private var popularPods: [IncubationProject] = []
     @State private var topUsers: [UserProfile] = []
     @State private var isLoading = false
     
@@ -327,7 +327,7 @@ struct TrendingSection: View {
 // MARK: - Search Results Section
 struct SearchResultsSection: View {
     let ideas: [IdeaSpark]
-    let pods: [IncubationPod]
+    let pods: [IncubationProject]
     let users: [UserProfile]
     let selectedCategory: SearchView.SearchCategory
     
@@ -430,7 +430,7 @@ struct TrendingIdeaCard: View {
 
 // MARK: - Trending Pod Card
 struct TrendingPodCard: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -462,7 +462,7 @@ struct TrendingPodCard: View {
                 .foregroundColor(Color.textSecondary)
                 .lineLimit(2)
             
-            PodStatusBadge(status: pod.status)
+                                        ProjectStatusBadge(status: pod.status)
         }
         .padding(16)
         .frame(width: 200)

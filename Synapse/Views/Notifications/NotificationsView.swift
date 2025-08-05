@@ -38,7 +38,7 @@ struct NotificationsView: View {
             case .tasks:
                 return notification.type == .taskAssigned || notification.type == .taskCompleted
             case .pods:
-                return notification.type == .podInvite || notification.type == .podJoined
+                return notification.type == .projectInvite || notification.type == .projectJoined
             }
         }
         return filtered.sorted { $0.timestamp > $1.timestamp }
@@ -198,8 +198,8 @@ struct NotificationsView: View {
     private func handleNotificationAction(_ notification: AppNotification) {
         // TODO: Handle notification actions (navigate to relevant screen)
         switch notification.type {
-        case .podInvite:
-            // Navigate to pod invite screen
+        case .projectInvite:
+            // Navigate to project invite screen
             break
         case .taskAssigned:
             // Navigate to task detail
@@ -261,7 +261,7 @@ struct NotificationRow: View {
     
     private var notificationColor: Color {
         switch notification.type {
-        case .podInvite, .podJoined:
+        case .projectInvite, .projectJoined:
             return Color.accentGreen
         case .taskAssigned, .taskCompleted:
             return Color.accentBlue
@@ -274,9 +274,9 @@ struct NotificationRow: View {
     
     private var notificationIcon: String {
         switch notification.type {
-        case .podInvite:
+        case .projectInvite:
             return "person.badge.plus"
-        case .podJoined:
+        case .projectJoined:
             return "person.3"
         case .taskAssigned:
             return "checklist"

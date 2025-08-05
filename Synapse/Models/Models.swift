@@ -60,8 +60,8 @@ struct IdeaSpark: Identifiable, Codable {
     }
 }
 
-// MARK: - Incubation Pod Model
-struct IncubationPod: Identifiable, Codable {
+// MARK: - Incubation Project Model
+struct IncubationProject: Identifiable, Codable {
     let id: String
     let ideaId: String
     let name: String
@@ -70,11 +70,11 @@ struct IncubationPod: Identifiable, Codable {
     let isPublic: Bool
     let createdAt: Date
     let updatedAt: Date
-    var members: [PodMember]
-    var tasks: [PodTask]
-    var status: PodStatus
+    var members: [ProjectMember]
+    var tasks: [ProjectTask]
+    var status: ProjectStatus
     
-    enum PodStatus: String, Codable, CaseIterable {
+    enum ProjectStatus: String, Codable, CaseIterable {
         case planning = "planning"
         case active = "active"
         case completed = "completed"
@@ -82,8 +82,8 @@ struct IncubationPod: Identifiable, Codable {
     }
 }
 
-// MARK: - Pod Member Model
-struct PodMember: Identifiable, Codable {
+// MARK: - Project Member Model
+struct ProjectMember: Identifiable, Codable {
     let id: String
     let userId: String
     let username: String
@@ -99,8 +99,8 @@ struct PodMember: Identifiable, Codable {
     }
 }
 
-// MARK: - Pod Task Model
-struct PodTask: Identifiable, Codable {
+// MARK: - Project Task Model
+struct ProjectTask: Identifiable, Codable {
     let id: String
     let title: String
     let description: String?
@@ -148,7 +148,7 @@ struct PodTask: Identifiable, Codable {
 // MARK: - Message Model
 struct Message: Identifiable, Codable {
     let id: String
-    let podId: String
+    let projectId: String
     let senderId: String
     let senderUsername: String
     let content: String
@@ -174,8 +174,8 @@ struct AppNotification: Identifiable, Codable {
     let timestamp: Date
     
     enum NotificationType: String, Codable, CaseIterable {
-        case podInvite = "pod_invite"
-        case podJoined = "pod_joined"
+        case projectInvite = "project_invite"
+        case projectJoined = "project_joined"
         case taskAssigned = "task_assigned"
         case taskCompleted = "task_completed"
         case mention = "mention"
@@ -201,7 +201,7 @@ let mockUser = UserProfile(
 // MARK: - Chat Models
 struct ChatMessage: Identifiable, Codable {
     let id: String
-    let podId: String
+    let projectId: String
     let senderId: String
     let senderName: String
     let senderAvatar: String?
@@ -221,7 +221,7 @@ struct ChatMessage: Identifiable, Codable {
 
 struct ChatRoom: Identifiable, Codable {
     let id: String
-    let podId: String
+    let projectId: String
     let name: String
     let lastMessage: ChatMessage?
     let lastActivity: Date
@@ -261,7 +261,7 @@ struct MemberActivityData: Identifiable, Codable {
     let tasksCompleted: Int
 }
 
-struct PodAnalytics: Codable {
+struct ProjectAnalytics: Codable {
     let completionRate: Int
     let activeMembers: Int
     let tasksCompleted: Int

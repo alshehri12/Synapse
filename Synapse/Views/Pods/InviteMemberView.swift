@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseFirestore
 
 struct InviteMemberView: View {
-    let pod: IncubationPod
+    let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
@@ -258,8 +258,8 @@ struct InviteMemberView: View {
         Task {
             do {
                 for user in selectedUsers {
-                    try await firebaseManager.inviteUserToPod(
-                        podId: pod.id,
+                                    try await firebaseManager.inviteUserToProject(
+                          projectId: pod.id,
                         userId: user.id,
                         role: selectedRole,
                         message: customMessage.isEmpty ? "You've been invited to join \(pod.name)" : customMessage

@@ -523,33 +523,33 @@ class FirebaseManager: ObservableObject {
         }
     }
     
-    func getUserPods(userId: String) async throws -> [IncubationPod] {
+    func getUserPods(userId: String) async throws -> [IncubationProject] {
         do {
             let snapshot = try await db.collection("pods")
                 .whereField("members", arrayContains: userId)
                 .getDocuments()
             
-            var pods: [IncubationPod] = []
+            var pods: [IncubationProject] = []
             
             for document in snapshot.documents {
                 let data = document.data()
-                let podId = document.documentID
+                let projectId = document.documentID
                 
                 // Fetch members with full details
-                print("🔍 DEBUG: Processing pod '\(data["name"] as? String ?? "Unknown")' (ID: \(podId))")
-                let members = try await fetchPodMembers(podId: podId)
+                print("🔍 DEBUG: Processing pod '\(data["name"] as? String ?? "Unknown")' (ID: \(projectId))")
+                let members = try await fetchProjectMembers(projectId: projectId)
                 print("👥 DEBUG: Fetched \(members.count) members for pod '\(data["name"] as? String ?? "Unknown")'")
                 
                 // Fetch tasks for this pod
-                let tasks = try await getPodTasks(podId: podId)
+                let tasks = try await getProjectTasks(projectId: projectId)
                 print("📋 DEBUG: Fetched \(tasks.count) tasks for pod '\(data["name"] as? String ?? "Unknown")'")
                 
                 // Map status string to enum
                 let statusString = data["status"] as? String ?? "planning"
-                let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
+                let status = IncubationProject.ProjectStatus(rawValue: statusString) ?? .planning
                 
-                let pod = IncubationPod(
-                    id: podId,
+                let pod = IncubationProject(
+                    id: projectId,
                     ideaId: data["ideaId"] as? String ?? "",
                     name: data["name"] as? String ?? "",
                     description: data["description"] as? String ?? "",
@@ -667,7 +667,7 @@ class FirebaseManager: ObservableObject {
         let docRef = try await db.collection("pods").addDocument(data: podData)
         
         // Create the creator as the first member with admin permissions
-        try await addPodMemberDetails(podId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
+        try await addProjectMemberDetails(projectId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
         
         return docRef.documentID
     }
@@ -713,7 +713,7 @@ class FirebaseManager: ObservableObject {
         print("📝 DEBUG: Pod document created with ID: \(docRef.documentID)")
         
         // Create the creator as the first member with admin permissions
-        try await addPodMemberDetails(podId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
+        try await addProjectMemberDetails(projectId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
         
         // Verify the pod was stored correctly
         let verifyDoc = try await db.collection("pods").document(docRef.documentID).getDocument()
@@ -741,7 +741,7 @@ class FirebaseManager: ObservableObject {
     }
     
     // Helper method to add member details to pod's members subcollection
-    private func addPodMemberDetails(podId: String, userId: String, role: String, permissions: [PodMember.Permission]) async throws {
+    private func addProjectMemberDetails(projectId: String, userId: String, role: String, permissions: [ProjectMember.Permission]) async throws {
         // Get user profile
         guard let userProfileData = try await getUserProfile(userId: userId) else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User profile not found"])
@@ -757,22 +757,22 @@ class FirebaseManager: ObservableObject {
             "permissions": permissions.map { $0.rawValue }
         ]
         
-        try await db.collection("pods").document(podId).collection("members").document(userId).setData(memberData)
-        print("✅ Added member details for user \(username) to pod \(podId)")
+        try await db.collection("pods").document(projectId).collection("members").document(userId).setData(memberData)
+        print("✅ Added member details for user \(username) to pod \(projectId)")
     }
     
     // Method to fetch pod members from subcollection
-    private func fetchPodMembers(podId: String) async throws -> [PodMember] {
+    private func fetchProjectMembers(projectId: String) async throws -> [ProjectMember] {
         do {
-            print("🔍 DEBUG: Fetching members for pod: \(podId)")
-            let snapshot = try await db.collection("pods").document(podId).collection("members").getDocuments()
+            print("🔍 DEBUG: Fetching members for pod: \(projectId)")
+            let snapshot = try await db.collection("pods").document(projectId).collection("members").getDocuments()
             
             print("📊 DEBUG: Found \(snapshot.documents.count) member documents in subcollection")
             
             if snapshot.documents.isEmpty {
-                print("⚠️ DEBUG: No members found in subcollection for pod \(podId)")
+                print("⚠️ DEBUG: No members found in subcollection for pod \(projectId)")
                 // Fallback: try to get members from main pod document
-                return try await fetchMembersFromMainDocument(podId: podId)
+                return try await fetchMembersFromMainDocument(projectId: projectId)
             }
             
             let members = snapshot.documents.compactMap { document in
@@ -780,9 +780,9 @@ class FirebaseManager: ObservableObject {
                 print("👤 DEBUG: Processing member document \(document.documentID): \(data)")
                 
                 let permissionsArray = data["permissions"] as? [String] ?? []
-                let permissions = permissionsArray.compactMap { PodMember.Permission(rawValue: $0) }
+                let permissions = permissionsArray.compactMap { ProjectMember.Permission(rawValue: $0) }
                 
-                let member = PodMember(
+                let member = ProjectMember(
                     id: document.documentID,
                     userId: data["userId"] as? String ?? "",
                     username: data["username"] as? String ?? "",
@@ -795,7 +795,7 @@ class FirebaseManager: ObservableObject {
                 return member
             }
             
-            print("📝 DEBUG: Returning \(members.count) members for pod \(podId)")
+            print("📝 DEBUG: Returning \(members.count) members for pod \(projectId)")
             return members
         } catch {
             print("❌ Failed to fetch pod members: \(error.localizedDescription)")
@@ -804,10 +804,10 @@ class FirebaseManager: ObservableObject {
     }
     
     // Fallback method to create members from main pod document
-    private func fetchMembersFromMainDocument(podId: String) async throws -> [PodMember] {
+    private func fetchMembersFromMainDocument(projectId: String) async throws -> [ProjectMember] {
         do {
-            print("🔄 DEBUG: Falling back to main document for pod \(podId)")
-            let podDoc = try await db.collection("pods").document(podId).getDocument()
+            print("🔄 DEBUG: Falling back to main document for pod \(projectId)")
+            let podDoc = try await db.collection("pods").document(projectId).getDocument()
             
             guard let data = podDoc.data(),
                   let memberIds = data["members"] as? [String] else {
@@ -817,7 +817,7 @@ class FirebaseManager: ObservableObject {
             
             print("👥 DEBUG: Found \(memberIds.count) member IDs in main document: \(memberIds)")
             
-            var members: [PodMember] = []
+            var members: [ProjectMember] = []
             
             for userId in memberIds {
                 do {
@@ -827,9 +827,9 @@ class FirebaseManager: ObservableObject {
                     // Determine role based on whether user is the creator
                     let creatorId = data["creatorId"] as? String ?? ""
                     let role = (userId == creatorId) ? "Creator" : "Member"
-                    let permissions: [PodMember.Permission] = (userId == creatorId) ? [.admin, .edit, .view, .comment] : [.view, .comment]
+                    let permissions: [ProjectMember.Permission] = (userId == creatorId) ? [.admin, .edit, .view, .comment] : [.view, .comment]
                     
-                    let member = PodMember(
+                    let member = ProjectMember(
                         id: userId,
                         userId: userId,
                         username: userProfileData?["username"] as? String ?? "Unknown User",
@@ -842,7 +842,7 @@ class FirebaseManager: ObservableObject {
                     print("✅ DEBUG: Created fallback member: \(member.username) (\(member.role))")
                     
                     // Optionally, create the subcollection entry for future use
-                    try await addPodMemberDetails(podId: podId, userId: userId, role: role, permissions: permissions)
+                    try await addProjectMemberDetails(projectId: projectId, userId: userId, role: role, permissions: permissions)
                     
                 } catch {
                     print("❌ DEBUG: Failed to create member for userId \(userId): \(error.localizedDescription)")
@@ -857,30 +857,30 @@ class FirebaseManager: ObservableObject {
         }
     }
     
-    func updatePod(podId: String, data: [String: Any]) async throws {
+    func updateProject(projectId: String, data: [String: Any]) async throws {
         do {
             var updateData = data
             updateData["updatedAt"] = Timestamp(date: Date())
-            try await db.collection("pods").document(podId).updateData(updateData)
+            try await db.collection("pods").document(projectId).updateData(updateData)
         } catch {
             throw error
         }
     }
     
     // Method to add a new member to an existing pod
-    func addMemberToPod(podId: String, userId: String, role: String = "Member") async throws {
+    func addMemberToProject(projectId: String, userId: String, role: String = "Member") async throws {
         do {
             // First, add the user ID to the pod's members array
-            try await db.collection("pods").document(podId).updateData([
+            try await db.collection("pods").document(projectId).updateData([
                 "members": FieldValue.arrayUnion([userId]),
                 "updatedAt": Timestamp(date: Date())
             ])
             
             // Then add detailed member information to the subcollection
-            let permissions: [PodMember.Permission] = [.view, .comment] // Default permissions for new members
-            try await addPodMemberDetails(podId: podId, userId: userId, role: role, permissions: permissions)
+            let permissions: [ProjectMember.Permission] = [.view, .comment] // Default permissions for new members
+            try await addProjectMemberDetails(projectId: projectId, userId: userId, role: role, permissions: permissions)
             
-            print("✅ Successfully added member \(userId) to pod \(podId)")
+            print("✅ Successfully added member \(userId) to pod \(projectId)")
         } catch {
             print("❌ Failed to add member to pod: \(error.localizedDescription)")
             throw error
@@ -888,27 +888,27 @@ class FirebaseManager: ObservableObject {
     }
     
     // Method to remove a member from a pod
-    func removeMemberFromPod(podId: String, userId: String) async throws {
+    func removeMemberFromProject(projectId: String, userId: String) async throws {
         do {
             // Remove from the pod's members array
-            try await db.collection("pods").document(podId).updateData([
+            try await db.collection("pods").document(projectId).updateData([
                 "members": FieldValue.arrayRemove([userId]),
                 "updatedAt": Timestamp(date: Date())
             ])
             
             // Remove from the members subcollection
-            try await db.collection("pods").document(podId).collection("members").document(userId).delete()
+            try await db.collection("pods").document(projectId).collection("members").document(userId).delete()
             
-            print("✅ Successfully removed member \(userId) from pod \(podId)")
+            print("✅ Successfully removed member \(userId) from pod \(projectId)")
         } catch {
             print("❌ Failed to remove member from pod: \(error.localizedDescription)")
             throw error
         }
     }
     
-    func deletePod(podId: String) async throws {
+    func deleteProject(projectId: String) async throws {
         do {
-            try await db.collection("pods").document(podId).delete()
+            try await db.collection("pods").document(projectId).delete()
         } catch {
             throw error
         }
@@ -916,13 +916,13 @@ class FirebaseManager: ObservableObject {
     
     // MARK: - Task Management Methods
     
-    func createTask(podId: String, title: String, description: String?, assignedTo: String?, assignedToUsername: String?, dueDate: Date?, priority: String) async throws -> String {
+    func createTask(projectId: String, title: String, description: String?, assignedTo: String?, assignedToUsername: String?, dueDate: Date?, priority: String) async throws -> String {
         guard let currentUser = auth.currentUser else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
         }
         
         // Verify current user is pod admin/creator
-        let podDoc = try await db.collection("pods").document(podId).getDocument()
+        let podDoc = try await db.collection("pods").document(projectId).getDocument()
         guard podDoc.exists,
               let podData = podDoc.data(),
               let creatorId = podData["creatorId"] as? String,
@@ -943,19 +943,19 @@ class FirebaseManager: ObservableObject {
             "createdBy": currentUser.uid
         ]
         
-        let docRef = try await db.collection("pods").document(podId).collection("tasks").addDocument(data: taskData)
+        let docRef = try await db.collection("pods").document(projectId).collection("tasks").addDocument(data: taskData)
         return docRef.documentID
     }
     
     // Update task status
-    func updateTaskStatus(podId: String, taskId: String, status: String) async throws {
+    func updateTaskStatus(projectId: String, taskId: String, status: String) async throws {
         guard currentUser != nil else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
         }
         
         print("🔄 Updating task \(taskId) status to: \(status)")
         
-        try await db.collection("pods").document(podId).collection("tasks").document(taskId).updateData([
+        try await db.collection("pods").document(projectId).collection("tasks").document(taskId).updateData([
             "status": status,
             "updatedAt": FieldValue.serverTimestamp()
         ])
@@ -964,14 +964,14 @@ class FirebaseManager: ObservableObject {
     }
     
     // Update task priority
-    func updateTaskPriority(podId: String, taskId: String, priority: String) async throws {
+    func updateTaskPriority(projectId: String, taskId: String, priority: String) async throws {
         guard currentUser != nil else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
         }
         
         print("🔄 Updating task \(taskId) priority to: \(priority)")
         
-        try await db.collection("pods").document(podId).collection("tasks").document(taskId).updateData([
+        try await db.collection("pods").document(projectId).collection("tasks").document(taskId).updateData([
             "priority": priority,
             "updatedAt": FieldValue.serverTimestamp()
         ])
@@ -980,27 +980,27 @@ class FirebaseManager: ObservableObject {
     }
     
     // Delete task
-    func deleteTask(podId: String, taskId: String) async throws {
+    func deleteTask(projectId: String, taskId: String) async throws {
         guard currentUser != nil else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
         }
         
         print("🗑️ Deleting task: \(taskId)")
         
-        try await db.collection("pods").document(podId).collection("tasks").document(taskId).delete()
+        try await db.collection("pods").document(projectId).collection("tasks").document(taskId).delete()
         
         print("✅ Task deleted successfully")
     }
     
     // Fetch tasks for a specific pod
-    func getPodTasks(podId: String) async throws -> [PodTask] {
-        print("📋 Fetching tasks for pod: \(podId)")
+    func getProjectTasks(projectId: String) async throws -> [ProjectTask] {
+        print("📋 Fetching tasks for pod: \(projectId)")
         
-        let snapshot = try await db.collection("pods").document(podId).collection("tasks")
+        let snapshot = try await db.collection("pods").document(projectId).collection("tasks")
             .order(by: "createdAt", descending: false)
             .getDocuments()
         
-        var tasks: [PodTask] = []
+        var tasks: [ProjectTask] = []
         
         for document in snapshot.documents {
             let data = document.data()
@@ -1008,13 +1008,13 @@ class FirebaseManager: ObservableObject {
             
             // Parse task status
             let statusString = data["status"] as? String ?? "todo"
-            let status = PodTask.TaskStatus(rawValue: statusString) ?? .todo
+            let status = ProjectTask.TaskStatus(rawValue: statusString) ?? .todo
             
             // Parse task priority  
             let priorityString = data["priority"] as? String ?? "medium"
-            let priority = PodTask.TaskPriority(rawValue: priorityString) ?? .medium
+            let priority = ProjectTask.TaskPriority(rawValue: priorityString) ?? .medium
             
-            let task = PodTask(
+            let task = ProjectTask(
                 id: taskId,
                 title: data["title"] as? String ?? "",
                 description: data["description"] as? String,
@@ -1030,7 +1030,7 @@ class FirebaseManager: ObservableObject {
             tasks.append(task)
         }
         
-        print("✅ Fetched \(tasks.count) tasks for pod \(podId)")
+        print("✅ Fetched \(tasks.count) tasks for pod \(projectId)")
         return tasks
     }
     
@@ -1388,7 +1388,7 @@ class FirebaseManager: ObservableObject {
         }
     }
     
-    func getPodAnalytics(podId: String) async throws -> [String: Any] {
+    func getProjectAnalytics(projectId: String) async throws -> [String: Any] {
         do {
             // For now, return mock data structure
             // In a real implementation, you would aggregate data from various collections
@@ -1472,14 +1472,14 @@ class FirebaseManager: ObservableObject {
         }
     }
     
-    func inviteUserToPod(podId: String, userId: String, role: String, message: String) async throws {
+    func inviteUserToProject(projectId: String, userId: String, role: String, message: String) async throws {
         guard let currentUser = auth.currentUser else {
             throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
         }
         
         do {
             let invitationData: [String: Any] = [
-                "podId": podId,
+                "projectId": projectId,
                 "userId": userId,
                 "invitedBy": currentUser.uid,
                 "role": role,
@@ -1494,7 +1494,7 @@ class FirebaseManager: ObservableObject {
         }
     }
     
-    func getPublicPods() async throws -> [IncubationPod] {
+    func getPublicPods() async throws -> [IncubationProject] {
         do {
             let snapshot = try await db.collection("pods")
                 .whereField("isPublic", isEqualTo: true)
@@ -1502,23 +1502,23 @@ class FirebaseManager: ObservableObject {
                 .limit(to: 50)
                 .getDocuments()
             
-            var pods: [IncubationPod] = []
+            var pods: [IncubationProject] = []
             
             for document in snapshot.documents {
                 let data = document.data()
                 let podId = document.documentID
                 
                 // Fetch members with full details
-                let members = try await fetchPodMembers(podId: podId)
+                let members = try await fetchProjectMembers(projectId: podId)
                 
                 // Fetch tasks for this pod
-                let tasks = try await getPodTasks(podId: podId)
+                let tasks = try await getProjectTasks(projectId: podId)
                 
                 // Map status string to enum
                 let statusString = data["status"] as? String ?? "planning"
-                let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
+                let status = IncubationProject.ProjectStatus(rawValue: statusString) ?? .planning
                 
-                let pod = IncubationPod(
+                let pod = IncubationProject(
                     id: podId,
                     ideaId: data["ideaId"] as? String ?? "",
                     name: data["name"] as? String ?? "",
@@ -1542,7 +1542,7 @@ class FirebaseManager: ObservableObject {
     }
     
     // Method to get pods for a specific idea
-    func getPodsByIdeaId(ideaId: String) async throws -> [IncubationPod] {
+    func getPodsByIdeaId(ideaId: String) async throws -> [IncubationProject] {
         do {
             print("🔍 DEBUG: Fetching pods for ideaId: '\(ideaId)'")
             print("🔍 DEBUG: Query conditions - ideaId: '\(ideaId)', isPublic: true")
@@ -1575,23 +1575,23 @@ class FirebaseManager: ObservableObject {
                 print("  4. Query conditions too restrictive")
             }
             
-            var pods: [IncubationPod] = []
+            var pods: [IncubationProject] = []
             
             for document in snapshot.documents {
                 let data = document.data()
-                let podId = document.documentID
+                let projectId = document.documentID
                 
-                print("🔄 DEBUG: Processing found pod '\(data["name"] as? String ?? "Unknown")' (ID: \(podId))")
+                print("🔄 DEBUG: Processing found pod '\(data["name"] as? String ?? "Unknown")' (ID: \(projectId))")
                 
                 // Fetch members with full details
-                let members = try await fetchPodMembers(podId: podId)
+                let members = try await fetchProjectMembers(projectId: projectId)
                 
                 // Map status string to enum
                 let statusString = data["status"] as? String ?? "planning"
-                let status = IncubationPod.PodStatus(rawValue: statusString) ?? .planning
+                let status = IncubationProject.ProjectStatus(rawValue: statusString) ?? .planning
                 
-                let pod = IncubationPod(
-                    id: podId,
+                let pod = IncubationProject(
+                    id: projectId,
                     ideaId: data["ideaId"] as? String ?? "",
                     name: data["name"] as? String ?? "",
                     description: data["description"] as? String ?? "",
@@ -1699,14 +1699,14 @@ class FirebaseManager: ObservableObject {
     
     // MARK: - Debug Methods
     
-    func testPodMemberFunctionality(podId: String) async {
+    func testProjectMemberFunctionality(projectId: String) async {
         print("\n🧪 ===== TESTING POD MEMBER FUNCTIONALITY =====")
-        print("📱 Testing pod: \(podId)")
+        print("📱 Testing pod: \(projectId)")
         
         do {
             // Test fetching pod members
             print("🔍 Fetching pod members...")
-            let members = try await fetchPodMembers(podId: podId)
+            let members = try await fetchProjectMembers(projectId: projectId)
             print("✅ Found \(members.count) members:")
             
             for member in members {
@@ -1715,13 +1715,13 @@ class FirebaseManager: ObservableObject {
             
             // Test pod document structure
             print("\n🔍 Checking pod document structure...")
-            let podDoc = try await db.collection("pods").document(podId).getDocument()
+            let podDoc = try await db.collection("pods").document(projectId).getDocument()
             if let data = podDoc.data() {
                 let memberIds = data["members"] as? [String] ?? []
                 print("✅ Pod document has \(memberIds.count) member IDs: \(memberIds)")
                 
                 // Check if members subcollection exists
-                let membersSnapshot = try await db.collection("pods").document(podId).collection("members").getDocuments()
+                let membersSnapshot = try await db.collection("pods").document(projectId).collection("members").getDocuments()
                 print("✅ Members subcollection has \(membersSnapshot.documents.count) documents")
                 
                 if memberIds.count == membersSnapshot.documents.count {
