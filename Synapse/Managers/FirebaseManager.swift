@@ -10,908 +10,181 @@ import Firebase
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFunctions
+import Combine
 
 class FirebaseManager: ObservableObject {
     static let shared = FirebaseManager()
     
-    @Published var currentUser: User?
-    @Published var authError: String?
-    @Published var isEmailVerified = false
-    @Published var otpCode: String = ""
-    @Published var isOtpSent = false
-    @Published var isOtpVerified = false
-    @Published var isSigningUp = false  // Flag to prevent navigation during sign-up
-    @Published var lastSignUpAttempt: Date? = nil  // Track last sign-up attempt
+    // Delegate authentication properties to AuthenticationManager
+    var currentUser: User? { authManager.currentUser }
+    var authError: String? { authManager.authError }
+    var isEmailVerified: Bool { authManager.isEmailVerified }
+    var otpCode: String { authManager.otpCode }
+    var isOtpSent: Bool { authManager.isOtpSent }
+    var isOtpVerified: Bool { authManager.isOtpVerified }
+    var isSigningUp: Bool { authManager.isSigningUp }
     
+    // Manager dependencies
+    private let authManager: AuthenticationManager
+    private let userManager: UserManager
+    private let podManager: PodManager
+    
+    // Firebase services for remaining functionality
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
     private let functions = Functions.functions()
     
     private init() {
-        setupAuthStateListener()
+        self.authManager = AuthenticationManager.shared
+        self.userManager = UserManager.shared
+        self.podManager = PodManager.shared
+        
+        // Set up dependencies between managers
+        authManager.setUserManager(userManager)
+        
+        // Forward published changes from managers
+        setupManagerObservation()
     }
     
-    private func setupAuthStateListener() {
-        _ = auth.addStateDidChangeListener { [weak self] _, user in
-            print("\n🔄 ===== AUTH STATE CHANGED =====")
-            if let user = user {
-                print("👤 User signed in: \(user.uid)")
-                print("📧 User email: \(user.email ?? "no email")")
-                print("🔍 Firebase isEmailVerified: \(user.isEmailVerified)")
-                
-                DispatchQueue.main.async {
-                    self?.currentUser = user
-                    print("✅ Auth state set: currentUser=\(user.uid)")
-                }
-            } else {
-                print("🚪 User signed out")
-                DispatchQueue.main.async {
-                    self?.currentUser = nil
-                    self?.isEmailVerified = false
-                    print("✅ Auth state cleared: currentUser=nil, isEmailVerified=false")
-                }
+    private func setupManagerObservation() {
+        // Forward changes from AuthenticationManager to trigger UI updates
+        authManager.objectWillChange.sink { [weak self] in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
             }
-            print("===== AUTH STATE CHANGE COMPLETE =====\n")
-        }
+        }.store(in: &cancellables)
+        
+        // Forward changes from UserManager to trigger UI updates
+        userManager.objectWillChange.sink { [weak self] in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
+            }
+        }.store(in: &cancellables)
+        
+        // Forward changes from PodManager to trigger UI updates
+        podManager.objectWillChange.sink { [weak self] in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
+            }
+        }.store(in: &cancellables)
     }
     
-    // MARK: - Authentication Methods
+    private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Authentication Methods (Delegated to AuthenticationManager)
     
     func signUp(email: String, password: String, username: String) async throws {
-        // Rate limiting: Prevent rapid sign-up attempts (anti-bot measure)
-        if let lastAttempt = lastSignUpAttempt {
-            let timeSinceLastAttempt = Date().timeIntervalSince(lastAttempt)
-            if timeSinceLastAttempt < 30 { // 30 second cooldown
-                throw NSError(domain: "FirebaseManager", code: -1, 
-                            userInfo: [NSLocalizedDescriptionKey: "Please wait 30 seconds before creating another account".localized])
-            }
-        }
-        
-        // Set flag to prevent navigation during sign-up
-        await MainActor.run {
-            self.isSigningUp = true
-            self.lastSignUpAttempt = Date()
-        }
-        
-        do {
-            print("📝 Creating new user account...")
-            let result = try await auth.createUser(withEmail: email, password: password)
-            print("✅ Firebase user created: \(result.user.uid)")
-            
-            // Set the user's display name in Firebase Auth
-            let changeRequest = result.user.createProfileChangeRequest()
-            changeRequest.displayName = username
-            try await changeRequest.commitChanges()
-            print("✅ Display name set to: \(username)")
-            
-            // Create user profile in Firestore
-            try await createUserProfile(userId: result.user.uid, email: email, username: username)
-            print("✅ User profile created in Firestore")
-            
-            // IMMEDIATELY sign out to prevent auto-navigation to main app
-            try auth.signOut()
-            print("🔄 User immediately signed out after account creation")
-            
-            print("🎉 Sign-up completed successfully!")
-            
-            // Clear flag after sign-up is complete
-            await MainActor.run {
-                self.isSigningUp = false
-            }
-            
-        } catch {
-            print("❌ Sign-up failed: \(error.localizedDescription)")
-            await MainActor.run {
-                self.isSigningUp = false
-                self.authError = self.localizedAuthError(error)
-            }
-            throw error
-        }
+        try await authManager.signUp(email: email, password: password, username: username)
     }
     
     func signIn(email: String, password: String) async throws {
-        print("\n🔐 ===== SIGN-IN CHECK STARTED =====")
-        print("📧 Email: \(email)")
-        
-        // Clear any previous errors
-        DispatchQueue.main.async {
-            self.authError = nil
-        }
-        
-        do {
-            print("🔍 Checking email and password with Firebase...")
-            let result = try await auth.signIn(withEmail: email, password: password)
-            print("✅ Email and password are correct!")
-            print("👤 User signed in: \(result.user.uid)")
-            
-            // Check if displayName is missing and update it for existing users
-            if result.user.displayName == nil || result.user.displayName?.isEmpty == true {
-                print("⚠️ DisplayName is missing, updating from Firestore...")
-                try await updateDisplayNameFromFirestore(for: result.user)
-            }
-            
-            // Success - user credentials are valid
-            print("🎉 Sign-in successful!")
-            
-        } catch {
-            print("❌ Sign-in failed: \(error.localizedDescription)")
-            
-            // Make sure user is signed out on error so no conflicting states
-            try? auth.signOut()
-            
-            // Set clear error message for wrong credentials
-            let errorMessage = "Wrong email or password"
-            
-            DispatchQueue.main.async {
-                self.authError = errorMessage
-            }
-            
-            print("⚠️ Showing error to user: \(errorMessage)")
-            print("🔒 User signed out to prevent state conflicts")
-            throw error
-        }
-    }
-    
-    // MARK: - Helper Methods for DisplayName Updates
-    
-    private func updateDisplayNameFromFirestore(for user: User) async throws {
-        do {
-            // Fetch user document from Firestore
-            let userDoc = try await db.collection("users").document(user.uid).getDocument()
-            
-            guard userDoc.exists, 
-                  let data = userDoc.data(),
-                  let username = data["username"] as? String else {
-                print("❌ Could not find username in Firestore for user: \(user.uid)")
-                return
-            }
-            
-            // Update Firebase Auth profile with username
-            let changeRequest = user.createProfileChangeRequest()
-            changeRequest.displayName = username
-            try await changeRequest.commitChanges()
-            print("✅ DisplayName updated to: \(username) for existing user")
-            
-        } catch {
-            print("❌ Error updating displayName from Firestore: \(error.localizedDescription)")
-            // Don't throw the error - sign-in should still succeed even if displayName update fails
-        }
+        try await authManager.signIn(email: email, password: password)
     }
     
     func signOut() throws {
-        try auth.signOut()
-        DispatchQueue.main.async {
-            self.currentUser = nil
-            self.isEmailVerified = false
-            self.otpCode = ""
-            self.isOtpSent = false
-            self.isOtpVerified = false
-        }
+        try authManager.signOut()
     }
     
-    // MARK: - OTP Email Verification Methods
+    // MARK: - OTP Email Verification Methods (Delegated to AuthenticationManager)
     
     func sendOtpEmail(email: String) async throws {
-        do {
-            print("📧 Sending OTP email to: \(email)")
-            
-            // Generate 6-digit OTP
-            let otp = String(format: "%06d", Int.random(in: 100000...999999))
-            print("🔢 Generated OTP: \(otp)")
-            
-            // Calculate expiration time (15 minutes from now)
-            let expirationTime = Date().addingTimeInterval(15 * 60) // 15 minutes
-            
-            // Store OTP in Firestore for verification
-            try await db.collection("otp_codes").document(email).setData([
-                "otp": otp,
-                "createdAt": FieldValue.serverTimestamp(),
-                "expiresAt": Timestamp(date: expirationTime), // Set proper expiration time
-                "email": email
-            ])
-            print("💾 OTP stored in Firestore with 15-minute expiration")
-            
-            // Try to send actual email via Cloud Function first
-            var emailSent = false
-            do {
-                let data: [String: Any] = [
-                    "email": email,
-                    "otp": otp,
-                    "type": "verification"
-                ]
-                
-                _ = try await functions.httpsCallable("sendOtpEmail").call(data)
-                print("✅ Custom OTP email sent via Cloud Function")
-                emailSent = true
-            } catch {
-                print("⚠️ Cloud Function not available: \(error.localizedDescription)")
-            }
-            
-            // Fallback: Try Firebase's built-in email verification if we have a current user
-            if !emailSent && auth.currentUser != nil {
-                do {
-                    try await auth.currentUser?.sendEmailVerification()
-                    print("📨 Firebase verification email sent as fallback")
-                    emailSent = true
-                } catch {
-                    print("⚠️ Firebase email verification also failed: \(error.localizedDescription)")
-                }
-            }
-            
-            // For development: Print the OTP to console since email might not work
-            print("🧪 DEV MODE: OTP for \(email) is: \(otp)")
-            print("🧪 DEV MODE: You can also use '123456' as bypass code")
-            
-            DispatchQueue.main.async {
-                self.isOtpSent = true
-                self.otpCode = ""
-                // Don't set error even if email wasn't sent - OTP is stored and can be used
-            }
-            
-            if !emailSent {
-                print("⚠️ Email sending failed, but OTP is stored and can be verified")
-                // Don't throw error - allow verification with stored OTP or bypass code
-            }
-            
-        } catch {
-            print("❌ Failed to send OTP email: \(error.localizedDescription)")
-            DispatchQueue.main.async {
-                self.authError = "Failed to send verification email. Please try again.".localized
-            }
-            throw error
-        }
+        try await authManager.sendOtpEmail(email: email)
     }
     
     func verifyOtp(email: String, otp: String) async throws {
-        do {
-            print("🔍 Verifying OTP: \(otp) for email: \(email)")
-            
-            // Development bypass: allow "123456" as a universal OTP for testing
-            let isDevBypass = (otp == "123456")
-            
-            if !isDevBypass {
-                print("🔍 Fetching stored OTP from Firestore...")
-                let document = try await db.collection("otp_codes").document(email).getDocument()
-                
-                guard document.exists else {
-                    print("❌ No OTP found for email: \(email)")
-                    throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No verification code found. Please request a new one.".localized])
-                }
-                
-                guard let data = document.data(),
-                      let storedOtp = data["otp"] as? String,
-                      let expiresAt = data["expiresAt"] as? Timestamp else {
-                    print("❌ Invalid OTP data structure")
-                    throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid verification code. Please request a new one.".localized])
-                }
-                
-                print("✅ Found stored OTP data")
-                print("🔍 Stored OTP: \(storedOtp)")
-                print("🔍 Expires at: \(expiresAt.dateValue())")
-                print("🔍 Current time: \(Date())")
-                
-                // Check if OTP is expired
-                if Date() > expiresAt.dateValue() {
-                    print("❌ OTP has expired")
-                    throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Verification code has expired. Please request a new one.".localized])
-                }
-                
-                // Verify OTP
-                if otp != storedOtp {
-                    print("❌ OTP mismatch: entered '\(otp)' vs stored '\(storedOtp)'")
-                    throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid verification code. Please try again.".localized])
-                }
-                
-                print("✅ OTP verified successfully")
-                
-                // Delete OTP from database after successful verification
-                try await db.collection("otp_codes").document(email).delete()
-                print("🗑️ OTP deleted from database")
-            } else {
-                print("🔧 Using development bypass OTP (123456)")
-            }
-            
-            // Mark email as verified in our custom system
-            print("🔍 Finding user by email: \(email)")
-            let userSnapshot = try await db.collection("users")
-                .whereField("email", isEqualTo: email)
-                .getDocuments()
-            
-            guard let userDocument = userSnapshot.documents.first else {
-                print("❌ No user found with email: \(email)")
-                throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User account not found. Please try signing up again.".localized])
-            }
-            
-            print("✅ Found user document: \(userDocument.documentID)")
-            
-            // Update user profile to mark email as verified
-            try await userDocument.reference.updateData([
-                "isEmailVerified": true,
-                "emailVerifiedAt": FieldValue.serverTimestamp()
-            ])
-            print("✅ User email marked as verified in database")
-            
-            // Update the local state
-            DispatchQueue.main.async {
-                self.isOtpVerified = true
-                self.isEmailVerified = false  // Keep false since user is not signed in yet
-                print("✅ Local state updated: isOtpVerified=true")
-            }
-            
-            print("🎉 Email verification completed successfully for user: \(userDocument.documentID)")
-            
-        } catch {
-            print("❌ OTP verification failed: \(error.localizedDescription)")
-            DispatchQueue.main.async {
-                self.authError = error.localizedDescription
-            }
-            throw error
-        }
+        try await authManager.verifyOtp(email: email, otp: otp)
     }
     
     func resendOtp(email: String) async throws {
-        try await sendOtpEmail(email: email)
+        try await authManager.resendOtp(email: email)
     }
     
-    // MARK: - OTP State Management
+    // MARK: - OTP State Management (Delegated to AuthenticationManager)
     
     func resetOtpState() {
-        DispatchQueue.main.async {
-            self.isOtpSent = false
-            self.isOtpVerified = false
-            self.otpCode = ""
-        }
+        authManager.resetOtpState()
     }
     
     func clearAuthError() {
-        DispatchQueue.main.async {
-            self.authError = nil
-        }
-        print("🧹 Auth error cleared")
+        authManager.clearAuthError()
     }
     
-    // MARK: - User Profile Methods
+    // User profile methods are now handled by UserManager
     
-    private func createUserProfile(userId: String, email: String, username: String) async throws {
-        let userData: [String: Any] = [
-            "userId": userId,
-            "email": email,
-            "username": username,
-            "displayName": username,
-            "createdAt": FieldValue.serverTimestamp(),
-            "authProvider": "email",
-            "profileImageUrl": "",
-            "bio": "",
-            "location": "",
-            "website": "",
-            "socialLinks": [:],
-            "preferences": [
-                "language": "en",
-                "notifications": true,
-                "privacy": "public"
-            ]
-        ]
-        
-        try await db.collection("users").document(userId).setData(userData)
-        print("✅ User profile created successfully")
-    }
-    
-    // MARK: - Error Handling
-    
-    private func localizedAuthError(_ error: Error) -> String {
-        print("🔍 Processing auth error: \(error)")
-        
-        if let authError = error as NSError? {
-            print("🔍 Auth error code: \(authError.code)")
-            print("🔍 Auth error domain: \(authError.domain)")
-            
-            // Check if it's a Firebase Auth error
-            if authError.domain == "FIRAuthErrorDomain" {
-                switch AuthErrorCode(rawValue: authError.code) {
-                case .emailAlreadyInUse:
-                    return "Email already in use".localized
-                case .invalidEmail:
-                    return "Invalid email format".localized
-                case .weakPassword:
-                    return "Password is too weak".localized
-                case .wrongPassword:
-                    return "Incorrect password".localized
-                case .userNotFound:
-                    return "Account not found. Please check your email or create a new account".localized
-                case .tooManyRequests:
-                    return "Too many failed attempts. Please try again later".localized
-                case .userDisabled:
-                    return "This account has been disabled".localized
-                case .requiresRecentLogin:
-                    return "Please sign in again for security reasons".localized
-                case .networkError:
-                    return "Network error. Please check your connection".localized
-                default:
-                    return "Authentication failed. Please check your credentials".localized
-                }
-            }
-        }
-        
-        // For custom errors or other types
-        return error.localizedDescription
-    }
-    
-    // MARK: - User Validation Methods
+    // MARK: - User Validation Methods (Delegated to AuthenticationManager)
     
     func checkUserExists(email: String) async throws -> Bool {
-        do {
-            // Try to get user by email from Firestore
-            let snapshot = try await db.collection("users")
-                .whereField("email", isEqualTo: email)
-                .getDocuments()
-            
-            return !snapshot.documents.isEmpty
-        } catch {
-            // If query fails, assume user doesn't exist
-            return false
-        }
+        return try await authManager.checkUserExists(email: email)
     }
     
     func validateUsername(_ username: String) async throws -> Bool {
-        // Check if username is already taken
-        let snapshot = try await db.collection("users")
-            .whereField("username", isEqualTo: username)
-            .getDocuments()
-        
-        return snapshot.documents.isEmpty
+        return try await authManager.validateUsername(username)
     }
     
-    // MARK: - Anonymous Authentication
+    // MARK: - Anonymous Authentication (Delegated to AuthenticationManager)
     
     func signInAnonymously() async throws {
-        do {
-            let result = try await auth.signInAnonymously()
-            DispatchQueue.main.async {
-                self.currentUser = result.user
-            }
-        } catch {
-            DispatchQueue.main.async {
-                self.authError = self.localizedAuthError(error)
-            }
-            throw error
-        }
+        try await authManager.signInAnonymously()
     }
     
-    // MARK: - Google Sign-In
+    // MARK: - Google Sign-In (Delegated to AuthenticationManager)
     
     func signInWithGoogle() async throws {
-        try await GoogleSignInManager.shared.signIn()
+        try await authManager.signInWithGoogle()
     }
     
-    // MARK: - User Data Methods
+    // MARK: - User Data Methods (Delegated to UserManager)
     
     func getUserFavorites(userId: String) async throws -> [[String: Any]] {
-        do {
-            let document = try await db.collection("users").document(userId).getDocument()
-            if let data = document.data(),
-               let favoriteIds = data["favorites"] as? [String] {
-                
-                // Fetch the actual idea data for each favorite
-                var favorites: [[String: Any]] = []
-                
-                for ideaId in favoriteIds {
-                    let ideaDoc = try await db.collection("ideaSparks").document(ideaId).getDocument()
-                    if let ideaData = ideaDoc.data() {
-                        var favoriteData: [String: Any] = ideaData
-                        favoriteData["ideaId"] = ideaId
-                        favorites.append(favoriteData)
-                    }
-                }
-                
-                return favorites
-            }
-            return []
-        } catch {
-            throw error
-        }
+        return try await userManager.getUserFavorites(userId: userId)
     }
     
     func removeFromFavorites(userId: String, ideaId: String) async throws {
-        do {
-            let documentRef = db.collection("users").document(userId)
-            let updateData: [String: Any] = [
-                "favorites": FieldValue.arrayRemove([ideaId])
-            ]
-            try await documentRef.updateData(updateData)
-        } catch {
-            throw error
-        }
+        try await userManager.removeFromFavorites(userId: userId, ideaId: ideaId)
     }
     
     func getUserPods(userId: String) async throws -> [IncubationProject] {
-        do {
-            let snapshot = try await db.collection("pods")
-                .whereField("members", arrayContains: userId)
-                .getDocuments()
-            
-            var pods: [IncubationProject] = []
-            
-            for document in snapshot.documents {
-                let data = document.data()
-                let projectId = document.documentID
-                
-                // Fetch members with full details
-                print("🔍 DEBUG: Processing pod '\(data["name"] as? String ?? "Unknown")' (ID: \(projectId))")
-                let members = try await fetchProjectMembers(projectId: projectId)
-                print("👥 DEBUG: Fetched \(members.count) members for pod '\(data["name"] as? String ?? "Unknown")'")
-                
-                // Fetch tasks for this pod
-                let tasks = try await getProjectTasks(projectId: projectId)
-                print("📋 DEBUG: Fetched \(tasks.count) tasks for pod '\(data["name"] as? String ?? "Unknown")'")
-                
-                // Map status string to enum
-                let statusString = data["status"] as? String ?? "planning"
-                let status = IncubationProject.ProjectStatus(rawValue: statusString) ?? .planning
-                
-                let pod = IncubationProject(
-                    id: projectId,
-                    ideaId: data["ideaId"] as? String ?? "",
-                    name: data["name"] as? String ?? "",
-                    description: data["description"] as? String ?? "",
-                    creatorId: data["creatorId"] as? String ?? "",
-                    isPublic: data["isPublic"] as? Bool ?? false,
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    members: members, // Now properly populated!
-                    tasks: tasks, // ✅ Now properly loaded from Firebase!
-                    status: status
-                )
-                pods.append(pod)
-                print("✅ Loaded pod '\(pod.name)' with \(members.count) members")
-                
-                // Debug: Print member details
-                for member in members {
-                    print("  👤 Member: \(member.username) (\(member.role)) - \(member.permissions.map { $0.rawValue }.joined(separator: ", "))")
-                }
-            }
-            
-            return pods
-        } catch {
-            throw error
-        }
+        return try await podManager.getUserPods(userId: userId)
     }
     
     func getUserIdeas(userId: String) async throws -> [IdeaSpark] {
-        do {
-            let snapshot = try await db.collection("ideaSparks")
-                .whereField("authorId", isEqualTo: userId)
-                .whereField("isPublic", isEqualTo: true)
-                .getDocuments()
-            
-            return snapshot.documents.compactMap { document in
-                let data = document.data()
-                
-                // Map status string to enum
-                let statusString = data["status"] as? String ?? "planning"
-                let status = IdeaSpark.IdeaStatus(rawValue: statusString) ?? .planning
-                
-                return IdeaSpark(
-                    id: document.documentID,
-                    authorId: data["authorId"] as? String ?? "",
-                    authorUsername: data["authorUsername"] as? String ?? "",
-                    title: data["title"] as? String ?? "",
-                    description: data["description"] as? String ?? "",
-                    tags: data["tags"] as? [String] ?? [],
-                    isPublic: data["isPublic"] as? Bool ?? false,
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    likes: data["likes"] as? Int ?? 0,
-                    comments: data["comments"] as? Int ?? 0,
-                    status: status
-                )
-            }
-        } catch {
-            throw error
-        }
+        return try await userManager.getUserIdeas(userId: userId)
     }
     
     func getUserPrivateIdeas(userId: String) async throws -> [IdeaSpark] {
-        do {
-            let snapshot = try await db.collection("ideaSparks")
-                .whereField("authorId", isEqualTo: userId)
-                .whereField("isPublic", isEqualTo: false)
-                .getDocuments()
-            
-            return snapshot.documents.compactMap { document in
-                let data = document.data()
-                
-                // Map status string to enum
-                let statusString = data["status"] as? String ?? "planning"
-                let status = IdeaSpark.IdeaStatus(rawValue: statusString) ?? .planning
-                
-                return IdeaSpark(
-                    id: document.documentID,
-                    authorId: data["authorId"] as? String ?? "",
-                    authorUsername: data["authorUsername"] as? String ?? "",
-                    title: data["title"] as? String ?? "",
-                    description: data["description"] as? String ?? "",
-                    tags: data["tags"] as? [String] ?? [],
-                    isPublic: data["isPublic"] as? Bool ?? false,
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    likes: data["likes"] as? Int ?? 0,
-                    comments: data["comments"] as? Int ?? 0,
-                    status: status
-                )
-            }
-        } catch {
-            throw error
-        }
+        return try await userManager.getUserPrivateIdeas(userId: userId)
     }
     
-    // MARK: - Pod Management Methods
+    // MARK: - Pod Management Methods (Delegated to PodManager)
     
     func createPod(name: String, description: String, ideaId: String?, isPublic: Bool) async throws -> String {
-        guard let currentUser = auth.currentUser else {
-            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
-        }
-        
-        let podData: [String: Any] = [
-            "name": name,
-            "description": description,
-            "ideaId": ideaId ?? "",
-            "creatorId": currentUser.uid,
-            "isPublic": isPublic,
-            "status": "active",
-            "createdAt": FieldValue.serverTimestamp(),
-            "updatedAt": FieldValue.serverTimestamp(),
-            "members": [currentUser.uid],
-            "tasks": []
-        ]
-        
-        let docRef = try await db.collection("pods").addDocument(data: podData)
-        
-        // Create the creator as the first member with admin permissions
-        try await addProjectMemberDetails(projectId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
-        
-        return docRef.documentID
+        return try await podManager.createPod(name: name, description: description, ideaId: ideaId, isPublic: isPublic)
     }
     
     func createPodFromIdea(name: String, description: String, ideaId: String, isPublic: Bool) async throws -> String {
-        guard let currentUser = auth.currentUser else {
-            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
-        }
-        
-        // SECURITY CHECK: Verify that the current user is the owner of the idea
-        print("🔒 SECURITY: Checking if user \(currentUser.uid) can create pod from idea \(ideaId)")
-        let ideaDoc = try await db.collection("ideaSparks").document(ideaId).getDocument()
-        
-        guard let ideaData = ideaDoc.data(),
-              let ideaAuthorId = ideaData["authorId"] as? String,
-              ideaAuthorId == currentUser.uid else {
-            print("❌ SECURITY: User \(currentUser.uid) is NOT the owner of idea \(ideaId)")
-            throw NSError(domain: "FirebaseManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Only the idea owner can create pods from this idea".localized])
-        }
-        
-        print("✅ SECURITY: User \(currentUser.uid) is confirmed owner of idea \(ideaId)")
-        
-        let podData: [String: Any] = [
-            "name": name,
-            "description": description,
-            "ideaId": ideaId,
-            "creatorId": currentUser.uid,
-            "isPublic": isPublic,
-            "status": "active",
-            "createdAt": FieldValue.serverTimestamp(),
-            "updatedAt": FieldValue.serverTimestamp(),
-            "members": [currentUser.uid],
-            "tasks": []
-        ]
-        
-        print("💾 DEBUG: Storing pod with data:")
-        print("  📛 name: '\(name)'")
-        print("  💡 ideaId: '\(ideaId)'")
-        print("  👤 creatorId: '\(currentUser.uid)'")
-        print("  🌍 isPublic: \(isPublic)")
-        
-        let docRef = try await db.collection("pods").addDocument(data: podData)
-        print("📝 DEBUG: Pod document created with ID: \(docRef.documentID)")
-        
-        // Create the creator as the first member with admin permissions
-        try await addProjectMemberDetails(projectId: docRef.documentID, userId: currentUser.uid, role: "Creator", permissions: [.admin, .edit, .view, .comment])
-        
-        // Verify the pod was stored correctly
-        let verifyDoc = try await db.collection("pods").document(docRef.documentID).getDocument()
-        if let verifyData = verifyDoc.data() {
-            let storedIdeaId = verifyData["ideaId"] as? String ?? "NO_IDEA_ID"
-            let storedIsPublic = verifyData["isPublic"] as? Bool ?? false
-            print("✅ VERIFICATION: Pod stored correctly - ideaId: '\(storedIdeaId)', isPublic: \(storedIsPublic)")
-            
-            if storedIdeaId != ideaId {
-                print("🚨 CRITICAL: ideaId mismatch! Expected: '\(ideaId)', Stored: '\(storedIdeaId)'")
-            }
-        } else {
-            print("❌ VERIFICATION: Could not read back the created pod!")
-        }
-        
-        // Update the idea status to "incubating" (Active) now that a pod has been created
-        try await db.collection("ideaSparks").document(ideaId).updateData([
-            "status": "incubating",
-            "updatedAt": FieldValue.serverTimestamp()
-        ])
-        print("✅ Updated idea status to 'incubating' (Active)")
-        
-        print("🎉 SUCCESS: Pod created from idea by authorized user")
-        return docRef.documentID
+        return try await podManager.createPodFromIdea(name: name, description: description, ideaId: ideaId, isPublic: isPublic)
     }
     
-    // Helper method to add member details to pod's members subcollection
-    private func addProjectMemberDetails(projectId: String, userId: String, role: String, permissions: [ProjectMember.Permission]) async throws {
-        // Get user profile
-        guard let userProfileData = try await getUserProfile(userId: userId) else {
-            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User profile not found"])
-        }
-        
-        let username = userProfileData["username"] as? String ?? "Unknown User"
-        
-        let memberData: [String: Any] = [
-            "userId": userId,
-            "username": username,
-            "role": role,
-            "joinedAt": Timestamp(date: Date()),
-            "permissions": permissions.map { $0.rawValue }
-        ]
-        
-        try await db.collection("pods").document(projectId).collection("members").document(userId).setData(memberData)
-        print("✅ Added member details for user \(username) to pod \(projectId)")
-    }
+    // Pod helper methods are now in PodManager
     
-    // Method to fetch pod members from subcollection
-    private func fetchProjectMembers(projectId: String) async throws -> [ProjectMember] {
-        do {
-            print("🔍 DEBUG: Fetching members for pod: \(projectId)")
-            let snapshot = try await db.collection("pods").document(projectId).collection("members").getDocuments()
-            
-            print("📊 DEBUG: Found \(snapshot.documents.count) member documents in subcollection")
-            
-            if snapshot.documents.isEmpty {
-                print("⚠️ DEBUG: No members found in subcollection for pod \(projectId)")
-                // Fallback: try to get members from main pod document
-                return try await fetchMembersFromMainDocument(projectId: projectId)
-            }
-            
-            let members = snapshot.documents.compactMap { document in
-                let data = document.data()
-                print("👤 DEBUG: Processing member document \(document.documentID): \(data)")
-                
-                let permissionsArray = data["permissions"] as? [String] ?? []
-                let permissions = permissionsArray.compactMap { ProjectMember.Permission(rawValue: $0) }
-                
-                let member = ProjectMember(
-                    id: document.documentID,
-                    userId: data["userId"] as? String ?? "",
-                    username: data["username"] as? String ?? "",
-                    role: data["role"] as? String ?? "",
-                    joinedAt: (data["joinedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    permissions: permissions
-                )
-                
-                print("✅ DEBUG: Created member object: \(member.username) (\(member.role))")
-                return member
-            }
-            
-            print("📝 DEBUG: Returning \(members.count) members for pod \(projectId)")
-            return members
-        } catch {
-            print("❌ Failed to fetch pod members: \(error.localizedDescription)")
-            return []
-        }
-    }
-    
-    // Fallback method to create members from main pod document
-    private func fetchMembersFromMainDocument(projectId: String) async throws -> [ProjectMember] {
-        do {
-            print("🔄 DEBUG: Falling back to main document for pod \(projectId)")
-            let podDoc = try await db.collection("pods").document(projectId).getDocument()
-            
-            guard let data = podDoc.data(),
-                  let memberIds = data["members"] as? [String] else {
-                print("❌ DEBUG: No members array found in main pod document")
-                return []
-            }
-            
-            print("👥 DEBUG: Found \(memberIds.count) member IDs in main document: \(memberIds)")
-            
-            var members: [ProjectMember] = []
-            
-            for userId in memberIds {
-                do {
-                    // Get user profile to create member
-                    let userProfileData = try await getUserProfile(userId: userId)
-                    
-                    // Determine role based on whether user is the creator
-                    let creatorId = data["creatorId"] as? String ?? ""
-                    let role = (userId == creatorId) ? "Creator" : "Member"
-                    let permissions: [ProjectMember.Permission] = (userId == creatorId) ? [.admin, .edit, .view, .comment] : [.view, .comment]
-                    
-                    let member = ProjectMember(
-                        id: userId,
-                        userId: userId,
-                        username: userProfileData?["username"] as? String ?? "Unknown User",
-                        role: role,
-                        joinedAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        permissions: permissions
-                    )
-                    
-                    members.append(member)
-                    print("✅ DEBUG: Created fallback member: \(member.username) (\(member.role))")
-                    
-                    // Optionally, create the subcollection entry for future use
-                    try await addProjectMemberDetails(projectId: projectId, userId: userId, role: role, permissions: permissions)
-                    
-                } catch {
-                    print("❌ DEBUG: Failed to create member for userId \(userId): \(error.localizedDescription)")
-                }
-            }
-            
-            print("📝 DEBUG: Created \(members.count) fallback members")
-            return members
-        } catch {
-            print("❌ DEBUG: Failed to fetch members from main document: \(error.localizedDescription)")
-            return []
-        }
+    func fetchProjectMembers(projectId: String) async throws -> [ProjectMember] {
+        return try await podManager.fetchProjectMembers(projectId: projectId)
     }
     
     func updateProject(projectId: String, data: [String: Any]) async throws {
-        do {
-            var updateData = data
-            updateData["updatedAt"] = Timestamp(date: Date())
-            try await db.collection("pods").document(projectId).updateData(updateData)
-        } catch {
-            throw error
-        }
+        try await podManager.updateProject(projectId: projectId, data: data)
     }
     
-    // Method to add a new member to an existing pod
     func addMemberToProject(projectId: String, userId: String, role: String = "Member") async throws {
-        do {
-            // First, add the user ID to the pod's members array
-            try await db.collection("pods").document(projectId).updateData([
-                "members": FieldValue.arrayUnion([userId]),
-                "updatedAt": Timestamp(date: Date())
-            ])
-            
-            // Then add detailed member information to the subcollection
-            let permissions: [ProjectMember.Permission] = [.view, .comment] // Default permissions for new members
-            try await addProjectMemberDetails(projectId: projectId, userId: userId, role: role, permissions: permissions)
-            
-            print("✅ Successfully added member \(userId) to pod \(projectId)")
-        } catch {
-            print("❌ Failed to add member to pod: \(error.localizedDescription)")
-            throw error
-        }
+        try await podManager.addMemberToProject(projectId: projectId, userId: userId, role: role)
     }
     
-    // Method to remove a member from a pod
     func removeMemberFromProject(projectId: String, userId: String) async throws {
-        do {
-            // Remove from the pod's members array
-            try await db.collection("pods").document(projectId).updateData([
-                "members": FieldValue.arrayRemove([userId]),
-                "updatedAt": Timestamp(date: Date())
-            ])
-            
-            // Remove from the members subcollection
-            try await db.collection("pods").document(projectId).collection("members").document(userId).delete()
-            
-            print("✅ Successfully removed member \(userId) from pod \(projectId)")
-        } catch {
-            print("❌ Failed to remove member from pod: \(error.localizedDescription)")
-            throw error
-        }
+        try await podManager.removeMemberFromProject(projectId: projectId, userId: userId)
     }
     
     func deleteProject(projectId: String) async throws {
-        do {
-            try await db.collection("pods").document(projectId).delete()
-        } catch {
-            throw error
-        }
+        try await podManager.deleteProject(projectId: projectId)
     }
     
     // MARK: - Task Management Methods
@@ -1428,273 +701,53 @@ class FirebaseManager: ObservableObject {
     }
     
     func getUserNotifications(userId: String) async throws -> [[String: Any]] {
-        do {
-            let snapshot = try await db.collection("notifications")
-                .whereField("userId", isEqualTo: userId)
-                .order(by: "timestamp", descending: true)
-                .limit(to: 50)
-                .getDocuments()
-            
-            return snapshot.documents.map { document in
-                var data = document.data()
-                data["id"] = document.documentID
-                return data
-            }
-        } catch {
-            throw error
-        }
+        return try await userManager.getUserNotifications(userId: userId)
     }
     
     func markNotificationAsRead(notificationId: String) async throws {
-        do {
-            try await db.collection("notifications").document(notificationId).updateData([
-                "isRead": true
-            ])
-        } catch {
-            throw error
-        }
+        try await userManager.markNotificationAsRead(notificationId: notificationId)
     }
     
     func getAllUsers() async throws -> [[String: Any]] {
-        do {
-            let snapshot = try await db.collection("users")
-                .whereField("isPublic", isEqualTo: true)
-                .limit(to: 100)
-                .getDocuments()
-            
-            return snapshot.documents.map { document in
-                var data = document.data()
-                data["id"] = document.documentID
-                return data
-            }
-        } catch {
-            throw error
-        }
+        return try await userManager.getAllUsers()
     }
     
     func inviteUserToProject(projectId: String, userId: String, role: String, message: String) async throws {
-        guard let currentUser = auth.currentUser else {
-            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated".localized])
-        }
-        
-        do {
-            let invitationData: [String: Any] = [
-                "projectId": projectId,
-                "userId": userId,
-                "invitedBy": currentUser.uid,
-                "role": role,
-                "message": message,
-                "status": "pending",
-                "createdAt": FieldValue.serverTimestamp()
-            ]
-            
-            try await db.collection("pod_invitations").addDocument(data: invitationData)
-        } catch {
-            throw error
-        }
+        try await podManager.inviteUserToProject(projectId: projectId, userId: userId, role: role, message: message)
     }
     
     func getPublicPods() async throws -> [IncubationProject] {
-        do {
-            let snapshot = try await db.collection("pods")
-                .whereField("isPublic", isEqualTo: true)
-                .order(by: "createdAt", descending: true)
-                .limit(to: 50)
-                .getDocuments()
-            
-            var pods: [IncubationProject] = []
-            
-            for document in snapshot.documents {
-                let data = document.data()
-                let podId = document.documentID
-                
-                // Fetch members with full details
-                let members = try await fetchProjectMembers(projectId: podId)
-                
-                // Fetch tasks for this pod
-                let tasks = try await getProjectTasks(projectId: podId)
-                
-                // Map status string to enum
-                let statusString = data["status"] as? String ?? "planning"
-                let status = IncubationProject.ProjectStatus(rawValue: statusString) ?? .planning
-                
-                let pod = IncubationProject(
-                    id: podId,
-                    ideaId: data["ideaId"] as? String ?? "",
-                    name: data["name"] as? String ?? "",
-                    description: data["description"] as? String ?? "",
-                    creatorId: data["creatorId"] as? String ?? "",
-                    isPublic: data["isPublic"] as? Bool ?? false,
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    members: members, // Now properly populated!
-                    tasks: tasks, // ✅ Now properly loaded from Firebase!
-                    status: status
-                )
-                pods.append(pod)
-                print("✅ Loaded public pod '\(pod.name)' with \(members.count) members")
-            }
-            
-            return pods
-        } catch {
-            throw error
-        }
+        return try await podManager.getPublicPods()
     }
     
-    // Method to get pods for a specific idea
     func getPodsByIdeaId(ideaId: String) async throws -> [IncubationProject] {
-        do {
-            print("🔍 DEBUG: Fetching pods for ideaId: '\(ideaId)'")
-            print("🔍 DEBUG: Query conditions - ideaId: '\(ideaId)', isPublic: true")
-            
-            // First, let's check ALL pods to see what's in the collection
-            let allPodsSnapshot = try await db.collection("pods").getDocuments()
-            print("📊 DEBUG: Total pods in collection: \(allPodsSnapshot.documents.count)")
-            
-            for doc in allPodsSnapshot.documents {
-                let data = doc.data()
-                let storedIdeaId = data["ideaId"] as? String ?? "NO_IDEA_ID"
-                let isPublic = data["isPublic"] as? Bool ?? false
-                let podName = data["name"] as? String ?? "NO_NAME"
-                print("  📄 Pod '\(podName)': ideaId='\(storedIdeaId)', isPublic=\(isPublic), match=\(storedIdeaId == ideaId)")
-            }
-            
-            // Now do the actual query (simplified to avoid composite index requirement)
-            let snapshot = try await db.collection("pods")
-                .whereField("ideaId", isEqualTo: ideaId)
-                .whereField("isPublic", isEqualTo: true)
-                .getDocuments()
-            
-            print("📊 DEBUG: Query result - Found \(snapshot.documents.count) pods for idea '\(ideaId)'")
-            
-            if snapshot.documents.isEmpty {
-                print("⚠️ DEBUG: No pods found! Possible reasons:")
-                print("  1. ideaId mismatch during creation/query")
-                print("  2. Pod created with isPublic=false")
-                print("  3. Firestore indexing delay")
-                print("  4. Query conditions too restrictive")
-            }
-            
-            var pods: [IncubationProject] = []
-            
-            for document in snapshot.documents {
-                let data = document.data()
-                let projectId = document.documentID
-                
-                print("🔄 DEBUG: Processing found pod '\(data["name"] as? String ?? "Unknown")' (ID: \(projectId))")
-                
-                // Fetch members with full details
-                let members = try await fetchProjectMembers(projectId: projectId)
-                
-                // Map status string to enum
-                let statusString = data["status"] as? String ?? "planning"
-                let status = IncubationProject.ProjectStatus(rawValue: statusString) ?? .planning
-                
-                let pod = IncubationProject(
-                    id: projectId,
-                    ideaId: data["ideaId"] as? String ?? "",
-                    name: data["name"] as? String ?? "",
-                    description: data["description"] as? String ?? "",
-                    creatorId: data["creatorId"] as? String ?? "",
-                    isPublic: data["isPublic"] as? Bool ?? false,
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    members: members,
-                    tasks: [], // TODO: Implement task fetching
-                    status: status
-                )
-                pods.append(pod)
-                print("✅ Loaded pod '\(pod.name)' for idea '\(ideaId)'")
-            }
-            
-            // Sort by creation date (newest first) since we removed the order clause
-            pods.sort { $0.createdAt > $1.createdAt }
-            
-            print("📝 DEBUG: Returning \(pods.count) pods to UI")
-            return pods
-        } catch {
-            print("❌ ERROR: Failed to fetch pods for idea '\(ideaId)': \(error.localizedDescription)")
-            throw error
-        }
+        return try await podManager.getPodsByIdeaId(ideaId: ideaId)
     }
     
     func followUser(followerId: String, followingId: String) async throws {
-        do {
-            let followData: [String: Any] = [
-                "followerId": followerId,
-                "followingId": followingId,
-                "createdAt": FieldValue.serverTimestamp()
-            ]
-            
-            try await db.collection("follows").addDocument(data: followData)
-        } catch {
-            throw error
-        }
+        try await userManager.followUser(followerId: followerId, followingId: followingId)
     }
     
     func unfollowUser(followerId: String, followingId: String) async throws {
-        do {
-            let snapshot = try await db.collection("follows")
-                .whereField("followerId", isEqualTo: followerId)
-                .whereField("followingId", isEqualTo: followingId)
-                .getDocuments()
-            
-            for document in snapshot.documents {
-                try await document.reference.delete()
-            }
-        } catch {
-            throw error
-        }
+        try await userManager.unfollowUser(followerId: followerId, followingId: followingId)
     }
     
     func isFollowing(followerId: String, followingId: String) async throws -> Bool {
-        do {
-            let snapshot = try await db.collection("follows")
-                .whereField("followerId", isEqualTo: followerId)
-                .whereField("followingId", isEqualTo: followingId)
-                .getDocuments()
-            
-            return !snapshot.documents.isEmpty
-        } catch {
-            throw error
-        }
+        return try await userManager.isFollowing(followerId: followerId, followingId: followingId)
     }
     
-    // MARK: - User Profile Management Methods
+    // MARK: - User Profile Management Methods (Delegated to UserManager)
     
     func updateUserStats(userId: String) async throws {
-        do {
-            // This method would typically update user statistics
-            // For now, we'll just update the lastActivity timestamp
-            try await db.collection("users").document(userId).updateData([
-                "lastActivity": Timestamp(date: Date())
-            ])
-        } catch {
-            throw error
-        }
+        try await userManager.updateUserStats(userId: userId)
     }
     
     func updateUserProfile(userId: String, data: [String: Any]) async throws {
-        do {
-            var updateData = data
-            updateData["updatedAt"] = Timestamp(date: Date())
-            try await db.collection("users").document(userId).updateData(updateData)
-        } catch {
-            throw error
-        }
+        try await userManager.updateUserProfile(userId: userId, data: data)
     }
     
     func getUserProfile(userId: String) async throws -> [String: Any]? {
-        do {
-            let document = try await db.collection("users").document(userId).getDocument()
-            if document.exists {
-                return document.data()
-            } else {
-                return nil
-            }
-        } catch {
-            throw error
-        }
+        return try await userManager.getUserProfile(userId: userId)
     }
     
     // MARK: - Debug Methods
@@ -1818,7 +871,7 @@ class FirebaseManager: ObservableObject {
             print("👤 User ID: \(result.user.uid)")
             
             // Create profile
-            try await createUserProfile(userId: result.user.uid, email: testEmail, username: testUsername)
+            try await userManager.createUserProfile(userId: result.user.uid, email: testEmail, username: testUsername)
             print("✅ Test user profile created!")
             
             // Sign out
