@@ -234,6 +234,13 @@
 "Select Idea" = "Select Idea";
 "No ideas match your search" = "No ideas match your search";
 "Create an idea first" = "Create an idea first";
+"Already in Project" = "Already in Project";
+"No Projects Yet" = "No Projects Yet";
+"Join a Project" = "Join a Project";
+"Select a project to join and start collaborating" = "Select a project to join and start collaborating";
+"Joining Project..." = "Joining Project...";
+"Join Selected Project" = "Join Selected Project";
+"Join Project Result" = "Join Project Result";
 "Unread" = "Unread";
 "Mentions" = "Mentions";
 "Tasks" = "Tasks";

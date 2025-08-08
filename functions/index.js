@@ -5,13 +5,22 @@ const nodemailer = require('nodemailer');
 admin.initializeApp();
 
 // Configure email transporter (you'll need to set up your email service)
-const transporter = nodemailer.createTransporter({
-  service: 'gmail', // or your preferred email service
-  auth: {
-    user: functions.config().email.user,
-    pass: functions.config().email.pass
+// Easiest: Gmail with an App Password. Run:
+// firebase functions:config:set email.user="you@gmail.com" email.pass="your-app-password"
+// Then deploy functions.
+function getTransporter() {
+  const user = functions.config().email && functions.config().email.user;
+  const pass = functions.config().email && functions.config().email.pass;
+
+  if (!user || !pass) {
+    throw new Error('Missing email credentials. Set with: firebase functions:config:set email.user="..." email.pass="..."');
   }
-});
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
+}
 
 exports.sendOtpEmail = functions.https.onCall(async (data, context) => {
   try {
@@ -20,6 +29,8 @@ exports.sendOtpEmail = functions.https.onCall(async (data, context) => {
     if (!email || !otp) {
       throw new functions.https.HttpsError('invalid-argument', 'Email and OTP are required');
     }
+
+    const transporter = getTransporter();
     
     const mailOptions = {
       from: functions.config().email.user,

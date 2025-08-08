@@ -251,8 +251,8 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
             }
             
             // For development: Print the OTP to console since email might not work
+            // Comment out in production
             print("🧪 DEV MODE: OTP for \(email) is: \(otp)")
-            print("🧪 DEV MODE: You can also use '123456' as bypass code")
             
             DispatchQueue.main.async {
                 self.isOtpSent = true
@@ -278,10 +278,8 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
         do {
             print("🔍 Verifying OTP: \(otp) for email: \(email)")
             
-            // Development bypass: allow "123456" as a universal OTP for testing
-            let isDevBypass = (otp == "123456")
-            
-            if !isDevBypass {
+            // Validate OTP strictly (no universal bypass in production)
+            do {
                 print("🔍 Fetching stored OTP from Firestore...")
                 let document = try await db.collection("otp_codes").document(email).getDocument()
                 
@@ -319,8 +317,6 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
                 // Delete OTP from database after successful verification
                 try await db.collection("otp_codes").document(email).delete()
                 print("🗑️ OTP deleted from database")
-            } else {
-                print("🔧 Using development bypass OTP (123456)")
             }
             
             // Mark email as verified in our custom system

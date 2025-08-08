@@ -319,19 +319,15 @@ struct SignUpView: View {
             }
             .background(Color.backgroundSecondary)
             .navigationBarHidden(true)
+            .sheet(isPresented: $showingEmailVerification) {
+                OtpVerificationView(email: email)
+            }
             .alert("Error".localized, isPresented: $showingError) {
                 Button("OK".localized) {
                     firebaseManager.clearAuthError()
                 }
             } message: {
                 Text(firebaseManager.authError ?? "An error occurred".localized)
-            }
-            .alert("Account Created!".localized, isPresented: $showingSuccess) {
-                Button("OK".localized) {
-                    dismiss()
-                }
-            } message: {
-                Text("User has been created successfully!".localized)
             }
             .onChange(of: firebaseManager.authError) { _, error in
                 showingError = error != nil
@@ -397,10 +393,11 @@ struct SignUpView: View {
                 print("🚀 SignUpView: Creating account for: \(email)")
                 try await firebaseManager.signUp(email: email, password: password, username: username)
                 print("✅ SignUpView: Account created successfully")
-                
+                // Attempt to send OTP email, then show OTP sheet
+                do { try await firebaseManager.sendOtpEmail(email: email) } catch { print("⚠️ OTP send failed: \(error.localizedDescription)") }
                 DispatchQueue.main.async {
                     self.isSubmitting = false
-                    self.showingSuccess = true
+                    self.showingEmailVerification = true
                 }
                 
             } catch {

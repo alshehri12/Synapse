@@ -164,7 +164,7 @@ struct IdeaDetailView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "plus.circle")
                                             .font(.system(size: 16))
-                                        Text("Create Pod".localized)
+                                        Text("Create Project".localized)
                                             .font(.system(size: 14, weight: .medium))
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.8)
@@ -197,7 +197,7 @@ struct IdeaDetailView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.system(size: 16))
-                                        Text("Already in Pod".localized)
+                                        Text("Already in Project".localized)
                                             .font(.system(size: 14, weight: .medium))
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.8)
@@ -214,7 +214,7 @@ struct IdeaDetailView: View {
                                         HStack(spacing: 6) {
                                             Image(systemName: "person.3")
                                                 .font(.system(size: 16))
-                                            Text("Join Pod".localized)
+                                            Text("Join Project".localized)
                                                 .font(.system(size: 14, weight: .medium))
                                                 .lineLimit(1)
                                                 .minimumScaleFactor(0.8)
@@ -231,7 +231,7 @@ struct IdeaDetailView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "person.3.fill")
                                             .font(.system(size: 16))
-                                        Text("No Pods Yet".localized)
+                                        Text("No Projects Yet".localized)
                                             .font(.system(size: 14, weight: .medium))
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.8)
@@ -618,7 +618,7 @@ struct CreatePodFromIdeaView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Header
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Create Pod from Idea".localized)
+                        Text("Create Project from Idea".localized)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(Color.textPrimary)
                         
@@ -628,19 +628,19 @@ struct CreatePodFromIdeaView: View {
                     }
                     .padding(.top, 20)
                     
-                    // Pod Name
+                    // Project Name
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Pod Name".localized)
+                        Text("Project Name".localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(Color.textPrimary)
                         
-                        TextField("Enter pod name...".localized, text: $podName)
+                        TextField("Enter project name...".localized, text: $podName)
                             .textFieldStyle(CustomTextFieldStyle())
                     }
                     
-                    // Pod Description
+                    // Project Description
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Pod Description".localized)
+                        Text("Project Description".localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(Color.textPrimary)
                         
@@ -667,7 +667,7 @@ struct CreatePodFromIdeaView: View {
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             
-                            Text(isSubmitting ? "Creating Pod...".localized : "Create Pod".localized)
+                            Text(isSubmitting ? "Creating Project...".localized : "Create Project".localized)
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.white)
@@ -682,7 +682,7 @@ struct CreatePodFromIdeaView: View {
                 .padding(.bottom, 40)
             }
             .background(Color.backgroundSecondary)
-            .navigationTitle("Create Pod".localized)
+            .navigationTitle("Create Project".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -751,13 +751,13 @@ struct JoinPodView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Header
+            // Header
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Join a Pod".localized)
+                Text("Join a Project".localized)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(Color.textPrimary)
                         
-                        Text("Select a pod to join and start collaborating".localized)
+                Text("Select a project to join and start collaborating".localized)
                             .font(.system(size: 16))
                             .foregroundColor(Color.textSecondary)
                     }
@@ -775,7 +775,7 @@ struct JoinPodView: View {
                     }
                     
                     // Join Button
-                    Button(action: joinSelectedPod) {
+            Button(action: joinSelectedPod) {
                         HStack {
                             if isJoining {
                                 ProgressView()
@@ -786,7 +786,7 @@ struct JoinPodView: View {
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             
-                            Text(isJoining ? "Joining Pod...".localized : "Join Selected Pod".localized)
+                    Text(isJoining ? "Joining Project...".localized : "Join Selected Project".localized)
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.white)
@@ -801,7 +801,7 @@ struct JoinPodView: View {
                 .padding(.bottom, 40)
             }
             .background(Color.backgroundSecondary)
-            .navigationTitle("Join Pod".localized)
+            .navigationTitle("Join Project".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -810,7 +810,7 @@ struct JoinPodView: View {
                     }
                 }
             }
-            .alert("Join Pod Result".localized, isPresented: $showingAlert) {
+            .alert("Join Project Result".localized, isPresented: $showingAlert) {
                 Button("OK".localized) {
                     if alertMessage.contains("successfully") {
                         dismiss()
@@ -833,13 +833,13 @@ struct JoinPodView: View {
                 try await firebaseManager.addMemberToProject(projectId: pod.id, userId: currentUser.uid, role: "Member")
                 await MainActor.run {
                     isJoining = false
-                    alertMessage = "Successfully joined pod '\(pod.name)'!".localized
+                    alertMessage = "Successfully joined project '\(pod.name)'!".localized
                     showingAlert = true
                 }
             } catch {
                 await MainActor.run {
                     isJoining = false
-                    alertMessage = "Failed to join pod: \(error.localizedDescription)".localized
+                    alertMessage = "Failed to join project: \(error.localizedDescription)".localized
                     showingAlert = true
                 }
             }

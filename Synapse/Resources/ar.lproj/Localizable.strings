@@ -233,6 +233,13 @@
 "Select Idea" = "اختر فكرة";
 "No ideas match your search" = "لا توجد أفكار تطابق بحثك";
 "Create an idea first" = "أنشئ فكرة أولاً";
+"Already in Project" = "أنت ضمن المشروع";
+"No Projects Yet" = "لا توجد مشاريع بعد";
+"Join a Project" = "انضم لمشروع";
+"Select a project to join and start collaborating" = "اختر مشروعًا للانضمام وابدأ التعاون";
+"Joining Project..." = "جاري الانضمام للمشروع...";
+"Join Selected Project" = "انضم للمشروع المحدد";
+"Join Project Result" = "نتيجة الانضمام للمشروع";
 "Unread" = "غير مقروء";
 "Mentions" = "الإشارات";
 "Tasks" = "المهام";
