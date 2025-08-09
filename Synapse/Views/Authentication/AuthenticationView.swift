@@ -393,11 +393,10 @@ struct SignUpView: View {
                 print("🚀 SignUpView: Creating account for: \(email)")
                 try await firebaseManager.signUp(email: email, password: password, username: username)
                 print("✅ SignUpView: Account created successfully")
-                // Send Firebase verification link and present verification UI
-                do { try await firebaseManager.sendEmailVerificationLink() } catch { print("⚠️ sendEmailVerification failed: \(error.localizedDescription)") }
+                // Manager sends verification link and signs out; return to auth screen
                 DispatchQueue.main.async {
                     self.isSubmitting = false
-                    self.showingEmailVerification = true
+                    dismiss()
                 }
                 
             } catch {

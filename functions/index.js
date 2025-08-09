@@ -4,22 +4,42 @@ const nodemailer = require('nodemailer');
 
 admin.initializeApp();
 
-// Configure email transporter (you'll need to set up your email service)
-// Easiest: Gmail with an App Password. Run:
-// firebase functions:config:set email.user="you@gmail.com" email.pass="your-app-password"
-// Then deploy functions.
+// Configure email transporter (supports SMTP providers like MailerSend, or Gmail fallback)
+// Option A: SMTP (recommended for custom domain)
+//   firebase functions:config:set \
+//     smtp.host="smtp.mailersend.net" \
+//     smtp.port="587" \
+//     smtp.user="<SMTP_USERNAME_FROM_PROVIDER>" \
+//     smtp.pass="<SMTP_PASSWORD_FROM_PROVIDER>" \
+//     smtp.from="no-reply@mysynapses.com" \
+//     smtp.from_name="Synapse"
+// Option B: Gmail (quick start)
+//   firebase functions:config:set email.user="you@gmail.com" email.pass="your-app-password"
 function getTransporter() {
-  const user = functions.config().email && functions.config().email.user;
-  const pass = functions.config().email && functions.config().email.pass;
-
-  if (!user || !pass) {
-    throw new Error('Missing email credentials. Set with: firebase functions:config:set email.user="..." email.pass="..."');
+  const smtp = functions.config().smtp || {};
+  if (smtp.host && smtp.user && smtp.pass) {
+    const port = Number(smtp.port || 587);
+    const secure = port === 465; // true for 465, false for 587
+    return nodemailer.createTransport({
+      host: smtp.host,
+      port,
+      secure,
+      auth: {
+        user: smtp.user,
+        pass: smtp.pass,
+      },
+    });
   }
 
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
+  const email = functions.config().email || {};
+  if (email.user && email.pass) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: email.user, pass: email.pass },
+    });
+  }
+
+  throw new Error('Missing mail credentials. Set SMTP (smtp.*) or Gmail (email.*) in functions config.');
 }
 
 exports.sendOtpEmail = functions.https.onCall(async (data, context) => {
@@ -32,8 +52,11 @@ exports.sendOtpEmail = functions.https.onCall(async (data, context) => {
 
     const transporter = getTransporter();
     
+    const smtp = functions.config().smtp || {};
+    const fromAddress = smtp.from || (functions.config().email && functions.config().email.user);
+    const fromName = smtp.from_name || 'Synapse';
     const mailOptions = {
-      from: functions.config().email.user,
+      from: fromAddress ? `${fromName} <${fromAddress}>` : undefined,
       to: email,
       subject: 'Synapse - Email Verification Code',
       html: `

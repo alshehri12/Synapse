@@ -85,6 +85,15 @@ class FirebaseManager: ObservableObject {
         try authManager.signOut()
     }
     
+    // MARK: - Email Verification Link Helpers (Delegated)
+    func sendEmailVerificationLink() async throws {
+        try await authManager.sendEmailVerificationLink()
+    }
+    
+    func reloadCurrentUser() async {
+        await authManager.reloadCurrentUser()
+    }
+    
     // MARK: - OTP Email Verification Methods (Delegated to AuthenticationManager)
     
     func sendOtpEmail(email: String) async throws {

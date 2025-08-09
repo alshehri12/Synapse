@@ -109,12 +109,21 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
                 print("⚠️ Failed to send verification email: \(error.localizedDescription)")
             }
             
-            print("🎉 Sign-up completed successfully! Awaiting email verification.")
+            print("🎉 Sign-up completed successfully! Awaiting email verification. Signing out to require login after verification.")
             
-            // Clear flag after sign-up is complete
+            // Sign out newly created (unverified) session so user returns to auth screen
+            do {
+                try auth.signOut()
+                print("🚪 Signed out after sign-up to await verification")
+            } catch {
+                print("⚠️ Failed to sign out after sign-up: \(error.localizedDescription)")
+            }
+            
+            // Clear flag and reset local auth state
             await MainActor.run {
                 self.isSigningUp = false
-                self.isEmailVerified = result.user.isEmailVerified
+                self.currentUser = nil
+                self.isEmailVerified = false
             }
             
         } catch {
@@ -148,11 +157,23 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
                 try await updateDisplayNameFromFirestore(for: result.user)
             }
             
-            // Success - user credentials are valid
-            await MainActor.run {
-                self.isEmailVerified = result.user.isEmailVerified
+            // Block unverified accounts from entering the app
+            if !result.user.isEmailVerified {
+                print("⚠️ Email not verified. Signing out and showing message.")
+                try? auth.signOut()
+                await MainActor.run {
+                    self.currentUser = nil
+                    self.isEmailVerified = false
+                    self.authError = "Please verify your email via the link we sent, then sign in.".localized
+                }
+                throw NSError(domain: "AuthenticationManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Email not verified"]) 
             }
-            print("🎉 Sign-in successful! isEmailVerified=\(result.user.isEmailVerified)")
+
+            // Success - verified user
+            await MainActor.run {
+                self.isEmailVerified = true
+            }
+            print("🎉 Sign-in successful and email verified")
             
         } catch {
             print("❌ Sign-in failed: \(error.localizedDescription)")
