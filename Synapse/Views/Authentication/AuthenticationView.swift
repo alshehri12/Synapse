@@ -320,7 +320,7 @@ struct SignUpView: View {
             .background(Color.backgroundSecondary)
             .navigationBarHidden(true)
             .sheet(isPresented: $showingEmailVerification) {
-                OtpVerificationView(email: email)
+                EmailVerificationLinkView(email: email)
             }
             .alert("Error".localized, isPresented: $showingError) {
                 Button("OK".localized) {
@@ -393,8 +393,8 @@ struct SignUpView: View {
                 print("🚀 SignUpView: Creating account for: \(email)")
                 try await firebaseManager.signUp(email: email, password: password, username: username)
                 print("✅ SignUpView: Account created successfully")
-                // Attempt to send OTP email, then show OTP sheet
-                do { try await firebaseManager.sendOtpEmail(email: email) } catch { print("⚠️ OTP send failed: \(error.localizedDescription)") }
+                // Send Firebase verification link and present verification UI
+                do { try await firebaseManager.sendEmailVerificationLink() } catch { print("⚠️ sendEmailVerification failed: \(error.localizedDescription)") }
                 DispatchQueue.main.async {
                     self.isSubmitting = false
                     self.showingEmailVerification = true
@@ -751,6 +751,85 @@ struct OtpVerificationView: View {
                 canResend = true
                 timer.invalidate()
             }
+        }
+    }
+}
+
+// MARK: - Email Verification Link View
+struct EmailVerificationLinkView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    let email: String
+    @State private var isResending = false
+    @State private var isChecking = false
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Image(systemName: "envelope.badge")
+                    .font(.system(size: 80))
+                    .foregroundColor(Color.accentGreen)
+                Text("Verify Your Email".localized)
+                    .font(.title)
+                    .fontWeight(.bold)
+                Text("We sent a verification link to".localized)
+                    .foregroundColor(Color.textSecondary)
+                Text(email)
+                    .font(.headline)
+                    .foregroundColor(Color.textPrimary)
+                
+                VStack(spacing: 12) {
+                    Button(action: resend) {
+                        if isResending {
+                            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white)).scaleEffect(0.8)
+                        } else {
+                            Text("Resend Verification Email".localized)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.accentGreen)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .disabled(isResending)
+                    
+                    Button(action: check) {
+                        if isChecking {
+                            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen)).scaleEffect(0.8)
+                        } else {
+                            Text("I Verified, Continue".localized)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color.accentGreen)
+                        }
+                    }
+                }
+                
+                if let msg = errorMessage { Text(msg).foregroundColor(Color.error).font(.footnote) }
+                Spacer()
+                Button("Back to Sign In".localized) { dismiss() }.foregroundColor(Color.textSecondary)
+            }
+            .padding(24)
+            .navigationBarHidden(true)
+        }
+    }
+    
+    private func resend() {
+        isResending = true
+        Task {
+            do {
+                try await firebaseManager.sendEmailVerificationLink()
+            } catch { errorMessage = error.localizedDescription }
+            isResending = false
+        }
+    }
+    private func check() {
+        isChecking = true
+        Task {
+            await firebaseManager.reloadCurrentUser()
+            isChecking = false
+            if firebaseManager.isEmailVerified { dismiss() } else { errorMessage = "Email not verified yet".localized }
         }
     }
 }

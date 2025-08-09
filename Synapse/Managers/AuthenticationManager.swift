@@ -49,6 +49,7 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
                 
                 DispatchQueue.main.async {
                     self?.currentUser = user
+                    self?.isEmailVerified = user.isEmailVerified
                     print("✅ Auth state set: currentUser=\(user.uid)")
                 }
             } else {
@@ -100,15 +101,20 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
                 print("⚠️ UserManager not available, skipping profile creation")
             }
             
-            // IMMEDIATELY sign out to prevent auto-navigation to main app
-            try auth.signOut()
-            print("🔄 User immediately signed out after account creation")
+            // Send Firebase email verification link
+            do {
+                try await result.user.sendEmailVerification()
+                print("📨 Email verification link sent to: \(email)")
+            } catch {
+                print("⚠️ Failed to send verification email: \(error.localizedDescription)")
+            }
             
-            print("🎉 Sign-up completed successfully!")
+            print("🎉 Sign-up completed successfully! Awaiting email verification.")
             
             // Clear flag after sign-up is complete
             await MainActor.run {
                 self.isSigningUp = false
+                self.isEmailVerified = result.user.isEmailVerified
             }
             
         } catch {
@@ -143,7 +149,10 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
             }
             
             // Success - user credentials are valid
-            print("🎉 Sign-in successful!")
+            await MainActor.run {
+                self.isEmailVerified = result.user.isEmailVerified
+            }
+            print("🎉 Sign-in successful! isEmailVerified=\(result.user.isEmailVerified)")
             
         } catch {
             print("❌ Sign-in failed: \(error.localizedDescription)")
@@ -161,6 +170,24 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
             print("⚠️ Showing error to user: \(errorMessage)")
             print("🔒 User signed out to prevent state conflicts")
             throw error
+        }
+    }
+
+    // MARK: - Email Verification Link Helpers
+    func sendEmailVerificationLink() async throws {
+        guard let user = auth.currentUser else { throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not signed in"]) }
+        try await user.sendEmailVerification()
+    }
+    
+    func reloadCurrentUser() async {
+        do {
+            try await auth.currentUser?.reload()
+            let verified = auth.currentUser?.isEmailVerified ?? false
+            await MainActor.run {
+                self.isEmailVerified = verified
+            }
+        } catch {
+            print("⚠️ Failed to reload current user: \(error.localizedDescription)")
         }
     }
     
