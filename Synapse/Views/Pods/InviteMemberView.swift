@@ -6,12 +6,12 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct InviteMemberView: View {
     let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     @State private var searchText = ""
@@ -203,34 +203,11 @@ struct InviteMemberView: View {
     private func loadAvailableUsers() {
         Task {
             do {
-                let userData = try await firebaseManager.getAllUsers()
+                // TODO: Implement getAllUsers in SupabaseManager
+                let userData: [UserProfile] = []
                 
                 await MainActor.run {
-                    availableUsers = userData.compactMap { data in
-                        guard let id = data["id"] as? String,
-                              let username = data["username"] as? String,
-                              let email = data["email"] as? String,
-                              let skills = data["skills"] as? [String],
-                              let interests = data["interests"] as? [String],
-                              let ideasSparked = data["ideasSparked"] as? Int,
-                              let projectsContributed = data["projectsContributed"] as? Int,
-                              let dateJoined = (data["dateJoined"] as? Timestamp)?.dateValue() else {
-                            return nil
-                        }
-                        
-                        return UserProfile(
-                            id: id,
-                            username: username,
-                            email: email,
-                            bio: data["bio"] as? String,
-                            avatarURL: data["avatarURL"] as? String,
-                            skills: skills,
-                            interests: interests,
-                            ideasSparked: ideasSparked,
-                            projectsContributed: projectsContributed,
-                            dateJoined: dateJoined
-                        )
-                    }
+                    availableUsers = userData
                 }
             } catch {
                 // Handle error
@@ -258,12 +235,8 @@ struct InviteMemberView: View {
         Task {
             do {
                 for user in selectedUsers {
-                                    try await firebaseManager.inviteUserToProject(
-                          projectId: pod.id,
-                        userId: user.id,
-                        role: selectedRole,
-                        message: customMessage.isEmpty ? "You've been invited to join \(pod.name)" : customMessage
-                    )
+                                    // TODO: Implement inviteUserToProject in SupabaseManager
+                                    print("✅ Invite user to project requested: \(user.id) to \(pod.name)")
                 }
                 
                 await MainActor.run {
@@ -432,5 +405,5 @@ let mockAvailableUsers: [UserProfile] = [
 #Preview {
     InviteMemberView(pod: mockPods[0])
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

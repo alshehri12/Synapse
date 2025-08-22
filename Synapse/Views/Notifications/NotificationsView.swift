@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 
 
@@ -16,7 +16,7 @@ struct NotificationsView: View {
     @State private var isLoading = false
     @State private var showingMarkAllRead = false
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     enum NotificationFilter: String, CaseIterable {
         case all = "All"
@@ -116,38 +116,17 @@ struct NotificationsView: View {
     }
     
     private func loadNotifications() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
         Task {
             do {
-                let notificationData = try await firebaseManager.getUserNotifications(userId: currentUser.uid)
+                let notificationData = try await supabaseManager.getUserNotifications(userId: currentUser.uid)
                 
                 await MainActor.run {
-                    notifications = notificationData.compactMap { data in
-                        guard let id = data["id"] as? String,
-                              let userId = data["userId"] as? String,
-                              let typeString = data["type"] as? String,
-                              let type = AppNotification.NotificationType(rawValue: typeString),
-                              let message = data["message"] as? String,
-                              let isRead = data["isRead"] as? Bool,
-                              let timestamp = (data["timestamp"] as? Timestamp)?.dateValue() else {
-                            return nil
-                        }
-                        
-                        let relatedId = data["relatedId"] as? String
-                        
-                        return AppNotification(
-                            id: id,
-                            userId: userId,
-                            type: type,
-                            message: message,
-                            relatedId: relatedId?.isEmpty == false ? relatedId : nil,
-                            isRead: isRead,
-                            timestamp: timestamp
-                        )
-                    }
+                    // The notificationData is already parsed as [AppNotification] from SupabaseManager
+                    notifications = notificationData
                     isLoading = false
                 }
             } catch {
@@ -181,7 +160,8 @@ struct NotificationsView: View {
         Task {
             do {
                 for notification in notifications where !notification.isRead {
-                    try await firebaseManager.markNotificationAsRead(notificationId: notification.id)
+                    // TODO: Implement markNotificationAsRead in SupabaseManager
+                    print("✅ Mark notification as read requested: \(notification.id)")
                 }
                 
                 await MainActor.run {
@@ -297,5 +277,5 @@ struct NotificationRow: View {
 #Preview {
     NotificationsView()
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

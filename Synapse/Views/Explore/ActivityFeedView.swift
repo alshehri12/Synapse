@@ -6,12 +6,12 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct ActivityFeedView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     @State private var activities: [FeedActivityItem] = []
     @State private var isLoading = false
@@ -122,7 +122,8 @@ struct ActivityFeedView: View {
     
     private func loadActivitiesAsync() async {
         do {
-            let activityData = try await firebaseManager.getActivityFeed()
+            // TODO: Implement getActivityFeed in SupabaseManager
+            let activityData: [[String: Any]] = []
             
             await MainActor.run {
                 activities = activityData.compactMap { data in
@@ -132,7 +133,7 @@ struct ActivityFeedView: View {
                           let typeString = data["type"] as? String,
                           let type = FeedActivityItem.ActivityType(rawValue: typeString),
                           let message = data["message"] as? String,
-                          let timestamp = (data["timestamp"] as? Timestamp)?.dateValue() else {
+                          let timestamp = data["timestamp"] as? Date else {
                         return nil
                     }
                     

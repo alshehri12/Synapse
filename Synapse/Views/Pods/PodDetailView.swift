@@ -6,13 +6,16 @@
 //
 
 import SwiftUI
-import Firebase
-import FirebaseAuth
+import Supabase
 struct PodDetailView: View {
     @State private var currentPod: IncubationProject
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
+    
+    // Placeholder for chat functionality - to be integrated with SupabaseManager
+    @State private var chatMessages: [Message] = []
+    @State private var typingUsers: [String] = []
     
     @State private var selectedTab = 0
     @State private var showingTaskSheet = false
@@ -136,7 +139,7 @@ struct PodDetailView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         // Only pod creator/admin can create tasks
-                        if currentPod.creatorId == firebaseManager.currentUser?.uid {
+                        if currentPod.creatorId == supabaseManager.currentUser?.uid {
                             Button(action: { showingTaskSheet = true }) {
                                 Label("Add Task".localized, systemImage: "plus.circle")
                             }
@@ -180,7 +183,8 @@ struct PodDetailView: View {
         isRefreshingTasks = true
         Task {
             do {
-                let updatedTasks = try await firebaseManager.getProjectTasks(projectId: currentPod.id)
+                // TODO: Implement getProjectTasks in SupabaseManager
+                let updatedTasks: [ProjectTask] = [] // Placeholder until implemented
                 await MainActor.run {
                     currentPod = IncubationProject(
                         id: currentPod.id,
@@ -431,22 +435,38 @@ struct MembersTab: View {
 struct FullScreenChatView: View {
     let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var chatManager = ChatManager.shared
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @State private var messageText = ""
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
     @State private var showingMessageOptions: ChatMessage?
     @FocusState private var isTextFieldFocused: Bool
     
+    // Placeholder for chat functionality - to be integrated with SupabaseManager
+    @State private var chatMessages: [ChatMessage] = []
+    @State private var typingUsers: [TypingIndicator] = []
+    
     var body: some View {
         NavigationView {
+            mainChatView
+        }
+        .actionSheet(item: $showingMessageOptions) { message in
+            messageOptionsActionSheet(for: message)
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(selectedImage: $selectedImage)
+        }
+    }
+    
+    // MARK: - Main Chat View
+    private var mainChatView: some View {
             VStack(spacing: 0) {
                 // Messages Area
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
                             // Welcome message for empty chat
-                            if chatManager.messages.isEmpty {
+                            if chatMessages.isEmpty {
                                 VStack(spacing: 12) {
                                     Image(systemName: "bubble.left.and.bubble.right")
                                         .font(.system(size: 50))
@@ -464,25 +484,25 @@ struct FullScreenChatView: View {
                                 .padding(.top, 100)
                             }
                             
-                            ForEach(chatManager.messages) { message in
+                            ForEach(chatMessages) { message in
                                 MessageBubble(
                                     message: message,
-                                    isFromCurrentUser: message.senderId == Auth.auth().currentUser?.uid,
+                                    isFromCurrentUser: message.senderId == supabaseManager.currentUser?.uid,
                                     onLongPress: { showingMessageOptions = message }
                                 )
                                 .id(message.id)
                             }
                             
                             // Typing indicators
-                            if !chatManager.typingUsers.isEmpty {
-                                TypingIndicatorView(users: chatManager.typingUsers)
+                            if !typingUsers.isEmpty {
+                                TypingIndicatorView(users: typingUsers)
                                     .padding(.top, 4)
                             }
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
                     }
-                    .onChange(of: chatManager.messages.count) { _ in
+                    .onChange(of: chatMessages.count) { _ in
                         scrollToBottom(proxy: proxy)
                     }
                 }
@@ -512,9 +532,9 @@ struct FullScreenChatView: View {
                                 .lineLimit(1...4)
                                 .onChange(of: messageText) { _ in
                                     if !messageText.isEmpty {
-                                        chatManager.startTyping(projectId: pod.id)
+                                        // TODO: Implement typing indicators
                                     } else {
-                                        chatManager.stopTyping(projectId: pod.id)
+                                        // TODO: Implement typing indicators
                                     }
                                 }
                         }
@@ -575,10 +595,10 @@ struct FullScreenChatView: View {
                 }
             }
             .onAppear {
-                chatManager.joinChatRoom(projectId: pod.id)
+                // TODO: Implement chat room joining
             }
             .onDisappear {
-                chatManager.leaveChatRoom(projectId: pod.id)
+                // TODO: Implement chat room leaving  
             }
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(selectedImage: $selectedImage)
@@ -588,7 +608,7 @@ struct FullScreenChatView: View {
                     title: Text("Message Options"),
                     buttons: [
                         .destructive(Text("Delete")) {
-                            chatManager.deleteMessage(message.id, projectId: pod.id)
+                            // TODO: Implement message deletion
                         },
                         .cancel()
                     ]
@@ -600,19 +620,31 @@ struct FullScreenChatView: View {
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        chatManager.sendMessage(messageText, projectId: pod.id)
+        // TODO: Implement message sending
+        print("📤 Sending message: \(messageText)")
         messageText = ""
-        chatManager.stopTyping(projectId: pod.id)
     }
     
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        if let lastMessage = chatManager.messages.last {
+        if let lastMessage = chatMessages.last {
             withAnimation(.easeInOut(duration: 0.3)) {
                 proxy.scrollTo(lastMessage.id, anchor: .bottom)
             }
         }
     }
-}
+    
+    // MARK: - Message Options Action Sheet
+    private func messageOptionsActionSheet(for message: ChatMessage) -> ActionSheet {
+        ActionSheet(
+            title: Text("Message Options"),
+            buttons: [
+                .destructive(Text("Delete")) {
+                    // TODO: Implement message deletion
+                },
+                .cancel()
+            ]
+        )
+    }
 
 // MARK: - Supporting Views
 struct TaskStatusCard: View {
@@ -712,7 +744,7 @@ struct TaskRow: View {
     let task: ProjectTask
     let pod: IncubationProject
     let onTaskUpdated: () -> Void
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var showingStatusPicker = false
     @State private var showingPriorityPicker = false
     @State private var showingDeleteAlert = false
@@ -848,7 +880,8 @@ struct TaskRow: View {
         isUpdating = true
         Task {
             do {
-                try await firebaseManager.updateTaskStatus(projectId: pod.id, taskId: task.id, status: status.rawValue)
+                // TODO: Implement updateTaskStatus in SupabaseManager
+                print("✅ Task status update requested: \(task.id) -> \(status.rawValue)")
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -866,7 +899,8 @@ struct TaskRow: View {
         isUpdating = true
         Task {
             do {
-                try await firebaseManager.updateTaskPriority(projectId: pod.id, taskId: task.id, priority: priority.rawValue)
+                // TODO: Implement updateTaskPriority in SupabaseManager
+                print("✅ Task priority update requested: \(task.id) -> \(priority.rawValue)")
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -884,7 +918,8 @@ struct TaskRow: View {
         isUpdating = true
         Task {
             do {
-                try await firebaseManager.deleteTask(projectId: pod.id, taskId: task.id)
+                // TODO: Implement deleteTask in SupabaseManager
+                print("✅ Task deletion requested: \(task.id)")
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -1009,5 +1044,5 @@ struct ActivityItem: Identifiable {
 #Preview {
     PodDetailView(pod: mockPods[0])
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

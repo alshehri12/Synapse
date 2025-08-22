@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct MyCollaborationsView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var pods: [IncubationProject] = []
     @State private var isLoading = true
     @State private var selectedTab = 0
@@ -94,14 +94,14 @@ struct MyCollaborationsView: View {
     }
     
     private func loadCollaborations() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
         Task {
             do {
                 // Get all pods where user is a member
-                let allPods = try await firebaseManager.getUserPods(userId: currentUser.uid)
+                let allPods = try await supabaseManager.getUserPods(userId: currentUser.uid)
                 
                 // Filter pods where user is actually a member
                 let userPods = allPods.filter { pod in

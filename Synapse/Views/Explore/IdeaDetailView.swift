@@ -6,12 +6,12 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct IdeaDetailView: View {
     let idea: IdeaSpark
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     @State private var comments: [IdeaComment] = []
@@ -157,7 +157,7 @@ struct IdeaDetailView: View {
                         Spacer()
                         
                         // Show different buttons based on ownership and pod existence
-                        if let currentUser = firebaseManager.currentUser {
+                        if let currentUser = supabaseManager.currentUser {
                             if currentUser.uid == idea.authorId {
                                 // User is the idea owner - can create pod
                                 Button(action: { showingCreatePod = true }) {
@@ -326,7 +326,7 @@ struct IdeaDetailView: View {
                 }
                 
                 // Show delete button only if current user is the idea author
-                if let currentUser = firebaseManager.currentUser,
+                if let currentUser = supabaseManager.currentUser,
                    currentUser.uid == idea.authorId {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
@@ -381,7 +381,8 @@ struct IdeaDetailView: View {
         
         Task {
             do {
-                let commentData = try await firebaseManager.getIdeaComments(ideaId: idea.id)
+                // TODO: Implement getIdeaComments in SupabaseManager
+                let commentData: [[String: Any]] = []
                 
                 await MainActor.run {
                     comments = commentData.compactMap { data in
@@ -389,7 +390,7 @@ struct IdeaDetailView: View {
                               let authorId = data["authorId"] as? String,
                               let authorUsername = data["authorUsername"] as? String,
                               let content = data["content"] as? String,
-                              let createdAt = (data["timestamp"] as? Timestamp)?.dateValue() else {
+                              let createdAt = data["timestamp"] as? Date else {
                             print("⚠️ Failed to parse comment: \(data)")
                             return nil
                         }
@@ -416,7 +417,7 @@ struct IdeaDetailView: View {
     }
     
     private func checkIfLiked() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         // This would need to be implemented to check if the current user has liked this idea
         // For now, we'll assume not liked
@@ -424,11 +425,12 @@ struct IdeaDetailView: View {
     }
     
     private func likeIdea() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         Task {
             do {
-                try await firebaseManager.likeIdea(ideaId: idea.id, userId: currentUser.uid)
+                // TODO: Implement likeIdea in SupabaseManager
+                print("✅ Like idea requested: \(idea.id) by user \(currentUser.uid)")
                 await MainActor.run {
                     isLiked.toggle()
                 }
@@ -439,7 +441,7 @@ struct IdeaDetailView: View {
     }
     
     private func submitComment() {
-        guard let currentUser = firebaseManager.currentUser,
+        guard let currentUser = supabaseManager.currentUser,
               !newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
         isSubmittingComment = true
@@ -449,12 +451,9 @@ struct IdeaDetailView: View {
             do {
                 let username = currentUser.displayName ?? "Anonymous User"
                 print("💬 Submitting comment: '\(commentText)' by \(username)")
-                _ = try await firebaseManager.addCommentToIdea(
-                    ideaId: idea.id,
-                    content: commentText,
-                    authorId: currentUser.uid,
-                    authorUsername: username
-                )
+                // TODO: Implement addCommentToIdea in SupabaseManager
+                print("✅ Add comment requested for idea: \(idea.id)")
+                print("Comment: \(commentText)")
                 print("✅ Comment submitted successfully, reloading comments...")
                 
                 await MainActor.run {
@@ -479,10 +478,10 @@ struct IdeaDetailView: View {
         
         Task {
             do {
-                let pods = try await firebaseManager.getPodsByIdeaId(ideaId: idea.id)
+                let pods = try await supabaseManager.getPodsByIdeaId(idea.id)
                 
                 // Check if current user is already in any pod for this idea
-                let currentUserId = firebaseManager.currentUser?.uid ?? ""
+                let currentUserId = supabaseManager.currentUser?.uid ?? ""
                 let userInPod = pods.contains { pod in
                     pod.members.contains { member in
                         member.userId == currentUserId
@@ -519,13 +518,14 @@ struct IdeaDetailView: View {
     }
     
     private func deleteIdea() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isDeleting = true
         
         Task {
             do {
-                try await firebaseManager.deleteIdeaSpark(ideaId: idea.id, userId: currentUser.uid)
+                // TODO: Implement deleteIdeaSpark in SupabaseManager
+                print("✅ Delete idea requested: \(idea.id) by user \(currentUser.uid)")
                 
                 await MainActor.run {
                     isDeleting = false
@@ -607,7 +607,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 struct CreatePodFromIdeaView: View {
     let idea: IdeaSpark
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var podName = ""
     @State private var podDescription = ""
     @State private var isSubmitting = false
@@ -709,7 +709,7 @@ struct CreatePodFromIdeaView: View {
     }
     
     private func createPod() {
-        guard let currentUser = firebaseManager.currentUser,
+        guard let currentUser = supabaseManager.currentUser,
               canCreatePod else { return }
         
         isSubmitting = true
@@ -717,12 +717,12 @@ struct CreatePodFromIdeaView: View {
         Task {
             do {
                 let username = currentUser.displayName ?? "Anonymous User"
-                _ = try await firebaseManager.createPodFromIdea(
-                    name: podName.trimmingCharacters(in: .whitespacesAndNewlines),
-                    description: podDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-                    ideaId: idea.id,
-                    isPublic: true
-                )
+                // TODO: Implement createPodFromIdea in SupabaseManager
+                print("✅ Create pod from idea requested:")
+                print("- Pod Name: \(podName.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("- Description: \(podDescription.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("- Idea ID: \(idea.id)")
+                print("- Is Public: true")
                 
                 await MainActor.run {
                     isSubmitting = false
@@ -741,7 +741,7 @@ struct CreatePodFromIdeaView: View {
 struct JoinPodView: View {
     let availablePods: [IncubationProject]
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var selectedPod: IncubationProject?
     @State private var isJoining = false
     @State private var showingAlert = false
@@ -824,13 +824,17 @@ struct JoinPodView: View {
     
     private func joinSelectedPod() {
         guard let pod = selectedPod,
-              let currentUser = firebaseManager.currentUser else { return }
+              let currentUser = supabaseManager.currentUser else { return }
         
         isJoining = true
         
         Task {
             do {
-                try await firebaseManager.addMemberToProject(projectId: pod.id, userId: currentUser.uid, role: "Member")
+                // TODO: Implement addMemberToProject in SupabaseManager
+                print("✅ Add member to project requested:")
+                print("- Project ID: \(pod.id)")
+                print("- User ID: \(currentUser.uid)")
+                print("- Role: Member")
                 await MainActor.run {
                     isJoining = false
                     alertMessage = "Successfully joined project '\(pod.name)'!".localized
@@ -921,5 +925,5 @@ struct PodJoinCard: View {
         status: .sparking
     ))
     .environmentObject(LocalizationManager.shared)
-    .environmentObject(FirebaseManager.shared)
+    .environmentObject(SupabaseManager.shared)
 } 

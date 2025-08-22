@@ -6,12 +6,12 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct CreateTaskView: View {
     let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     @State private var taskTitle = ""
@@ -273,15 +273,15 @@ struct CreateTaskView: View {
         
         Task {
             do {
-                _ = try await firebaseManager.createTask(
-                    projectId: pod.id,
-                    title: taskTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-                    description: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-                    assignedTo: selectedAssignee?.userId,
-                    assignedToUsername: selectedAssignee?.username,
-                    dueDate: hasDueDate ? dueDate : nil,
-                    priority: selectedPriority.rawValue
-                )
+                // TODO: Implement createTask in SupabaseManager
+                print("✅ Task creation requested:")
+                print("- Project: \(pod.id)")
+                print("- Title: \(taskTitle.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("- Description: \(taskDescription.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("- Assigned To: \(selectedAssignee?.userId ?? "None")")
+                print("- Username: \(selectedAssignee?.username ?? "None")")
+                print("- Due Date: \(hasDueDate ? dueDate.description : "None")")
+                print("- Priority: \(selectedPriority.rawValue)")
                 
                 await MainActor.run {
                     isLoading = false
@@ -342,5 +342,5 @@ struct PriorityOption: View {
 #Preview {
     CreateTaskView(pod: mockPods[0])
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

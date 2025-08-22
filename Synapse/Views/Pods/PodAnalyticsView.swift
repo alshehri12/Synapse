@@ -11,7 +11,7 @@ struct ProjectAnalyticsView: View {
     let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     @State private var selectedTimeRange: TimeRange = .week
     @State private var analytics: ProjectAnalytics?
@@ -102,7 +102,8 @@ struct ProjectAnalyticsView: View {
         
         Task {
             do {
-                let analyticsData = try await firebaseManager.getProjectAnalytics(projectId: pod.id)
+                // TODO: Implement getProjectAnalytics in SupabaseManager
+                let analyticsData: [String: Any] = [:]
                 
                 await MainActor.run {
                     // Convert Firebase data to ProjectAnalytics model

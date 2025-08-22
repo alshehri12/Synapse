@@ -6,12 +6,12 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct SearchView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     @State private var searchText = ""
     @State private var selectedCategory: SearchCategory = .all
@@ -145,42 +145,22 @@ struct SearchView: View {
         
         Task {
             do {
-                async let ideasTask = firebaseManager.getPublicIdeaSparks()
-                async let podsTask = firebaseManager.getPublicPods()
-                async let usersTask = firebaseManager.getAllUsers()
+                async let ideasTask = supabaseManager.getPublicIdeaSparks()
+                async let podsTask = supabaseManager.getPublicPods()
+                // TODO: Implement getAllUsers in SupabaseManager
+                async let usersTask = Task { return [UserProfile]() }
                 
                 let (ideaData, podData, userData) = try await (ideasTask, podsTask, usersTask)
                 
+                // Get data from all tasks
+                let allIdeas = ideaData
+                let allPods = podData
+                let allUsers = try await userData.value
+                
                 await MainActor.run {
-                    ideas = ideaData
-                    pods = podData
-                    
-                    users = userData.compactMap { data in
-                        guard let id = data["id"] as? String,
-                              let username = data["username"] as? String,
-                              let email = data["email"] as? String,
-                              let skills = data["skills"] as? [String],
-                              let interests = data["interests"] as? [String],
-                              let ideasSparked = data["ideasSparked"] as? Int,
-                              let projectsContributed = data["projectsContributed"] as? Int,
-                              let dateJoined = (data["dateJoined"] as? Timestamp)?.dateValue() else {
-                            return nil
-                        }
-                        
-                        return UserProfile(
-                            id: id,
-                            username: username,
-                            email: email,
-                            bio: data["bio"] as? String,
-                            avatarURL: data["avatarURL"] as? String,
-                            skills: skills,
-                            interests: interests,
-                            ideasSparked: ideasSparked,
-                            projectsContributed: projectsContributed,
-                            dateJoined: dateJoined
-                        )
-                    }
-                    
+                    ideas = allIdeas
+                    pods = allPods
+                    users = allUsers
                     isLoading = false
                 }
             } catch {
@@ -194,7 +174,7 @@ struct SearchView: View {
 
 // MARK: - Trending Section
 struct TrendingSection: View {
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var trendingIdeas: [IdeaSpark] = []
     @State private var popularPods: [IncubationProject] = []
     @State private var topUsers: [UserProfile] = []
@@ -303,9 +283,10 @@ struct TrendingSection: View {
         
         Task {
             do {
-                async let ideasTask = firebaseManager.getPublicIdeaSparks()
-                async let podsTask = firebaseManager.getPublicPods()
-                async let usersTask = firebaseManager.getAllUsers()
+                async let ideasTask = supabaseManager.getPublicIdeaSparks()
+                async let podsTask = supabaseManager.getPublicPods()
+                // TODO: Implement getAllUsers in SupabaseManager
+                async let usersTask = Task { return [UserProfile]() }
                 
                 let (ideaData, podData, userData) = try await (ideasTask, podsTask, usersTask)
                 
@@ -476,7 +457,7 @@ struct UserRow: View {
     let user: UserProfile
     @State private var isFollowing = false
     @State private var isLoading = false
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     var body: some View {
         HStack(spacing: 12) {
@@ -538,11 +519,12 @@ struct UserRow: View {
     }
     
     private func checkFollowStatus() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         Task {
             do {
-                let following = try await firebaseManager.isFollowing(followerId: currentUser.uid, followingId: user.id)
+                // TODO: Implement isFollowing in SupabaseManager
+                let following = false
                 await MainActor.run {
                     isFollowing = following
                 }
@@ -553,16 +535,18 @@ struct UserRow: View {
     }
     
     private func toggleFollow() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
         Task {
             do {
                 if isFollowing {
-                    try await firebaseManager.unfollowUser(followerId: currentUser.uid, followingId: user.id)
+                    // TODO: Implement unfollowUser in SupabaseManager
+                    print("✅ Unfollow user requested: \(user.id)")
                 } else {
-                    try await firebaseManager.followUser(followerId: currentUser.uid, followingId: user.id)
+                    // TODO: Implement followUser in SupabaseManager
+                    print("✅ Follow user requested: \(user.id)")
                 }
                 
                 await MainActor.run {

@@ -7,12 +7,12 @@
 
 import SwiftUI
 import Combine
-import FirebaseAuth
+import Supabase
 import UIKit
 
 struct PodChatView: View {
     let pod: IncubationProject
-    @StateObject private var chatManager = ChatManager.shared
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @State private var messageText = ""
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
@@ -20,103 +20,120 @@ struct PodChatView: View {
     @State private var keyboardHeight: CGFloat = 0
     @FocusState private var isTextFieldFocused: Bool
     
+    // Placeholder for chat functionality - to be integrated with SupabaseManager
+    @State private var chatMessages: [ChatMessage] = []
+    @State private var typingUsers: [TypingIndicator] = []
+    
+    // MARK: - Main Body
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                // Header
-                chatHeader
-                
-                // Messages Area - Enhanced visual clarity
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 12) { // Increased spacing for better readability
-                            // Welcome message for empty chat
-                            if chatManager.messages.isEmpty {
-                                VStack(spacing: 8) {
-                                    Image(systemName: "bubble.left.and.bubble.right")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(Color.textSecondary.opacity(0.6))
-                                    
-                                    Text("Start the conversation!")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(Color.textSecondary)
-                                    
-                                    Text("Send a message to get things started")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(Color.textSecondary.opacity(0.8))
-                                }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .frame(minHeight: 200)
-                            }
-                            
-                            ForEach(chatManager.messages) { message in
-                                MessageBubble(
-                                    message: message,
-                                    isFromCurrentUser: message.senderId == Auth.auth().currentUser?.uid,
-                                    onLongPress: { showingMessageOptions = message }
-                                )
-                                .id(message.id)
-                            }
-                            
-                            // Typing indicators
-                            if !chatManager.typingUsers.isEmpty {
-                                TypingIndicatorView(users: chatManager.typingUsers)
-                                    .padding(.top, 4)
-                            }
-                            
-                            // Extra bottom padding when keyboard is shown
-                            if keyboardHeight > 0 {
-                                Rectangle()
-                                    .fill(Color.clear)
-                                    .frame(height: 16)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                    }
-                    .background(Color.backgroundSecondary.opacity(0.3))
-                    .frame(height: calculateChatHeight(screenHeight: geometry.size.height))
-                    .onChange(of: chatManager.messages.count) { _ in
-                        scrollToBottom(proxy: proxy)
-                    }
-                    .onChange(of: keyboardHeight) { _ in
-                        // Scroll to bottom when keyboard appears/disappears
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            scrollToBottom(proxy: proxy)
-                        }
-                    }
-                }
-                
-                Spacer(minLength: 0)
-                
-                // Input area - Fixed at bottom
-                messageInputArea
-            }
-            .navigationBarHidden(true)
-            .onAppear {
-                chatManager.joinChatRoom(projectId: pod.id)
-                setupKeyboardObservers()
-            }
-            .onDisappear {
-                chatManager.leaveChatRoom(projectId: pod.id)
-                removeKeyboardObservers()
-            }
+            mainChatContent(geometry: geometry)
         }
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
         }
-
         .actionSheet(item: $showingMessageOptions) { message in
-            ActionSheet(
-                title: Text("Message Options"),
-                buttons: [
-                    .destructive(Text("Delete")) {
-                        chatManager.deleteMessage(message.id, projectId: pod.id)
-                    },
-                    .cancel()
-                ]
-            )
+            messageOptionsSheet(for: message)
         }
+    }
+    
+    // MARK: - Main Content View
+    private func mainChatContent(geometry: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            chatHeader
+            messagesScrollView(geometry: geometry)
+            Spacer(minLength: 0)
+            messageInputArea
+        }
+        .navigationBarHidden(true)
+        .onAppear {
+            setupKeyboardObservers()
+        }
+        .onDisappear {
+            removeKeyboardObservers()
+        }
+    }
+    
+    // MARK: - Messages Scroll View
+    private func messagesScrollView(geometry: GeometryProxy) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                messagesContent
+            }
+            .background(Color.backgroundSecondary.opacity(0.3))
+            .frame(height: calculateChatHeight(screenHeight: geometry.size.height))
+            .onChange(of: chatMessages.count) {
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: keyboardHeight) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    scrollToBottom(proxy: proxy)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Messages Content
+    private var messagesContent: some View {
+        LazyVStack(spacing: 12) {
+            if chatMessages.isEmpty {
+                emptyStateView
+            }
+            
+            ForEach(chatMessages) { message in
+                MessageBubble(
+                    message: message,
+                    isFromCurrentUser: message.senderId == supabaseManager.currentUser?.uid,
+                    onLongPress: { showingMessageOptions = message }
+                )
+                .id(message.id)
+            }
+            
+            if !typingUsers.isEmpty {
+                TypingIndicatorView(users: typingUsers)
+                    .padding(.top, 4)
+            }
+            
+            if keyboardHeight > 0 {
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(height: 16)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+    }
+    
+    // MARK: - Empty State View
+    private var emptyStateView: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 40))
+                .foregroundColor(Color.textSecondary.opacity(0.6))
+            
+            Text("Start the conversation!")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Color.textSecondary)
+            
+            Text("Send a message to get things started")
+                .font(.system(size: 14))
+                .foregroundColor(Color.textSecondary.opacity(0.8))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(minHeight: 200)
+    }
+    
+    // MARK: - Message Options Sheet
+    private func messageOptionsSheet(for message: ChatMessage) -> ActionSheet {
+        ActionSheet(
+            title: Text("Message Options"),
+            buttons: [
+                .destructive(Text("Delete")) {
+                    // TODO: Implement message deletion
+                },
+                .cancel()
+            ]
+        )
     }
     
     // MARK: - Header
@@ -222,11 +239,11 @@ struct PodChatView: View {
                         .foregroundColor(Color.textPrimary)
                         .focused($isTextFieldFocused)
                         .lineLimit(1...4)
-                        .onChange(of: messageText) { _ in
+                        .onChange(of: messageText) {
                             if !messageText.isEmpty {
-                                chatManager.startTyping(projectId: pod.id)
-                                                          } else {
-                                  chatManager.stopTyping(projectId: pod.id)
+                                // TODO: Implement typing indicators
+                            } else {
+                                // TODO: Implement typing indicators
                             }
                         }
                     
@@ -276,18 +293,15 @@ struct PodChatView: View {
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        chatManager.sendMessage(
-            messageText,
-            projectId: pod.id
-        )
+        // TODO: Implement message sending
+        print("📤 Sending message: \(messageText)")
         
         messageText = ""
-        chatManager.stopTyping(projectId: pod.id)
     }
     
     // MARK: - Keyboard Handling
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        if let lastMessage = chatManager.messages.last {
+        if let lastMessage = chatMessages.last {
             withAnimation(.easeInOut(duration: 0.3)) {
                 proxy.scrollTo(lastMessage.id, anchor: .bottom)
             }
@@ -531,5 +545,5 @@ struct ImagePicker: UIViewControllerRepresentable {
 #Preview {
     PodChatView(pod: mockPods[0])
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

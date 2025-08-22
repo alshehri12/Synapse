@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct MyIdeasView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var ideas: [IdeaSpark] = []
     @State private var isLoading = true
     @State private var selectedTab = 0
@@ -84,7 +84,7 @@ struct MyIdeasView: View {
     }
     
     private func loadIdeas() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
@@ -92,10 +92,10 @@ struct MyIdeasView: View {
             do {
                 if selectedTab == 0 {
                     // Load public ideas
-                    ideas = try await firebaseManager.getUserIdeas(userId: currentUser.uid)
+                    ideas = try await supabaseManager.getUserIdeas(userId: currentUser.uid)
                 } else {
                     // Load private ideas
-                    ideas = try await firebaseManager.getUserPrivateIdeas(userId: currentUser.uid)
+                    ideas = try await supabaseManager.getUserPrivateIdeas(userId: currentUser.uid)
                 }
                 
                 await MainActor.run {

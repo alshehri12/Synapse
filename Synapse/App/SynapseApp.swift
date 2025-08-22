@@ -3,40 +3,59 @@
 //  Synapse
 //
 //  Created by Abdulrahman Alshehri on 18/01/1447 AH.
+//  Updated for Supabase migration on 16/01/2025
 //
 
 import SwiftUI
-import Firebase
+import Supabase
 
 @main
 struct SynapseApp: App {
     @StateObject private var localizationManager = LocalizationManager.shared
-    @StateObject private var firebaseManager = FirebaseManager.shared
-    
-    init() {
-        FirebaseApp.configure()
-        GoogleSignInManager.shared.configure()
-    }
+    @StateObject private var supabaseManager = SupabaseManager.shared
     
     var body: some Scene {
         WindowGroup {
             Group {
-                if firebaseManager.currentUser != nil && !firebaseManager.isSigningUp {
-                    // User is signed in and not in sign-up process - show main app
+                if !supabaseManager.isAuthReady {
+                    // Show loading while checking auth state
+                    LoadingView()
+                        .environmentObject(localizationManager)
+                        .environment(\.locale, localizationManager.locale)
+                        .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                } else if supabaseManager.currentUser != nil && supabaseManager.isEmailVerified && !supabaseManager.isSigningUp {
+                    // User is signed in with verified email - show main app
                     ContentView()
                         .environmentObject(localizationManager)
-                        .environmentObject(firebaseManager)
+                        .environmentObject(supabaseManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
                 } else {
-                    // User is not signed in or is in sign-up process - show authentication
+                    // User is not signed in or email not verified - show authentication
                     AuthenticationView()
                         .environmentObject(localizationManager)
-                        .environmentObject(firebaseManager)
+                        .environmentObject(supabaseManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
                 }
             }
         }
+    }
+}
+
+// Simple loading view for auth state check
+struct LoadingView: View {
+    var body: some View {
+        VStack {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                .scaleEffect(1.5)
+            
+            Text("Loading...")
+                .foregroundColor(.secondary)
+                .padding(.top, 16)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.backgroundSecondary)
     }
 }

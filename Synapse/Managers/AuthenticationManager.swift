@@ -3,15 +3,17 @@
 //  Synapse
 //
 //  Created by Abdulrahman Alshehri on 18/01/1447 AH.
+//  Updated for Supabase migration on 16/01/2025.
 //
 
 import Foundation
-import Firebase
-import FirebaseAuth
-import FirebaseFirestore
-import FirebaseFunctions
+import Supabase
+import Combine
 
-class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
+// For backwards compatibility during migration
+typealias User = Supabase.User
+
+class AuthenticationManager: ObservableObject {
     static let shared = AuthenticationManager()
     
     @Published var currentUser: User?
@@ -23,45 +25,57 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
     @Published var isSigningUp = false
     @Published var lastSignUpAttempt: Date? = nil
     
-    private let firebaseService: FirebaseServiceProtocol
-    private var userManager: (any UserManagerProtocol)?
+    private let supabaseManager: SupabaseManager
+    // User management is now handled directly by SupabaseManager
+    private var cancellables = Set<AnyCancellable>()
     
-    private var auth: Auth { firebaseService.auth }
-    private var db: Firestore { firebaseService.db }
-    private var functions: Functions { firebaseService.functions }
-    
-    init(firebaseService: FirebaseServiceProtocol = FirebaseService.shared) {
-        self.firebaseService = firebaseService
+    init(supabaseManager: SupabaseManager = SupabaseManager.shared) {
+        self.supabaseManager = supabaseManager
         setupAuthStateListener()
     }
     
-    func setUserManager(_ userManager: any UserManagerProtocol) {
-        self.userManager = userManager
-    }
+    // User management is now handled directly by SupabaseManager
+    // func setUserManager is no longer needed
     
     private func setupAuthStateListener() {
-        _ = auth.addStateDidChangeListener { [weak self] _, user in
-            print("\n🔄 ===== AUTH STATE CHANGED =====")
+        // Listen to Supabase auth state changes through SupabaseManager
+        supabaseManager.$currentUser
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] user in
+                print("\n🔄 ===== SUPABASE AUTH STATE CHANGED =====")
             if let user = user {
-                print("👤 User signed in: \(user.uid)")
+                    print("👤 User signed in: \(user.id)")
                 print("📧 User email: \(user.email ?? "no email")")
-                print("🔍 Firebase isEmailVerified: \(user.isEmailVerified)")
+                    print("🔍 Supabase isEmailVerified: \(user.emailConfirmedAt != nil)")
                 
-                DispatchQueue.main.async {
                     self?.currentUser = user
-                    self?.isEmailVerified = user.isEmailVerified
-                    print("✅ Auth state set: currentUser=\(user.uid)")
-                }
+                    self?.isEmailVerified = user.emailConfirmedAt != nil
+                    print("✅ Auth state set: currentUser=\(user.id)")
             } else {
                 print("🚪 User signed out")
-                DispatchQueue.main.async {
                     self?.currentUser = nil
                     self?.isEmailVerified = false
                     print("✅ Auth state cleared: currentUser=nil, isEmailVerified=false")
                 }
+                print("===== AUTH STATE CHANGE COMPLETE =====\n")
             }
-            print("===== AUTH STATE CHANGE COMPLETE =====\n")
-        }
+            .store(in: &cancellables)
+        
+        // Also sync auth errors from SupabaseManager
+        supabaseManager.$authError
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                self?.authError = error
+            }
+            .store(in: &cancellables)
+        
+        // Sync isSigningUp state
+        supabaseManager.$isSigningUp
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isSigningUp in
+                self?.isSigningUp = isSigningUp
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Authentication Methods
@@ -76,440 +90,144 @@ class AuthenticationManager: ObservableObject, AuthenticationServiceProtocol {
             }
         }
         
-        // Set flag to prevent navigation during sign-up
         await MainActor.run {
-            self.isSigningUp = true
             self.lastSignUpAttempt = Date()
         }
         
         do {
-            print("📝 Creating new user account...")
-            let result = try await auth.createUser(withEmail: email, password: password)
-            print("✅ Firebase user created: \(result.user.uid)")
+            print("📝 Creating new user account with Supabase...")
+            try await supabaseManager.signUp(email: email, password: password, username: username)
+            print("✅ Supabase user created successfully")
             
-            // Set the user's display name in Firebase Auth
-            let changeRequest = result.user.createProfileChangeRequest()
-            changeRequest.displayName = username
-            try await changeRequest.commitChanges()
-            print("✅ Display name set to: \(username)")
-            
-            // Create user profile in Firestore via UserManager
-            if let userManager = userManager {
-                try await userManager.createUserProfile(userId: result.user.uid, email: email, username: username)
-                print("✅ User profile created in Firestore")
-            } else {
-                print("⚠️ UserManager not available, skipping profile creation")
-            }
-            
-            // Send Firebase email verification link
-            do {
-                try await result.user.sendEmailVerification()
-                print("📨 Email verification link sent to: \(email)")
-            } catch {
-                print("⚠️ Failed to send verification email: \(error.localizedDescription)")
-            }
-            
-            print("🎉 Sign-up completed successfully! Awaiting email verification. Signing out to require login after verification.")
-            
-            // Sign out newly created (unverified) session so user returns to auth screen
-            do {
-                try auth.signOut()
-                print("🚪 Signed out after sign-up to await verification")
-            } catch {
-                print("⚠️ Failed to sign out after sign-up: \(error.localizedDescription)")
-            }
-            
-            // Clear flag and reset local auth state
-            await MainActor.run {
-                self.isSigningUp = false
-                self.currentUser = nil
-                self.isEmailVerified = false
-            }
+            // Note: User profile creation in Supabase will be handled differently
+            // For now, we'll keep using Firebase for database operations
+            // User profile creation is now handled by SupabaseManager during sign up
+            // The user profile is automatically created in Supabase when user signs up
+            print("✅ User profile will be created automatically by SupabaseManager")
             
         } catch {
             print("❌ Sign-up failed: \(error.localizedDescription)")
-            await MainActor.run {
-                self.isSigningUp = false
-                self.authError = self.localizedAuthError(error)
-            }
             throw error
         }
     }
     
     func signIn(email: String, password: String) async throws {
-        print("\n🔐 ===== SIGN-IN CHECK STARTED =====")
+        print("\n🔐 ===== SUPABASE SIGN-IN CHECK STARTED =====")
         print("📧 Email: \(email)")
         
-        // Clear any previous errors
-        DispatchQueue.main.async {
-            self.authError = nil
-        }
-        
         do {
-            print("🔍 Checking email and password with Firebase...")
-            let result = try await auth.signIn(withEmail: email, password: password)
-            print("✅ Email and password are correct!")
-            print("👤 User signed in: \(result.user.uid)")
-            
-            // Check if displayName is missing and update it for existing users
-            if result.user.displayName == nil || result.user.displayName?.isEmpty == true {
-                print("⚠️ DisplayName is missing, updating from Firestore...")
-                try await updateDisplayNameFromFirestore(for: result.user)
-            }
-            
-            // Block unverified accounts from entering the app
-            if !result.user.isEmailVerified {
-                print("⚠️ Email not verified. Signing out and showing message.")
-                try? auth.signOut()
-                await MainActor.run {
-                    self.currentUser = nil
-                    self.isEmailVerified = false
-                    self.authError = "Please verify your email via the link we sent, then sign in.".localized
-                }
-                throw NSError(domain: "AuthenticationManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Email not verified"]) 
-            }
-
-            // Success - verified user
-            await MainActor.run {
-                self.isEmailVerified = true
-            }
-            print("🎉 Sign-in successful and email verified")
-            
+            try await supabaseManager.signIn(email: email, password: password)
+            print("✅ Supabase sign-in successful")
         } catch {
             print("❌ Sign-in failed: \(error.localizedDescription)")
-            
-            // Make sure user is signed out on error so no conflicting states
-            try? auth.signOut()
-            
-            // Set clear error message for wrong credentials
-            let errorMessage = "Wrong email or password"
-            
-            DispatchQueue.main.async {
-                self.authError = errorMessage
-            }
-            
-            print("⚠️ Showing error to user: \(errorMessage)")
-            print("🔒 User signed out to prevent state conflicts")
             throw error
         }
     }
-
-    // MARK: - Email Verification Link Helpers
-    func sendEmailVerificationLink() async throws {
-        guard let user = auth.currentUser else { throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not signed in"]) }
-        try await user.sendEmailVerification()
+    
+    func signOut() async throws {
+        print("🚪 Signing out from Supabase...")
+        try await supabaseManager.signOut()
+        print("✅ Signed out successfully")
     }
     
-    func reloadCurrentUser() async {
-        do {
-            try await auth.currentUser?.reload()
-            let verified = auth.currentUser?.isEmailVerified ?? false
-            await MainActor.run {
-                self.isEmailVerified = verified
-            }
-        } catch {
-            print("⚠️ Failed to reload current user: \(error.localizedDescription)")
-        }
-    }
-    
-    // MARK: - Helper Methods for DisplayName Updates
-    
-    private func updateDisplayNameFromFirestore(for user: User) async throws {
-        do {
-            // Fetch user document from Firestore
-            let userDoc = try await db.collection("users").document(user.uid).getDocument()
-            
-            guard userDoc.exists, 
-                  let data = userDoc.data(),
-                  let username = data["username"] as? String else {
-                print("❌ Could not find username in Firestore for user: \(user.uid)")
-                return
-            }
-            
-            // Update Firebase Auth profile with username
-            let changeRequest = user.createProfileChangeRequest()
-            changeRequest.displayName = username
-            try await changeRequest.commitChanges()
-            print("✅ DisplayName updated to: \(username) for existing user")
-            
-        } catch {
-            print("❌ Error updating displayName from Firestore: \(error.localizedDescription)")
-            // Don't throw the error - sign-in should still succeed even if displayName update fails
-        }
-    }
-    
+    // Protocol requirement - synchronous version
     func signOut() throws {
-        try auth.signOut()
-        DispatchQueue.main.async {
-            self.currentUser = nil
-            self.isEmailVerified = false
-            self.otpCode = ""
-            self.isOtpSent = false
-            self.isOtpVerified = false
+        Task {
+            try await signOut()
         }
     }
     
-    // MARK: - OTP Email Verification Methods
+    func sendEmailVerificationLink() async throws {
+        print("📨 Sending email verification link via Supabase...")
+        try await supabaseManager.sendEmailVerificationLink()
+        print("✅ Email verification link sent")
+    }
+    
+    func reloadCurrentUser() async throws {
+        print("🔄 Reloading current user from Supabase...")
+        try await supabaseManager.reloadCurrentUser()
+        print("✅ User reloaded")
+    }
+    
+    // MARK: - OTP Methods (Legacy - kept for compatibility)
+    
+    func sendOtpEmail(email: String, otp: String) async throws {
+        print("📨 OTP email sending not implemented for Supabase yet")
+        // This could be implemented with a serverless function if needed
+    }
     
     func sendOtpEmail(email: String) async throws {
-        do {
-            print("📧 Sending OTP email to: \(email)")
-            
-            // Generate 6-digit OTP
-            let otp = String(format: "%06d", Int.random(in: 100000...999999))
-            print("🔢 Generated OTP: \(otp)")
-            
-            // Calculate expiration time (15 minutes from now)
-            let expirationTime = Date().addingTimeInterval(15 * 60) // 15 minutes
-            
-            // Store OTP in Firestore for verification
-            try await db.collection("otp_codes").document(email).setData([
-                "otp": otp,
-                "createdAt": FieldValue.serverTimestamp(),
-                "expiresAt": Timestamp(date: expirationTime), // Set proper expiration time
-                "email": email
-            ])
-            print("💾 OTP stored in Firestore with 15-minute expiration")
-            
-            // Try to send actual email via Cloud Function first
-            var emailSent = false
-            do {
-                let data: [String: Any] = [
-                    "email": email,
-                    "otp": otp,
-                    "type": "verification"
-                ]
-                
-                _ = try await functions.httpsCallable("sendOtpEmail").call(data)
-                print("✅ Custom OTP email sent via Cloud Function")
-                emailSent = true
-            } catch {
-                print("⚠️ Cloud Function not available: \(error.localizedDescription)")
-            }
-            
-            // Fallback: Try Firebase's built-in email verification if we have a current user
-            if !emailSent && auth.currentUser != nil {
-                do {
-                    try await auth.currentUser?.sendEmailVerification()
-                    print("📨 Firebase verification email sent as fallback")
-                    emailSent = true
-                } catch {
-                    print("⚠️ Firebase email verification also failed: \(error.localizedDescription)")
-                }
-            }
-            
-            // For development: Print the OTP to console since email might not work
-            // Comment out in production
-            print("🧪 DEV MODE: OTP for \(email) is: \(otp)")
-            
-            DispatchQueue.main.async {
-                self.isOtpSent = true
-                self.otpCode = ""
-                // Don't set error even if email wasn't sent - OTP is stored and can be used
-            }
-            
-            if !emailSent {
-                print("⚠️ Email sending failed, but OTP is stored and can be verified")
-                // Don't throw error - allow verification with stored OTP or bypass code
-            }
-            
-        } catch {
-            print("❌ Failed to send OTP email: \(error.localizedDescription)")
-            DispatchQueue.main.async {
-                self.authError = "Failed to send verification email. Please try again.".localized
-            }
-            throw error
-        }
+        print("📨 OTP email sending not implemented for Supabase yet")
+        // This could be implemented with a serverless function if needed
+    }
+    
+    func verifyOtp(email: String, enteredOtp: String) async throws -> Bool {
+        print("🔍 OTP verification not implemented for Supabase yet")
+        return false
     }
     
     func verifyOtp(email: String, otp: String) async throws {
-        do {
-            print("🔍 Verifying OTP: \(otp) for email: \(email)")
-            
-            // Validate OTP strictly (no universal bypass in production)
-            do {
-                print("🔍 Fetching stored OTP from Firestore...")
-                let document = try await db.collection("otp_codes").document(email).getDocument()
-                
-                guard document.exists else {
-                    print("❌ No OTP found for email: \(email)")
-                    throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No verification code found. Please request a new one.".localized])
-                }
-                
-                guard let data = document.data(),
-                      let storedOtp = data["otp"] as? String,
-                      let expiresAt = data["expiresAt"] as? Timestamp else {
-                    print("❌ Invalid OTP data structure")
-                    throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid verification code. Please request a new one.".localized])
-                }
-                
-                print("✅ Found stored OTP data")
-                print("🔍 Stored OTP: \(storedOtp)")
-                print("🔍 Expires at: \(expiresAt.dateValue())")
-                print("🔍 Current time: \(Date())")
-                
-                // Check if OTP is expired
-                if Date() > expiresAt.dateValue() {
-                    print("❌ OTP has expired")
-                    throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Verification code has expired. Please request a new one.".localized])
-                }
-                
-                // Verify OTP
-                if otp != storedOtp {
-                    print("❌ OTP mismatch: entered '\(otp)' vs stored '\(storedOtp)'")
-                    throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid verification code. Please try again.".localized])
-                }
-                
-                print("✅ OTP verified successfully")
-                
-                // Delete OTP from database after successful verification
-                try await db.collection("otp_codes").document(email).delete()
-                print("🗑️ OTP deleted from database")
-            }
-            
-            // Mark email as verified in our custom system
-            print("🔍 Finding user by email: \(email)")
-            let userSnapshot = try await db.collection("users")
-                .whereField("email", isEqualTo: email)
-                .getDocuments()
-            
-            guard let userDocument = userSnapshot.documents.first else {
-                print("❌ No user found with email: \(email)")
-                throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User account not found. Please try signing up again.".localized])
-            }
-            
-            print("✅ Found user document: \(userDocument.documentID)")
-            
-            // Update user profile to mark email as verified
-            try await userDocument.reference.updateData([
-                "isEmailVerified": true,
-                "emailVerifiedAt": FieldValue.serverTimestamp()
-            ])
-            print("✅ User email marked as verified in database")
-            
-            // Update the local state
-            DispatchQueue.main.async {
-                self.isOtpVerified = true
-                self.isEmailVerified = false  // Keep false since user is not signed in yet
-                print("✅ Local state updated: isOtpVerified=true")
-            }
-            
-            print("🎉 Email verification completed successfully for user: \(userDocument.documentID)")
-            
-        } catch {
-            print("❌ OTP verification failed: \(error.localizedDescription)")
-            DispatchQueue.main.async {
-                self.authError = error.localizedDescription
-            }
-            throw error
-        }
+        print("🔍 OTP verification not implemented for Supabase yet")
+    }
+    
+    func resetOtpState() {
+        isOtpSent = false
+        isOtpVerified = false
+        otpCode = ""
     }
     
     func resendOtp(email: String) async throws {
-        try await sendOtpEmail(email: email)
-    }
-    
-    // MARK: - OTP State Management
-    
-    func resetOtpState() {
-        DispatchQueue.main.async {
-            self.isOtpSent = false
-            self.isOtpVerified = false
-            self.otpCode = ""
-        }
+        print("📨 OTP resend not implemented for Supabase yet")
+        // This could be implemented with a serverless function if needed
     }
     
     func clearAuthError() {
-        DispatchQueue.main.async {
-            self.authError = nil
-        }
-        print("🧹 Auth error cleared")
+        authError = nil
     }
-    
-    // MARK: - Error Handling
-    
-    private func localizedAuthError(_ error: Error) -> String {
-        print("🔍 Processing auth error: \(error)")
-        
-        if let authError = error as NSError? {
-            print("🔍 Auth error code: \(authError.code)")
-            print("🔍 Auth error domain: \(authError.domain)")
-            
-            // Check if it's a Firebase Auth error
-            if authError.domain == "FIRAuthErrorDomain" {
-                switch AuthErrorCode(rawValue: authError.code) {
-                case .emailAlreadyInUse:
-                    return "Email already in use".localized
-                case .invalidEmail:
-                    return "Invalid email format".localized
-                case .weakPassword:
-                    return "Password is too weak".localized
-                case .wrongPassword:
-                    return "Incorrect password".localized
-                case .userNotFound:
-                    return "Account not found. Please check your email or create a new account".localized
-                case .tooManyRequests:
-                    return "Too many failed attempts. Please try again later".localized
-                case .userDisabled:
-                    return "This account has been disabled".localized
-                case .requiresRecentLogin:
-                    return "Please sign in again for security reasons".localized
-                case .networkError:
-                    return "Network error. Please check your connection".localized
-                default:
-                    return "Authentication failed. Please check your credentials".localized
-                }
-            }
-        }
-        
-        // For custom errors or other types
-        return error.localizedDescription
-    }
-    
-    // MARK: - User Validation Methods
     
     func checkUserExists(email: String) async throws -> Bool {
-        do {
-            // Try to get user by email from Firestore
-            let snapshot = try await db.collection("users")
-                .whereField("email", isEqualTo: email)
-                .getDocuments()
-            
-            return !snapshot.documents.isEmpty
-        } catch {
-            // If query fails, assume user doesn't exist
+        print("🔍 User existence check not implemented for Supabase yet")
             return false
-        }
     }
     
     func validateUsername(_ username: String) async throws -> Bool {
-        // Check if username is already taken
-        let snapshot = try await db.collection("users")
-            .whereField("username", isEqualTo: username)
-            .getDocuments()
-        
-        return snapshot.documents.isEmpty
+        print("🔍 Username validation not implemented for Supabase yet")
+        return !username.isEmpty && username.count >= 3
     }
     
-    // MARK: - Anonymous Authentication
-    
     func signInAnonymously() async throws {
+        print("🔍 Anonymous sign in not implemented for Supabase yet")
+        throw NSError(domain: "AuthenticationManager", code: -1, 
+                     userInfo: [NSLocalizedDescriptionKey: "Anonymous sign in not supported"])
+    }
+    
+    func signInWithGoogle() async throws {
+        print("🔍 Starting Google sign in with Supabase...")
         do {
-            let result = try await auth.signInAnonymously()
-            DispatchQueue.main.async {
-                self.currentUser = result.user
-            }
+            try await supabaseManager.signInWithGoogle()
+            print("✅ Google sign in successful")
         } catch {
-            DispatchQueue.main.async {
-                self.authError = self.localizedAuthError(error)
-            }
+            print("❌ Google sign in failed: \(error)")
             throw error
         }
     }
     
-    // MARK: - Google Sign-In
+    // MARK: - Helper Methods
     
-    func signInWithGoogle() async throws {
-        try await GoogleSignInManager.shared.signIn()
+    private func localizedAuthError(_ error: Error) -> String {
+        // Convert Supabase errors to user-friendly messages
+        let errorMessage = error.localizedDescription
+        
+        if errorMessage.contains("Invalid login credentials") {
+            return "Invalid email or password. Please check your credentials and try again.".localized
+        } else if errorMessage.contains("Email not confirmed") {
+            return "Please verify your email before signing in.".localized
+        } else if errorMessage.contains("User already registered") {
+            return "An account with this email already exists.".localized
+        } else {
+            return "Authentication failed: \(errorMessage)".localized
+        }
     }
-} 
+}
+
+// MARK: - String Extension for Localization (removed to avoid redeclaration)

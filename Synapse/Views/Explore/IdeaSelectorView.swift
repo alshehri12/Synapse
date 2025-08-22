@@ -6,13 +6,13 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct IdeaSelectorView: View {
     @Binding var selectedIdea: IdeaSpark?
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     @State private var ideas: [IdeaSpark] = []
     @State private var isLoading = false
@@ -105,7 +105,7 @@ struct IdeaSelectorView: View {
     
     private func loadIdeasAsync() async {
         do {
-            let ideaData = try await firebaseManager.getPublicIdeaSparks()
+            let ideaData = try await supabaseManager.getPublicIdeaSparks()
             
             await MainActor.run {
                 ideas = ideaData

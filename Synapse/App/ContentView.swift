@@ -11,7 +11,7 @@ import UIKit
 struct ContentView: View {
     @State private var selectedTab = 0
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -65,5 +65,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 }

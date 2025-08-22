@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct UserAnalyticsView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var analytics: [String: Any] = [:]
     @State private var isLoading = true
     
@@ -56,19 +56,19 @@ struct UserAnalyticsView: View {
     }
     
     private func loadAnalytics() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
                         Task<Void, Never> {
                     do {
                         // Get user's ideas
-                        let publicIdeas = try await firebaseManager.getUserIdeas(userId: currentUser.uid)
-                        let privateIdeas = try await firebaseManager.getUserPrivateIdeas(userId: currentUser.uid)
+                        let publicIdeas = try await supabaseManager.getPublicIdeaSparks()
+                        let privateIdeas: [IdeaSpark] = []  // Placeholder until getUserPrivateIdeas is implemented
                         let totalIdeas = publicIdeas.count + privateIdeas.count
                 
                 // Get user's pods
-                let userPods = try await firebaseManager.getUserPods(userId: currentUser.uid)
+                let userPods = try await supabaseManager.getUserPods(userId: currentUser.id.uuidString)
                 
                 // Calculate engagement metrics
                 let totalLikes = publicIdeas.reduce(0) { sum, idea in
@@ -125,7 +125,7 @@ struct UserAnalyticsView: View {
                     "avgCommentsPerIdea": totalIdeas > 0 ? Double(totalComments) / Double(totalIdeas) : 0.0,
                     "activityData": activityData,
                     "topIdeas": topIdeas,
-                    "memberSince": currentUser.metadata.creationDate ?? Date()
+                    "memberSince": currentUser.createdAt
                 ]
                 
                 await MainActor.run {

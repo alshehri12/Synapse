@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AuthenticationView: View {
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var showingSignUp = false
     @State private var showingLogin = false
@@ -160,7 +160,7 @@ struct AuthenticationView: View {
         Task {
             do {
                 print("AuthenticationView: Starting Google Sign-In...")
-                try await firebaseManager.signInWithGoogle()
+                try await supabaseManager.signInWithGoogle()
                 print("AuthenticationView: Google Sign-In completed successfully")
             } catch {
                 print("AuthenticationView: Google Sign-In failed with error: \(error.localizedDescription)")
@@ -175,7 +175,7 @@ struct AuthenticationView: View {
 // MARK: - Sign Up View
 struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var email = ""
     @State private var password = ""
@@ -324,12 +324,12 @@ struct SignUpView: View {
             }
             .alert("Error".localized, isPresented: $showingError) {
                 Button("OK".localized) {
-                    firebaseManager.clearAuthError()
+                    supabaseManager.clearAuthError()
                 }
             } message: {
-                Text(firebaseManager.authError ?? "An error occurred".localized)
+                Text(supabaseManager.authError ?? "An error occurred".localized)
             }
-            .onChange(of: firebaseManager.authError) { _, error in
+            .onChange(of: supabaseManager.authError) { _, error in
                 showingError = error != nil
             }
             // Removed the onChange handler that automatically dismisses the view
@@ -367,7 +367,7 @@ struct SignUpView: View {
         
         Task {
             do {
-                let isAvailable = try await firebaseManager.validateUsername(username)
+                let isAvailable = try await supabaseManager.validateUsername(username)
                 await MainActor.run {
                     isCheckingUsername = false
                     if !isAvailable {
@@ -391,7 +391,7 @@ struct SignUpView: View {
         Task {
             do {
                 print("🚀 SignUpView: Creating account for: \(email)")
-                try await firebaseManager.signUp(email: email, password: password, username: username)
+                try await supabaseManager.signUp(email: email, password: password, username: username)
                 print("✅ SignUpView: Account created successfully")
                 // Manager sends verification link and signs out; return to auth screen
                 DispatchQueue.main.async {
@@ -404,7 +404,7 @@ struct SignUpView: View {
                 DispatchQueue.main.async {
                     self.isSubmitting = false
                 }
-                // Error is handled by FirebaseManager
+                // Error is handled by SupabaseManager
             }
         }
     }
@@ -413,7 +413,7 @@ struct SignUpView: View {
 // MARK: - Login View
 struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var email = ""
     @State private var password = ""
@@ -508,19 +508,19 @@ struct LoginView: View {
             .navigationBarHidden(true)
             .alert("Sign In Error", isPresented: $showingError) {
                 Button("OK") {
-                    firebaseManager.clearAuthError()
+                    supabaseManager.clearAuthError()
                     // Stay on login page - don't dismiss
                 }
             } message: {
-                Text(firebaseManager.authError ?? "An error occurred")
+                Text(supabaseManager.authError ?? "An error occurred")
             }
-            .onChange(of: firebaseManager.authError) { _, error in
+            .onChange(of: supabaseManager.authError) { _, error in
                 showingError = error != nil
                 // Don't dismiss the view on error
             }
-            .onChange(of: firebaseManager.currentUser) { _, user in
+            .onChange(of: supabaseManager.currentUser) { _, user in
                 // Only dismiss if user is signed in AND there's no error
-                if user != nil && firebaseManager.authError == nil {
+                if user != nil && supabaseManager.authError == nil {
                     print("✅ LoginView: User signed in successfully, dismissing view")
                     dismiss()
                 }
@@ -536,7 +536,7 @@ struct LoginView: View {
         
         Task {
             do {
-                try await firebaseManager.signIn(email: email, password: password)
+                try await supabaseManager.signIn(email: email, password: password)
                 print("✅ LoginView: Sign-in successful")
                 DispatchQueue.main.async {
                     self.isSubmitting = false
@@ -546,7 +546,7 @@ struct LoginView: View {
                 DispatchQueue.main.async {
                     self.isSubmitting = false
                 }
-                // Error is handled by FirebaseManager
+                // Error is handled by SupabaseManager
             }
         }
     }
@@ -555,7 +555,7 @@ struct LoginView: View {
 // MARK: - OTP Verification View
 struct OtpVerificationView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var firebaseManager = FirebaseManager.shared
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @State private var otpCode = ""
     @State private var isVerifying = false
     @State private var isResending = false
@@ -680,7 +680,7 @@ struct OtpVerificationView: View {
             .onAppear {
                 startTimer()
             }
-            .onChange(of: firebaseManager.isOtpVerified) { _, isVerified in
+            .onChange(of: supabaseManager.isOtpVerified) { _, isVerified in
                 if isVerified {
                     showingSuccess = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
@@ -688,15 +688,15 @@ struct OtpVerificationView: View {
                     }
                 }
             }
-            .onChange(of: firebaseManager.authError) { _, error in
+            .onChange(of: supabaseManager.authError) { _, error in
                 showingError = error != nil
             }
             .alert("Error".localized, isPresented: $showingError) {
                 Button("OK".localized) {
-                    firebaseManager.clearAuthError()
+                    supabaseManager.clearAuthError()
                 }
             } message: {
-                Text(firebaseManager.authError ?? "An error occurred".localized)
+                Text(supabaseManager.authError ?? "An error occurred".localized)
             }
             .alert("Email Verified!".localized, isPresented: $showingSuccess) {
                 Button("Continue".localized) { 
@@ -715,11 +715,11 @@ struct OtpVerificationView: View {
         
         Task {
             do {
-                try await firebaseManager.verifyOtp(email: email, otp: otpCode)
+                try await supabaseManager.verifyOtp(email: email, otp: otpCode)
                 isVerifying = false
             } catch {
                 isVerifying = false
-                // Error is handled by FirebaseManager
+                // Error is handled by SupabaseManager
             }
         }
     }
@@ -729,12 +729,12 @@ struct OtpVerificationView: View {
         
         Task {
             do {
-                try await firebaseManager.resendOtp(email: email)
+                try await supabaseManager.resendOtp(email: email)
                 isResending = false
                 startTimer()
             } catch {
                 isResending = false
-                // Error is handled by FirebaseManager
+                // Error is handled by SupabaseManager
             }
         }
     }
@@ -757,7 +757,7 @@ struct OtpVerificationView: View {
 // MARK: - Email Verification Link View
 struct EmailVerificationLinkView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     let email: String
     @State private var isResending = false
     @State private var isChecking = false
@@ -818,7 +818,7 @@ struct EmailVerificationLinkView: View {
         isResending = true
         Task {
             do {
-                try await firebaseManager.sendEmailVerificationLink()
+                try await supabaseManager.sendEmailVerificationLink()
             } catch { errorMessage = error.localizedDescription }
             isResending = false
         }
@@ -826,9 +826,9 @@ struct EmailVerificationLinkView: View {
     private func check() {
         isChecking = true
         Task {
-            await firebaseManager.reloadCurrentUser()
+            await supabaseManager.reloadCurrentUser()
             isChecking = false
-            if firebaseManager.isEmailVerified { dismiss() } else { errorMessage = "Email not verified yet".localized }
+            if supabaseManager.isEmailVerified { dismiss() } else { errorMessage = "Email not verified yet".localized }
         }
     }
 }
@@ -882,7 +882,7 @@ struct OtpDigitField: View {
 // MARK: - Email Verification Required View
 struct EmailVerificationRequiredView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var firebaseManager = FirebaseManager.shared
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @State private var otpCode = ""
     @State private var isVerifying = false
     @State private var isResending = false
@@ -903,23 +903,23 @@ struct EmailVerificationRequiredView: View {
                     startTimer()
                     // Send OTP automatically when view appears
                     Task {
-                        try? await firebaseManager.sendOtpEmail(email: email)
+                        try? await supabaseManager.sendOtpEmail(email: email)
                     }
                 }
-                .onChange(of: firebaseManager.isOtpVerified) { _, isVerified in
+                .onChange(of: supabaseManager.isOtpVerified) { _, isVerified in
                     if isVerified {
                         showingSuccess = true
                     }
                 }
-                .onChange(of: firebaseManager.authError) { _, error in
+                .onChange(of: supabaseManager.authError) { _, error in
                     showingError = error != nil
                 }
                 .alert("Error".localized, isPresented: $showingError) {
                     Button("OK".localized) {
-                        firebaseManager.clearAuthError()
+                        supabaseManager.clearAuthError()
                     }
                 } message: {
-                    Text(firebaseManager.authError ?? "An error occurred".localized)
+                    Text(supabaseManager.authError ?? "An error occurred".localized)
                 }
                 .alert("Email Verified!".localized, isPresented: $showingSuccess) {
                     Button("Continue".localized) {
@@ -1078,7 +1078,7 @@ struct EmailVerificationRequiredView: View {
         
         Task {
             do {
-                try await firebaseManager.verifyOtp(email: email, otp: otpCode)
+                try await supabaseManager.verifyOtp(email: email, otp: otpCode)
                 print("✅ EmailVerificationRequiredView: OTP verification successful")
                 await MainActor.run {
                     isVerifying = false
@@ -1088,7 +1088,7 @@ struct EmailVerificationRequiredView: View {
                 await MainActor.run {
                     isVerifying = false
                 }
-                // Error is handled by FirebaseManager
+                // Error is handled by SupabaseManager
             }
         }
     }
@@ -1098,19 +1098,19 @@ struct EmailVerificationRequiredView: View {
         
         Task {
             do {
-                try await firebaseManager.resendOtp(email: email)
+                try await supabaseManager.resendOtp(email: email)
                 isResending = false
                 startTimer()
             } catch {
                 isResending = false
-                // Error is handled by FirebaseManager
+                // Error is handled by SupabaseManager
             }
         }
     }
     
     private func signOut() {
         do {
-            try firebaseManager.signOut()
+            try supabaseManager.signOut()
         } catch {
             print("Error signing out: \(error)")
         }
@@ -1182,7 +1182,7 @@ struct LanguageSwitcher: View {
 #Preview {
     AuthenticationView()
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 }
 
 // MARK: - Custom Google Sign-In Button

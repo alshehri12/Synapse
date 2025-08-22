@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct FavoritesView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var favorites: [[String: Any]] = []
     @State private var isLoading = true
     
@@ -74,13 +74,14 @@ struct FavoritesView: View {
     }
     
     private func loadFavorites() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
         Task {
             do {
-                favorites = try await firebaseManager.getUserFavorites(userId: currentUser.uid)
+                // TODO: Implement getUserFavorites in SupabaseManager  
+                favorites = [] // Placeholder empty array
                 
                 await MainActor.run {
                     isLoading = false
@@ -95,12 +96,13 @@ struct FavoritesView: View {
     }
     
     private func removeFromFavorites(favorite: [String: Any]) {
-        guard let currentUser = firebaseManager.currentUser,
+        guard let currentUser = supabaseManager.currentUser,
               let ideaId = favorite["ideaId"] as? String else { return }
         
         Task {
             do {
-                try await firebaseManager.removeFromFavorites(userId: currentUser.uid, ideaId: ideaId)
+                // TODO: Implement removeFromFavorites in SupabaseManager
+                print("✅ Remove from favorites requested: \(ideaId)")
                 
                 await MainActor.run {
                     // Remove from local array
@@ -198,8 +200,8 @@ struct FavoriteCard: View {
             }
             
             // Date added to favorites
-            if let createdAt = favorite["createdAt"] as? Timestamp {
-                Text("Added \(createdAt.dateValue().formatted(date: .abbreviated, time: .omitted))".localized)
+            if let createdAt = favorite["createdAt"] as? Date {
+                Text("Added \(createdAt.formatted(date: .abbreviated, time: .omitted))".localized)
                     .font(.system(size: 12))
                     .foregroundColor(Color.textSecondary)
             }

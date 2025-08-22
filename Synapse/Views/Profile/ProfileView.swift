@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct ProfileView: View {
     @State private var user: UserProfile?
@@ -14,7 +14,7 @@ struct ProfileView: View {
     @State private var showingEditProfile = false
     @State private var showingSettings = false
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     var body: some View {
         NavigationView {
@@ -62,7 +62,7 @@ struct ProfileView: View {
             .onAppear {
                 loadUserProfile()
             }
-            .onChange(of: firebaseManager.currentUser) { _, user in
+            .onChange(of: supabaseManager.currentUser) { _, user in
                 if user != nil {
                     loadUserProfile()
                 }
@@ -76,25 +76,25 @@ struct ProfileView: View {
         }
     }
     
-    private func signOut() {
+    private func signOut() async {
         do {
-            try firebaseManager.signOut()
+            try await supabaseManager.signOut()
         } catch {
-            // Error is handled by FirebaseManager
+            // Error is handled by SupabaseManager
         }
     }
     
     private func loadUserProfile() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
         Task {
             do {
                 // First, update user stats with real data
-                try await firebaseManager.updateUserStats(userId: currentUser.uid)
+                try await supabaseManager.updateUserStats(userId: currentUser.id.uuidString)
                 
-                if let userData = try await firebaseManager.getUserProfile(userId: currentUser.uid) {
+                if let userData = try await supabaseManager.getUserProfile(userId: currentUser.id.uuidString) {
                     // Convert Firestore data to User model
                     let username = userData["username"] as? String ?? ""
                     let email = userData["email"] as? String ?? ""
@@ -104,11 +104,11 @@ struct ProfileView: View {
                     let interests = userData["interests"] as? [String] ?? []
                     let ideasSparked = userData["ideasSparked"] as? Int ?? 0
                     let projectsContributed = userData["projectsContributed"] as? Int ?? 0
-                    let dateJoined = (userData["dateJoined"] as? Timestamp)?.dateValue() ?? Date()
+                    let dateJoined = userData["dateJoined"] as? Date ?? Date()
                     
                     await MainActor.run {
                         user = UserProfile(
-                            id: currentUser.uid,
+                            id: currentUser.id.uuidString,
                             username: username,
                             email: email,
                             bio: bio,
@@ -355,7 +355,7 @@ struct MenuRow: View {
 struct EditProfileView: View {
     let user: UserProfile
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var username: String
     @State private var bio: String
     @State private var skills: [String]
@@ -533,13 +533,13 @@ struct EditProfileView: View {
     }
     
     private func saveProfile() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         isSaving = true
         
         Task {
             do {
-                try await firebaseManager.updateUserProfile(userId: currentUser.uid, data: [
+                try await supabaseManager.updateUserProfile(userId: currentUser.id.uuidString, updates: [
                     "username": username,
                     "bio": bio,
                     "skills": skills,
@@ -587,8 +587,16 @@ struct InterestTagView: View {
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var showingLanguageSelector = false
+    
+    private func signOut() async {
+        do {
+            try await supabaseManager.signOut()
+        } catch {
+            // Error is handled by SupabaseManager
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -608,11 +616,9 @@ struct SettingsView: View {
                 
                 Section {
                     SettingsRow(icon: "arrow.right.square", title: "Sign Out".localized, action: {
-                        do {
-                            try firebaseManager.signOut()
+                        Task {
+                            await signOut()
                             dismiss()
-                        } catch {
-                            // Error is handled by FirebaseManager
                         }
                     })
                         .foregroundColor(Color.error)
@@ -723,5 +729,5 @@ struct SettingsRow: View {
 #Preview {
     ProfileView()
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

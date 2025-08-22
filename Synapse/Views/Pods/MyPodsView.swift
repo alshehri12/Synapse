@@ -6,14 +6,14 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct MyPodsView: View {
     @State private var selectedTab = 0
     @State private var pods: [IncubationProject] = []
     @State private var isLoading = false
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     var body: some View {
         NavigationView {
@@ -84,7 +84,7 @@ struct MyPodsView: View {
     }
     
     private func loadPods() {
-        guard let currentUser = firebaseManager.currentUser else { 
+        guard let currentUser = supabaseManager.currentUser else { 
             print("❌ No current user found")
             return 
         }
@@ -94,7 +94,7 @@ struct MyPodsView: View {
         
         Task {
             do {
-                let podData = try await firebaseManager.getUserPods(userId: currentUser.uid)
+                let podData = try await supabaseManager.getUserPods(userId: currentUser.uid)
                 print("📊 Found \(podData.count) pods in database")
                 
                 await MainActor.run {
@@ -387,5 +387,5 @@ let mockPods: [IncubationProject] = [
 #Preview {
     MyPodsView()
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

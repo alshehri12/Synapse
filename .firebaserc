@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "staging": "synapse-4578e",
+    "default": "synapse-4578e"
+  },
+  "targets": {},
+  "etags": {}
+}

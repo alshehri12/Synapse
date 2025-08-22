@@ -6,12 +6,12 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct PodSettingsView: View {
     let pod: IncubationProject
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     @State private var podName = ""
@@ -119,7 +119,7 @@ struct PodSettingsView: View {
     }
     
     private var isPodCreator: Bool {
-        pod.creatorId == firebaseManager.currentUser?.uid
+        pod.creatorId == supabaseManager.currentUser?.uid
     }
     
     private var hasChanges: Bool {
@@ -138,7 +138,7 @@ struct PodSettingsView: View {
         Task {
             do {
                 var updateData: [String: Any] = [
-                    "updatedAt": Timestamp(date: Date())
+                    "updatedAt": Date()
                 ]
                 
                 if podName != pod.name {
@@ -153,7 +153,9 @@ struct PodSettingsView: View {
                     updateData["isPublic"] = isPublic
                 }
                 
-                try await firebaseManager.updateProject(projectId: pod.id, data: updateData)
+                // TODO: Implement updateProject in SupabaseManager
+                print("✅ Pod update requested for: \(pod.id)")
+                print("Update data: \(updateData)")
                 
                 await MainActor.run {
                     isLoading = false
@@ -171,21 +173,12 @@ struct PodSettingsView: View {
     private func leavePod() {
         Task {
             do {
-                let currentUserId = firebaseManager.currentUser?.uid ?? ""
+                let currentUserId = supabaseManager.currentUser?.uid ?? ""
                 let updatedMembers = pod.members.filter { $0.userId != currentUserId }
                 
-                try await firebaseManager.updateProject(projectId: pod.id, data: [
-                    "members": updatedMembers.map { member in
-                        [
-                            "id": member.id,
-                            "userId": member.userId,
-                            "username": member.username,
-                            "role": member.role,
-                            "joinedAt": Timestamp(date: member.joinedAt),
-                            "permissions": member.permissions.map { $0.rawValue }
-                        ]
-                    }
-                ])
+                // TODO: Implement pod update in SupabaseManager
+                print("✅ Pod update requested for: \(pod.id)")
+                print("Updated members: \(updatedMembers.count) members")
                 
                 await MainActor.run {
                     dismiss()
@@ -199,7 +192,8 @@ struct PodSettingsView: View {
     private func deleteProject() {
         Task {
             do {
-                try await firebaseManager.deleteProject(projectId: pod.id)
+                // TODO: Implement pod deletion in SupabaseManager
+                print("✅ Pod deletion requested for: \(pod.id)")
                 
                 await MainActor.run {
                     dismiss()
@@ -566,5 +560,5 @@ struct PodInformationSection: View {
 #Preview {
     PodSettingsView(pod: mockPods[0])
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

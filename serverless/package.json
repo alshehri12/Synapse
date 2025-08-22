@@ -1,0 +1,13 @@
+{
+  "name": "synapse-otp-serverless",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "nodemailer": "^6.9.8"
+  }
+}
+
+
+

@@ -15,5 +15,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>OTPApiBaseURL</key>
+	<string>https://YOUR-DEPLOYED-ENDPOINT.example.com</string>
 </dict>
 </plist>

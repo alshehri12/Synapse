@@ -19,7 +19,7 @@ struct CreateIdeaView: View {
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     private let maxTitleLength = 100
     private let maxDescriptionLength = 500
@@ -289,7 +289,7 @@ struct CreateIdeaView: View {
     
     private func submitIdea() {
         guard isFormValid else { return }
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         print("🚀 CreateIdeaView: Starting idea submission...")
         print("📝 Form data: Title='\(title)', Public=\(isPublic), Tags=\(tags)")
@@ -298,11 +298,11 @@ struct CreateIdeaView: View {
         
         Task {
             do {
-                if let userData = try await firebaseManager.getUserProfile(userId: currentUser.uid) {
+                if let userData = try await supabaseManager.getUserProfile(userId: currentUser.uid) {
                     let username = userData["username"] as? String ?? "Anonymous User"
                     print("👤 User profile found: \(username)")
                     
-                    let ideaSparkId = try await firebaseManager.createIdeaSpark(
+                    let ideaSparkId = try await supabaseManager.createIdeaSpark(
                         title: title,
                         description: description,
                         tags: tags,
@@ -380,5 +380,5 @@ let suggestedTags = [
 #Preview {
     CreateIdeaView(onDismiss: {})
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

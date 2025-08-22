@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct ExploreView: View {
     @State private var searchText = ""
@@ -17,7 +17,7 @@ struct ExploreView: View {
     @State private var showingActivityFeed = false
     @State private var showingCreateIdea = false
     @EnvironmentObject private var localizationManager: LocalizationManager
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     enum IdeaFilter: String, CaseIterable {
         case all = "All"
@@ -178,7 +178,7 @@ struct ExploreView: View {
     private func loadIdeasAsync() async {
         do {
             print("🔄 ExploreView: Loading ideas...")
-            let ideaData = try await firebaseManager.getPublicIdeaSparks()
+            let ideaData = try await supabaseManager.getPublicIdeaSparks()
             
             await MainActor.run {
                 print("📱 ExploreView: Received \(ideaData.count) ideas")
@@ -258,7 +258,7 @@ struct ExploreIdeaCard: View {
     let idea: IdeaSpark
     @State private var isLiked = false
     @State private var showingDetail = false
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     
     var body: some View {
         Button(action: { showingDetail = true }) {
@@ -379,7 +379,7 @@ struct ExploreIdeaCard: View {
     }
     
     private func checkIfLiked() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         // This would need to be implemented to check if the current user has liked this idea
         // For now, we'll assume not liked
@@ -387,11 +387,12 @@ struct ExploreIdeaCard: View {
     }
     
     private func likeIdea() {
-        guard let currentUser = firebaseManager.currentUser else { return }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
         Task {
             do {
-                try await firebaseManager.likeIdea(ideaId: idea.id, userId: currentUser.uid)
+                // TODO: Implement likeIdea in SupabaseManager
+                print("✅ Like idea requested: \(idea.id) by user \(currentUser.uid)")
                 await MainActor.run {
                     isLiked.toggle()
                 }
@@ -408,5 +409,5 @@ struct ExploreIdeaCard: View {
 #Preview {
     ExploreView()
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 

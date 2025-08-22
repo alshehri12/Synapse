@@ -36,6 +36,7 @@
 		C428DBEE2E245541005396C0 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = C428DBED2E245541005396C0 /* FirebaseVertexAI */; };
 		C4C4D9892E299600005E64CC /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = C4C4D9882E299600005E64CC /* GoogleSignIn */; };
 		C4C4D98B2E299600005E64CC /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C4C4D98A2E299600005E64CC /* GoogleSignInSwift */; };
+		C4SUPABASE12345678901B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = C4SUPABASE12345678901A /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,6 +98,7 @@
 				C428DBCC2E245541005396C0 /* FirebaseAuthCombine-Community in Frameworks */,
 				C428DBE42E245541005396C0 /* FirebaseMessaging in Frameworks */,
 				C428DBE02E245541005396C0 /* FirebaseInstallations in Frameworks */,
+				C4SUPABASE12345678901B /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -168,6 +170,7 @@
 				C428DBED2E245541005396C0 /* FirebaseVertexAI */,
 				C4C4D9882E299600005E64CC /* GoogleSignIn */,
 				C4C4D98A2E299600005E64CC /* GoogleSignInSwift */,
+				C4SUPABASE12345678901A /* Supabase */,
 			);
 			productName = Synapse;
 			productReference = C428DB992E245046005396C0 /* Synapse.app */;
@@ -201,6 +204,7 @@
 			packageReferences = (
 				C428DBB82E245541005396C0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				C4C4D9872E299600005E64CC /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				C4SUPABASE1234567890123 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C428DB9A2E245046005396C0 /* Products */;
@@ -452,6 +456,14 @@
 				minimumVersion = 9.0.0;
 			};
 		};
+		C4SUPABASE1234567890123 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -599,6 +611,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C4C4D9872E299600005E64CC /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		C4SUPABASE12345678901A /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C4SUPABASE1234567890123 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

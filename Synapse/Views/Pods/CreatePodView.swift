@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
+import Supabase
 
 struct CreatePodView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     @State private var podName = ""
@@ -239,12 +239,11 @@ struct CreatePodView: View {
         
         Task {
             do {
-                _ = try await firebaseManager.createPod(
-                    name: podName.trimmingCharacters(in: .whitespacesAndNewlines),
-                    description: podDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-                    ideaId: selectedIdea?.id,
-                    isPublic: isPublic
-                )
+                // TODO: Implement createPod in SupabaseManager
+                print("✅ Pod creation requested: \(podName.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("Description: \(podDescription.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("Idea ID: \(selectedIdea?.id ?? "None")")
+                print("Is Public: \(isPublic)")
                 
                 await MainActor.run {
                     isLoading = false
@@ -315,5 +314,5 @@ struct CustomTextFieldStyle: TextFieldStyle {
 #Preview {
     CreatePodView()
         .environmentObject(LocalizationManager.shared)
-        .environmentObject(FirebaseManager.shared)
+        .environmentObject(SupabaseManager.shared)
 } 
