@@ -716,21 +716,35 @@ struct CreatePodFromIdeaView: View {
         
         Task {
             do {
-                let username = currentUser.displayName ?? "Anonymous User"
-                // TODO: Implement createPodFromIdea in SupabaseManager
+                let trimmedName = podName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmedDescription = podDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                
                 print("✅ Create pod from idea requested:")
-                print("- Pod Name: \(podName.trimmingCharacters(in: .whitespacesAndNewlines))")
-                print("- Description: \(podDescription.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("- Pod Name: \(trimmedName)")
+                print("- Description: \(trimmedDescription)")
                 print("- Idea ID: \(idea.id)")
+                print("- Creator ID: \(currentUser.uid)")
                 print("- Is Public: true")
+                
+                let podId = try await supabaseManager.createPodFromIdea(
+                    ideaId: idea.id,
+                    name: trimmedName,
+                    description: trimmedDescription,
+                    creatorId: currentUser.uid,
+                    isPublic: true
+                )
+                
+                print("🎉 SUCCESS: Pod created successfully with ID: \(podId)")
                 
                 await MainActor.run {
                     isSubmitting = false
                     dismiss()
                 }
             } catch {
+                print("❌ ERROR: Failed to create pod - \(error.localizedDescription)")
                 await MainActor.run {
                     isSubmitting = false
+                    // You could show an error alert here if needed
                 }
             }
         }

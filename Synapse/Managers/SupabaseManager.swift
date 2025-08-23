@@ -44,6 +44,7 @@ class SupabaseManager: ObservableObject {
     @Published var currentUser: User?
     @Published var authError: String?
     @Published var isEmailVerified: Bool = false
+    @Published var isAuthenticated: Bool = false
     @Published var isSigningUp: Bool = false
     @Published var isAuthReady: Bool = false
     
@@ -127,16 +128,38 @@ class SupabaseManager: ObservableObject {
                 data: ["username": .string(username)]
             )
             
-            // User created successfully, they need to verify their email
-            print("✅ User created: \(response.user.email ?? "no email")")
-            authError = "Please check your email and click the verification link to complete registration."
+            // User created successfully
+            let user = response.user
+            print("✅ User created: \(user.email ?? "no email") | id: \(user.id.uuidString)")
+            // Create profile row (best-effort)
+            do {
+                try await createUserProfile(userId: user.id.uuidString, email: user.email ?? email, username: username)
+            } catch {
+                print("⚠️ Failed to create user profile: \(error.localizedDescription)")
+            }
             
             isSigningUp = false
         } catch {
             isSigningUp = false
-            authError = "Failed to create account: \(error.localizedDescription)"
+            let lower = error.localizedDescription.lowercased()
+            if lower.contains("confirm") || lower.contains("email") || lower.contains("smtp") {
+                authError = "Email confirmation is required or email sending failed. Please disable email confirmations in Supabase Auth settings for now."
+            } else {
+                authError = "Failed to create account: \(error.localizedDescription)"
+            }
             throw error
         }
+    }
+    
+    private func friendlySignUpError(from error: Error) -> String {
+        let lower = error.localizedDescription.lowercased()
+        if lower.contains("smtp") || lower.contains("email") || lower.contains("confirm") {
+            return "Error sending confirmation email. Please configure email in Supabase Auth or try again later."
+        }
+        if lower.contains("rate") || lower.contains("too many") {
+            return "Too many attempts. Please wait a bit and try again."
+        }
+        return "Failed to create account: \(error.localizedDescription)"
     }
     
     @MainActor
@@ -148,20 +171,20 @@ class SupabaseManager: ObservableObject {
                 email: email,
                 password: password
             )
-            
             let user = response.user
+            print("✅ User signed in: \(user.email ?? "no email") (emailConfirmedAt: \(user.emailConfirmedAt?.description ?? "nil"))")
             
-            if user.emailConfirmedAt == nil {
-                // Sign out unverified user and show error
-                try await signOut()
-                authError = "Please verify your email via the link we sent, then sign in."
-                
-                // Optionally resend verification email
-                try await resendEmailVerification(email: email)
-            } else {
-                print("✅ User signed in: \(user.email ?? "no email")")
-                // User profile will be set by auth state listener
+            // Ensure user profile exists (best-effort)
+            do {
+                let hasProfile = try await getUserProfile(userId: user.id.uuidString) != nil
+                if !hasProfile {
+                    try await createUserProfile(userId: user.id.uuidString, email: user.email ?? email, username: user.displayName ?? "user_\(user.id.uuidString.prefix(6))")
+                }
+            } catch {
+                print("⚠️ Failed to ensure user profile on sign-in: \(error.localizedDescription)")
             }
+            
+            // No verification gate: allow unverified logins per request
         } catch {
             authError = "Sign in failed: \(error.localizedDescription)"
             throw error
@@ -285,24 +308,319 @@ class SupabaseManager: ObservableObject {
         }
     }
     
-    // MARK: - Pod Management (Placeholder)
+    // MARK: - Pod Management
     
     func getUserPods(userId: String) async throws -> [IncubationProject] {
-        // Placeholder - return empty for now
-        print("🚧 getUserPods - Supabase implementation needed")
-        return []
+        let response = try await supabase
+            .from("pods")
+            .select("""
+                *,
+                pod_members (
+                    id,
+                    user_id,
+                    username,
+                    role,
+                    permissions,
+                    joined_at
+                ),
+                tasks (
+                    id,
+                    title,
+                    description,
+                    assigned_to,
+                    assigned_to_username,
+                    status,
+                    priority,
+                    created_at,
+                    updated_at
+                )
+            """)
+            .eq("creator_id", value: userId)
+            .order("created_at", ascending: false)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parsePodFromData(item)
+        }
     }
     
     func getPublicPods() async throws -> [IncubationProject] {
-        // Placeholder - return empty for now
-        print("🚧 getPublicPods - Supabase implementation needed")
-        return []
+        let response = try await supabase
+            .from("pods")
+            .select("""
+                *,
+                pod_members (
+                    id,
+                    user_id,
+                    username,
+                    role,
+                    permissions,
+                    joined_at
+                ),
+                tasks (
+                    id,
+                    title,
+                    description,
+                    assigned_to,
+                    assigned_to_username,
+                    status,
+                    priority,
+                    created_at,
+                    updated_at
+                )
+            """)
+            .eq("is_public", value: true)
+            .order("created_at", ascending: false)
+            .limit(20)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parsePodFromData(item)
+        }
     }
     
     func getPodsByIdeaId(_ ideaId: String) async throws -> [IncubationProject] {
-        // Placeholder - return empty for now
-        print("🚧 getPodsByIdeaId - Supabase implementation needed")
-        return []
+        print("🔍 DEBUG: Fetching pods for ideaId: '\(ideaId)'")
+        
+        let response = try await supabase
+            .from("pods")
+            .select("""
+                *,
+                pod_members (
+                    id,
+                    user_id,
+                    username,
+                    role,
+                    permissions,
+                    joined_at
+                ),
+                tasks (
+                    id,
+                    title,
+                    description,
+                    assigned_to,
+                    assigned_to_username,
+                    status,
+                    priority,
+                    created_at,
+                    updated_at
+                )
+            """)
+            .eq("idea_id", value: ideaId)
+            .eq("is_public", value: true)
+            .order("created_at", ascending: false)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        print("📊 DEBUG: Query result - Found \(data.count) pods for idea '\(ideaId)'")
+        
+        let pods = data.compactMap { item in
+            parsePodFromData(item)
+        }
+        
+        for pod in pods {
+            print("  📄 Pod '\(pod.name)': ideaId='\(pod.ideaId)', isPublic=\(pod.isPublic)")
+        }
+        
+        return pods
+    }
+    
+    func createPodFromIdea(ideaId: String, name: String, description: String, creatorId: String, isPublic: Bool = true) async throws -> String {
+        print("💾 DEBUG: Creating pod with data:")
+        print("  📛 name: '\(name)'")
+        print("  💡 ideaId: '\(ideaId)'")
+        print("  👤 creatorId: '\(creatorId)'")
+        print("  🌍 isPublic: \(isPublic)")
+        
+        let podData: [String: AnyJSON] = [
+            "idea_id": AnyJSON.string(ideaId),
+            "name": AnyJSON.string(name),
+            "description": AnyJSON.string(description),
+            "creator_id": AnyJSON.string(creatorId),
+            "is_public": AnyJSON.bool(isPublic),
+            "status": AnyJSON.string("planning")
+        ]
+        
+        let response = try await supabase
+            .from("pods")
+            .insert(podData)
+            .select("id")
+            .single()
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [String: Any]
+        guard let podId = data?["id"] as? String else {
+            throw NSError(domain: "SupabaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create pod"])
+        }
+        
+        // Add creator as first member with admin role
+        try await addPodMember(podId: podId, userId: creatorId, username: currentUser?.displayName ?? "Creator", role: "Creator")
+        
+        print("✅ VERIFICATION: Pod created successfully - id: '\(podId)', ideaId: '\(ideaId)', isPublic: \(isPublic)")
+        return podId
+    }
+    
+    func addPodMember(podId: String, userId: String, username: String, role: String = "Member") async throws {
+        let memberData: [String: AnyJSON] = [
+            "pod_id": AnyJSON.string(podId),
+            "user_id": AnyJSON.string(userId),
+            "username": AnyJSON.string(username),
+            "role": AnyJSON.string(role),
+            "permissions": AnyJSON.array([AnyJSON.string("view"), AnyJSON.string("comment")])
+        ]
+        
+        try await supabase
+            .from("pod_members")
+            .insert(memberData)
+            .execute()
+        
+        print("✅ Added member '\(username)' to pod \(podId) with role '\(role)'")
+    }
+    
+    // MARK: - Pod Data Parsing Helper
+    
+    private func parsePodFromData(_ item: [String: Any]) -> IncubationProject? {
+        guard let id = item["id"] as? String,
+              let ideaId = item["idea_id"] as? String,
+              let name = item["name"] as? String,
+              let description = item["description"] as? String,
+              let creatorId = item["creator_id"] as? String else {
+            return nil
+        }
+        
+        let isPublic = item["is_public"] as? Bool ?? false
+        let statusString = item["status"] as? String ?? "planning"
+        let status = IncubationProject.ProjectStatus(rawValue: statusString) ?? .planning
+        
+        let createdAt = parseDate(item["created_at"]) ?? Date()
+        let updatedAt = parseDate(item["updated_at"]) ?? Date()
+        
+        // Parse members
+        let membersData = item["pod_members"] as? [[String: Any]] ?? []
+        let members = membersData.compactMap { memberItem -> ProjectMember? in
+            guard let memberId = memberItem["id"] as? String,
+                  let userId = memberItem["user_id"] as? String,
+                  let username = memberItem["username"] as? String,
+                  let role = memberItem["role"] as? String else {
+                return nil
+            }
+            
+            let joinedAt = parseDate(memberItem["joined_at"]) ?? Date()
+            let permissionsArray = memberItem["permissions"] as? [String] ?? ["view", "comment"]
+            let permissions = permissionsArray.compactMap { ProjectMember.Permission(rawValue: $0) }
+            
+            return ProjectMember(
+                id: memberId,
+                userId: userId,
+                username: username,
+                role: role,
+                joinedAt: joinedAt,
+                permissions: permissions
+            )
+        }
+        
+        // Parse tasks
+        let tasksData = item["tasks"] as? [[String: Any]] ?? []
+        let tasks = tasksData.compactMap { taskItem -> ProjectTask? in
+            guard let taskId = taskItem["id"] as? String,
+                  let title = taskItem["title"] as? String else {
+                return nil
+            }
+            
+            let description = taskItem["description"] as? String
+            let assignedTo = taskItem["assigned_to"] as? String
+            let assignedToUsername = taskItem["assigned_to_username"] as? String
+            let statusString = taskItem["status"] as? String ?? "todo"
+            let priorityString = taskItem["priority"] as? String ?? "medium"
+            
+            let taskStatus = ProjectTask.TaskStatus(rawValue: statusString) ?? .todo
+            let taskPriority = ProjectTask.TaskPriority(rawValue: priorityString) ?? .medium
+            
+            let taskCreatedAt = parseDate(taskItem["created_at"]) ?? Date()
+            let taskUpdatedAt = parseDate(taskItem["updated_at"]) ?? Date()
+            
+            return ProjectTask(
+                id: taskId,
+                title: title,
+                description: description,
+                assignedTo: assignedTo,
+                assignedToUsername: assignedToUsername,
+                dueDate: nil, // Add due_date to schema if needed
+                createdAt: taskCreatedAt,
+                updatedAt: taskUpdatedAt,
+                status: taskStatus,
+                priority: taskPriority
+            )
+        }
+        
+        return IncubationProject(
+            id: id,
+            ideaId: ideaId,
+            name: name,
+            description: description,
+            creatorId: creatorId,
+            isPublic: isPublic,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            members: members,
+            tasks: tasks,
+            status: status
+        )
+    }
+
+    // MARK: - Additional Authentication Methods
+    
+    func validateUsername(_ username: String) async throws -> Bool {
+        do {
+            let response = try await supabase
+                .from("users")
+                .select("id")
+                .eq("username", value: username)
+                .execute()
+            
+            let decoder = JSONDecoder()
+            let data = try decoder.decode([[String: AnyJSON]].self, from: response.data)
+            return data.isEmpty // Available if no results found
+        } catch {
+            print("❌ Error validating username: \(error)")
+            throw error
+        }
+    }
+    
+    func verifyOtp(email: String, otp: String) async throws {
+        do {
+            let response = try await supabase.auth.verifyOTP(
+                email: email,
+                token: otp,
+                type: .signup
+            )
+            
+            let user = response.user
+            await MainActor.run {
+                self.currentUser = user
+                self.isAuthenticated = true
+            }
+        } catch {
+            print("❌ Error verifying OTP: \(error)")
+            throw error
+        }
+    }
+    
+    func resendOtp(email: String) async throws {
+        do {
+            try await supabase.auth.resend(
+                email: email,
+                type: .signup
+            )
+        } catch {
+            print("❌ Error resending OTP: \(error)")
+            throw error
+        }
     }
     
     // MARK: - Search (Placeholder)
@@ -432,8 +750,23 @@ class SupabaseManager: ObservableObject {
     }
     
     func reloadCurrentUser() async throws {
-        // In Supabase, we get real-time updates via the auth state change listener
-        print("User reload requested - Supabase handles this automatically")
+        do {
+            let session = try await supabase.auth.session
+            let user = session.user
+            await MainActor.run {
+                self.currentUser = user
+                self.isEmailVerified = user.emailConfirmedAt != nil
+                self.isAuthenticated = true
+            }
+        } catch {
+            print("❌ Error reloading current user: \(error)")
+            await MainActor.run {
+                self.currentUser = nil
+                self.isEmailVerified = false
+                self.isAuthenticated = false
+            }
+            throw error
+        }
     }
     
     // MARK: - User-specific Ideas

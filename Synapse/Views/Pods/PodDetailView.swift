@@ -14,8 +14,13 @@ struct PodDetailView: View {
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     // Placeholder for chat functionality - to be integrated with SupabaseManager
-    @State private var chatMessages: [Message] = []
+    @State private var chatMessages: [ChatMessage] = []
     @State private var typingUsers: [String] = []
+    @State private var messageText = ""
+    @FocusState private var isTextFieldFocused: Bool
+    @State private var showingImagePicker = false
+    @State private var selectedImage: UIImage?
+    @State private var showingMessageOptions: ChatMessage?
     
     @State private var selectedTab = 0
     @State private var showingTaskSheet = false
@@ -616,7 +621,9 @@ struct FullScreenChatView: View {
             }
         }
     }
-    
+
+// MARK: - FullScreenChatView Functions
+extension FullScreenChatView {
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
@@ -645,6 +652,7 @@ struct FullScreenChatView: View {
             ]
         )
     }
+}
 
 // MARK: - Supporting Views
 struct TaskStatusCard: View {

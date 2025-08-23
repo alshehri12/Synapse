@@ -233,25 +233,45 @@ struct CreatePodView: View {
     }
     
     private func createPod() {
-        guard isFormValid else { return }
+        guard isFormValid, let currentUser = supabaseManager.currentUser else { return }
         
         isLoading = true
         
         Task {
             do {
-                // TODO: Implement createPod in SupabaseManager
-                print("✅ Pod creation requested: \(podName.trimmingCharacters(in: .whitespacesAndNewlines))")
-                print("Description: \(podDescription.trimmingCharacters(in: .whitespacesAndNewlines))")
+                let trimmedName = podName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmedDescription = podDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                print("✅ Pod creation requested: \(trimmedName)")
+                print("Description: \(trimmedDescription)")
                 print("Idea ID: \(selectedIdea?.id ?? "None")")
                 print("Is Public: \(isPublic)")
+                
+                if let idea = selectedIdea {
+                    // Create pod from existing idea
+                    let podId = try await supabaseManager.createPodFromIdea(
+                        ideaId: idea.id,
+                        name: trimmedName,
+                        description: trimmedDescription,
+                        creatorId: currentUser.uid,
+                        isPublic: isPublic
+                    )
+                    print("🎉 SUCCESS: Pod created from idea with ID: \(podId)")
+                } else {
+                    // TODO: Implement creating pod without specific idea
+                    print("🚧 Creating standalone pod - implementation needed")
+                }
                 
                 await MainActor.run {
                     isLoading = false
                     dismiss()
                 }
             } catch {
+                print("❌ ERROR: Failed to create pod - \(error.localizedDescription)")
                 await MainActor.run {
                     isLoading = false
+                    errorMessage = error.localizedDescription
+                    showingError = true
                 }
             }
         }
