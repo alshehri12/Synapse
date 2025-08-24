@@ -106,6 +106,7 @@ struct SignUpView: View {
     @State private var isSubmitting = false
     @State private var usernameError = ""
     @State private var isCheckingUsername = false
+    @State private var showSuccessAlert = false
     
     var isFormValid: Bool {
         !email.isEmpty && !password.isEmpty && !username.isEmpty &&
@@ -126,6 +127,13 @@ struct SignUpView: View {
             .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
+        .alert("Account Created", isPresented: $showSuccessAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Your account has been created successfully.")
+        }
     }
     
     private var headerSection: some View {
@@ -332,7 +340,7 @@ struct SignUpView: View {
                 
                 DispatchQueue.main.async {
                     self.isSubmitting = false
-                    dismiss()
+                    self.showSuccessAlert = true
                 }
                 
             } catch {
@@ -716,7 +724,7 @@ struct SecondaryButtonStyle: ButtonStyle {
             .foregroundColor(Color.accentGreen)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(
+                        .background(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.accentGreen, lineWidth: 2)
             )
@@ -732,7 +740,7 @@ struct GoogleSignInButton: View {
     
     var body: some View {
         Button(action: {
-            isPressed = true
+                isPressed = true
             Task {
                 do {
                     try await supabaseManager.signInWithGoogle()
@@ -787,7 +795,7 @@ struct GoogleSignInButton: View {
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: isPressed)
     }
-}
+} 
 
 // MARK: - Language Switcher
 struct LanguageSwitcher: View {

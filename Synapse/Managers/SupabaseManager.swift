@@ -109,7 +109,19 @@ class SupabaseManager: ObservableObject {
                     accessToken: accessToken
                 )
             )
-            
+            // Immediately reflect auth state in UI
+            do {
+                let session = try await supabase.auth.session
+                let user = session.user
+                await MainActor.run {
+                    self.currentUser = user
+                    self.isEmailVerified = user.emailConfirmedAt != nil
+                    self.isAuthenticated = true
+                    self.isAuthReady = true
+                }
+            } catch {
+                // Non-fatal; listener should still catch it
+            }
         } catch {
             self.authError = error.localizedDescription
             throw error
@@ -145,7 +157,7 @@ class SupabaseManager: ObservableObject {
             if lower.contains("confirm") || lower.contains("email") || lower.contains("smtp") {
                 authError = "Email confirmation is required or email sending failed. Please disable email confirmations in Supabase Auth settings for now."
             } else {
-                authError = "Failed to create account: \(error.localizedDescription)"
+            authError = "Failed to create account: \(error.localizedDescription)"
             }
             throw error
         }
@@ -184,6 +196,13 @@ class SupabaseManager: ObservableObject {
                 print("⚠️ Failed to ensure user profile on sign-in: \(error.localizedDescription)")
             }
             
+            // Immediately reflect auth state in UI
+            await MainActor.run {
+                self.currentUser = user
+                self.isEmailVerified = user.emailConfirmedAt != nil
+                self.isAuthenticated = true
+                self.isAuthReady = true
+            }
             // No verification gate: allow unverified logins per request
         } catch {
             authError = "Sign in failed: \(error.localizedDescription)"
@@ -196,6 +215,8 @@ class SupabaseManager: ObservableObject {
         try await supabase.auth.signOut()
         currentUser = nil
         isEmailVerified = false
+        isAuthenticated = false
+        isAuthReady = true
         authError = nil
     }
     
@@ -659,18 +680,21 @@ class SupabaseManager: ObservableObject {
                     if let user = session?.user {
                         self.currentUser = user
                         self.isEmailVerified = user.emailConfirmedAt != nil
+                        self.isAuthenticated = true
                         self.isAuthReady = true
                         print("✅ Auth state - User signed in: \(user.email ?? "no email")")
                     }
                 case .signedOut:
                     self.currentUser = nil
                     self.isEmailVerified = false
+                    self.isAuthenticated = false
                     self.isAuthReady = true
                     print("🚪 Auth state - User signed out")
                 case .tokenRefreshed:
                     if let user = session?.user {
                         self.currentUser = user
                         self.isEmailVerified = user.emailConfirmedAt != nil
+                        self.isAuthenticated = true
                         print("🔄 Auth state - Token refreshed")
                     }
                 default:
@@ -687,11 +711,13 @@ class SupabaseManager: ObservableObject {
                 let user = session.user
                 self.currentUser = user
                 self.isEmailVerified = user.emailConfirmedAt != nil
+                self.isAuthenticated = true
                 self.isAuthReady = true
                 print("✅ Restored session for: \(user.email ?? "Unknown")")
             }
         } catch {
             await MainActor.run {
+                self.isAuthenticated = false
                 self.isAuthReady = true
             }
             print("ℹ️ No existing session found")

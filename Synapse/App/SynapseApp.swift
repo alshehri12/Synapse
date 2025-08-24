@@ -23,8 +23,8 @@ struct SynapseApp: App {
                         .environmentObject(localizationManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
-                } else if supabaseManager.currentUser != nil && supabaseManager.isEmailVerified && !supabaseManager.isSigningUp {
-                    // User is signed in with verified email - show main app
+                } else if supabaseManager.isAuthenticated && !supabaseManager.isSigningUp {
+                    // User is signed in - show main app (no email verification gate per request)
                     ContentView()
                         .environmentObject(localizationManager)
                         .environmentObject(supabaseManager)
