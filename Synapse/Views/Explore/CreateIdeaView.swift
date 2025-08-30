@@ -298,30 +298,42 @@ struct CreateIdeaView: View {
         
         Task {
             do {
-                if let userData = try await supabaseManager.getUserProfile(userId: currentUser.uid) {
-                    let username = userData["username"] as? String ?? "Anonymous User"
-                    print("👤 User profile found: \(username)")
-                    
-                    let ideaSparkId = try await supabaseManager.createIdeaSpark(
-                        title: title,
-                        description: description,
-                        tags: tags,
-                        isPublic: isPublic,
-                        creatorId: currentUser.uid,
-                        creatorUsername: username
-                    )
-                    
-                    print("✅ CreateIdeaView: Idea created with ID: \(ideaSparkId)")
-                    
-                    await MainActor.run {
-                        isSubmitting = false
-                        showingSuccessAlert = true
+                // Try to fetch profile, but don't fail idea creation if profile lookup has issues
+                var resolvedUsername: String = "Anonymous User"
+                do {
+                    if let userData = try await supabaseManager.getUserProfile(userId: currentUser.uid) {
+                        resolvedUsername = userData["username"] as? String
+                            ?? supabaseManager.currentUser?.displayName
+                            ?? (supabaseManager.currentUser?.email?.split(separator: "@").first.map(String.init))
+                            ?? "Anonymous User"
+                        print("👤 User profile found: \(resolvedUsername)")
+                    } else {
+                        resolvedUsername = supabaseManager.currentUser?.displayName
+                            ?? (supabaseManager.currentUser?.email?.split(separator: "@").first.map(String.init))
+                            ?? "Anonymous User"
+                        print("ℹ️ No profile row; using resolved username: \(resolvedUsername)")
                     }
-                } else {
-                    print("❌ CreateIdeaView: User profile not found")
-                    await MainActor.run {
-                        isSubmitting = false
-                    }
+                } catch {
+                    resolvedUsername = supabaseManager.currentUser?.displayName
+                        ?? (supabaseManager.currentUser?.email?.split(separator: "@").first.map(String.init))
+                        ?? "Anonymous User"
+                    print("⚠️ Profile lookup failed; falling back to username: \(resolvedUsername). Error: \(error)")
+                }
+
+                let ideaSparkId = try await supabaseManager.createIdeaSpark(
+                    title: title,
+                    description: description,
+                    tags: tags,
+                    isPublic: isPublic,
+                    creatorId: currentUser.uid,
+                    creatorUsername: resolvedUsername
+                )
+                
+                print("✅ CreateIdeaView: Idea created with ID: \(ideaSparkId)")
+                
+                await MainActor.run {
+                    isSubmitting = false
+                    showingSuccessAlert = true
                 }
             } catch {
                 print("❌ CreateIdeaView: Error creating idea - \(error)")

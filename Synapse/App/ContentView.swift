@@ -46,6 +46,9 @@ struct ContentView: View {
         .tint(Color.accentGreen)
         .preferredColorScheme(.light)
         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+        .onReceive(NotificationCenter.default.publisher(for: .switchToMyPods)) { _ in
+            selectedTab = 1
+        }
         .onAppear {
             // Ensure tab bar is visible and properly configured
             let appearance = UITabBarAppearance()
@@ -61,6 +64,12 @@ struct ContentView: View {
         }
     }
 }
+
+#if canImport(UIKit)
+extension Notification.Name {
+    static let switchToMyPods = Notification.Name("SwitchToMyPods")
+}
+#endif
 
 #Preview {
     ContentView()

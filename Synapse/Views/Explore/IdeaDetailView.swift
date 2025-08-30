@@ -27,6 +27,12 @@ struct IdeaDetailView: View {
     @State private var existingPods: [IncubationProject] = []
     @State private var isLoadingPods = false
     @State private var isUserInPod = false
+    @State private var showMyPods = false
+
+    private var isOwner: Bool {
+        guard let currentUser = supabaseManager.currentUser else { return false }
+        return currentUser.uid.lowercased() == idea.authorId.lowercased()
+    }
     
     var body: some View {
         NavigationView {
@@ -157,8 +163,8 @@ struct IdeaDetailView: View {
                         Spacer()
                         
                         // Show different buttons based on ownership and pod existence
-                        if let currentUser = supabaseManager.currentUser {
-                            if currentUser.uid == idea.authorId {
+                        if let _ = supabaseManager.currentUser {
+                            if isOwner {
                                 // User is the idea owner - can create pod
                                 Button(action: { showingCreatePod = true }) {
                                     HStack(spacing: 6) {
@@ -354,7 +360,10 @@ struct IdeaDetailView: View {
                 // Refresh pod status after potential creation
                 loadExistingPods()
             }) {
-                CreatePodFromIdeaView(idea: idea)
+                CreatePodFromIdeaView(idea: idea, onCreated: {
+                    // After creating a project, switch to My Projects tab
+                    NotificationCenter.default.post(name: .switchToMyPods, object: nil)
+                })
             }
             .sheet(isPresented: $showingJoinPod, onDismiss: {
                 // Refresh pod status after potential join
@@ -606,6 +615,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 // MARK: - Create Pod From Idea View
 struct CreatePodFromIdeaView: View {
     let idea: IdeaSpark
+    var onCreated: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var podName = ""
@@ -739,6 +749,7 @@ struct CreatePodFromIdeaView: View {
                 await MainActor.run {
                     isSubmitting = false
                     dismiss()
+                    onCreated?()
                 }
             } catch {
                 print("❌ ERROR: Failed to create pod - \(error.localizedDescription)")
