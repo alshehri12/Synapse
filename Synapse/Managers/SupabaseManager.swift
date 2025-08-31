@@ -352,6 +352,33 @@ class SupabaseManager: ObservableObject {
         return newIdeaId
     }
     
+    func updateIdeaSpark(ideaId: String, title: String, description: String, tags: [String], isPublic: Bool) async throws {
+        let updateData: [String: AnyJSON] = [
+            "title": AnyJSON.string(title),
+            "description": AnyJSON.string(description),
+            "tags": AnyJSON.array(tags.map { AnyJSON.string($0) }),
+            "is_public": AnyJSON.bool(isPublic)
+        ]
+        
+        try await supabase
+            .from("idea_sparks")
+            .update(updateData)
+            .eq("id", value: ideaId)
+            .execute()
+        
+        print("✅ Idea updated: \(ideaId)")
+    }
+    
+    func deleteIdeaSpark(ideaId: String) async throws {
+        try await supabase
+            .from("idea_sparks")
+            .delete()
+            .eq("id", value: ideaId)
+            .execute()
+        
+        print("✅ Idea deleted: \(ideaId)")
+    }
+    
     func getPublicIdeaSparks() async throws -> [IdeaSpark] {
         let response = try await supabase
             .from("idea_sparks")
@@ -589,6 +616,63 @@ class SupabaseManager: ObservableObject {
             print("❌ Error resending OTP: \(error)")
             throw error
         }
+    }
+    
+    // MARK: - Comments Management
+    
+    func getIdeaComments(ideaId: String) async throws -> [IdeaComment] {
+        let response = try await supabase
+            .from("idea_comments")
+            .select("*")
+            .eq("idea_id", value: ideaId)
+            .order("created_at", ascending: true)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parseCommentFromData(item)
+        }
+    }
+    
+    func addCommentToIdea(ideaId: String, content: String, authorId: String, authorUsername: String) async throws -> String {
+        let commentId = UUID().uuidString
+        let commentData: [String: AnyJSON] = [
+            "id": AnyJSON.string(commentId),
+            "idea_id": AnyJSON.string(ideaId),
+            "author_id": AnyJSON.string(authorId),
+            "author_username": AnyJSON.string(authorUsername),
+            "content": AnyJSON.string(content)
+        ]
+        
+        try await supabase
+            .from("idea_comments")
+            .insert(commentData)
+            .execute()
+        
+        print("✅ Comment added to idea \(ideaId): \(content)")
+        return commentId
+    }
+    
+    private func parseCommentFromData(_ item: [String: Any]) -> IdeaComment? {
+        guard let id = item["id"] as? String,
+              let ideaId = item["idea_id"] as? String,
+              let authorId = item["author_id"] as? String,
+              let authorUsername = item["author_username"] as? String,
+              let content = item["content"] as? String else {
+            return nil
+        }
+        
+        let createdAt = parseDate(item["created_at"]) ?? Date()
+        
+        return IdeaComment(
+            id: id,
+            authorId: authorId,
+            authorUsername: authorUsername,
+            content: content,
+            createdAt: createdAt,
+            likes: 0 // We can add comment likes later
+        )
     }
     
     // MARK: - Search (Placeholder)

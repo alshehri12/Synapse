@@ -9,10 +9,14 @@ import SwiftUI
 import Supabase
 
 struct IdeaDetailView: View {
-    let idea: IdeaSpark
+    @State private var currentIdea: IdeaSpark
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
+    
+    init(idea: IdeaSpark) {
+        self._currentIdea = State(initialValue: idea)
+    }
     
     @State private var comments: [IdeaComment] = []
     @State private var newComment = ""
@@ -28,60 +32,120 @@ struct IdeaDetailView: View {
     @State private var isLoadingPods = false
     @State private var isUserInPod = false
     @State private var showMyPods = false
+    @State private var showingEditIdea = false
 
     private var isOwner: Bool {
         guard let currentUser = supabaseManager.currentUser else { return false }
-        return currentUser.uid.lowercased() == idea.authorId.lowercased()
+        return currentUser.uid.lowercased() == currentIdea.authorId.lowercased()
     }
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Idea Header
+                    ideaHeaderSection
+                    interactionStatsSection
+                    actionButtonsSection
+                    commentsSection
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .background(Color.backgroundSecondary)
+            .navigationTitle("Idea Details".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close".localized) {
+                        dismiss()
+                    }
+                }
+                
+                if isOwner {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        ownerToolbarButtons
+                    }
+                }
+            }
+            .onAppear {
+                loadComments()
+                checkIfLiked()
+                loadExistingPods()
+            }
+            .sheet(isPresented: $showingCreatePod, onDismiss: {
+                loadExistingPods()
+            }) {
+                CreatePodFromIdeaView(idea: currentIdea, onCreated: {
+                    NotificationCenter.default.post(name: .switchToMyPods, object: nil)
+                })
+            }
+            .sheet(isPresented: $showingJoinPod, onDismiss: {
+                loadExistingPods()
+            }) {
+                JoinPodView(availablePods: existingPods)
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                ShareSheet(items: [currentIdea.title, currentIdea.description])
+            }
+            .sheet(isPresented: $showingEditIdea) {
+                EditIdeaView(idea: currentIdea) { updatedIdea in
+                    currentIdea = updatedIdea
+                }
+            }
+            .alert("Delete Idea".localized, isPresented: $showingDeleteAlert) {
+                Button("Cancel".localized, role: .cancel) { }
+                Button("Delete".localized, role: .destructive) {
+                    deleteIdea()
+                }
+            } message: {
+                Text("Are you sure you want to delete this idea? This action cannot be undone.".localized)
+            }
+        }
+    }
+    
+    // MARK: - View Components
+    
+    private var ideaHeaderSection: some View {
                     VStack(alignment: .leading, spacing: 16) {
-                        // Author Info
                         HStack {
                             Circle()
                                 .fill(Color.accentGreen)
                                 .frame(width: 50, height: 50)
                                 .overlay(
-                                    Text(String(idea.authorUsername.prefix(1)).uppercased())
+                        Text(String(currentIdea.authorUsername.prefix(1)).uppercased())
                                         .font(.system(size: 20, weight: .semibold))
                                         .foregroundColor(.white)
                                 )
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(idea.authorUsername)
+                    Text(currentIdea.authorUsername)
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(Color.textPrimary)
                                 
-                                Text(idea.createdAt.timeAgoDisplay())
+                    Text(currentIdea.createdAt.timeAgoDisplay())
                                     .font(.system(size: 14))
                                     .foregroundColor(Color.textSecondary)
                             }
                             
                             Spacer()
                             
-                            StatusBadge(status: idea.status)
+                StatusBadge(status: currentIdea.status)
                         }
                         
-                        // Idea Content
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(idea.title)
+                Text(currentIdea.title)
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(Color.textPrimary)
                             
-                            Text(idea.description)
+                Text(currentIdea.description)
                                 .font(.system(size: 16))
                                 .foregroundColor(Color.textSecondary)
                                 .lineSpacing(4)
                             
-                            // Tags
-                            if !idea.tags.isEmpty {
+                if !currentIdea.tags.isEmpty {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
-                                        ForEach(idea.tags, id: \.self) { tag in
+                            ForEach(currentIdea.tags, id: \.self) { tag in
                                             Text("#\(tag)")
                                                 .font(.system(size: 14, weight: .medium))
                                                 .foregroundColor(Color.accentGreen)
@@ -99,14 +163,15 @@ struct IdeaDetailView: View {
                     .background(Color.backgroundPrimary)
                     .cornerRadius(16)
                     .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
                     
-                    // Interaction Stats
+    private var interactionStatsSection: some View {
                     HStack(spacing: 20) {
                         HStack(spacing: 6) {
                             Image(systemName: "heart.fill")
                                 .font(.system(size: 16))
                                 .foregroundColor(.red)
-                            Text("\(idea.likes)")
+                Text("\(currentIdea.likes)")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(Color.textPrimary)
                         }
@@ -115,7 +180,7 @@ struct IdeaDetailView: View {
                             Image(systemName: "message.fill")
                                 .font(.system(size: 16))
                                 .foregroundColor(Color.accentGreen)
-                            Text("\(idea.comments)")
+                Text("\(currentIdea.comments)")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(Color.textPrimary)
                         }
@@ -123,8 +188,9 @@ struct IdeaDetailView: View {
                         Spacer()
                     }
                     .padding(.horizontal, 20)
+    }
                     
-                    // Action Buttons
+    private var actionButtonsSection: some View {
                     HStack(spacing: 12) {
                         Button(action: likeIdea) {
                             HStack(spacing: 6) {
@@ -162,10 +228,15 @@ struct IdeaDetailView: View {
                         
                         Spacer()
                         
-                        // Show different buttons based on ownership and pod existence
-                        if let _ = supabaseManager.currentUser {
-                            if isOwner {
-                                // User is the idea owner - can create pod
+            projectActionButton
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private var projectActionButton: some View {
+        if let _ = supabaseManager.currentUser {
+            if isOwner {
                                 Button(action: { showingCreatePod = true }) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "plus.circle")
@@ -183,9 +254,14 @@ struct IdeaDetailView: View {
                                     .fixedSize(horizontal: true, vertical: false)
                                 }
                             } else {
-                                // User is NOT the idea owner
+                nonOwnerProjectButton
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var nonOwnerProjectButton: some View {
                                 if isLoadingPods {
-                                    // Show loading state
                                     HStack(spacing: 6) {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -199,7 +275,6 @@ struct IdeaDetailView: View {
                                     .background(Color.textSecondary.opacity(0.6))
                                     .cornerRadius(20)
                                 } else if isUserInPod {
-                                    // User already in pod - show status
                                     HStack(spacing: 6) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.system(size: 16))
@@ -215,7 +290,6 @@ struct IdeaDetailView: View {
                                     .cornerRadius(20)
                                     .fixedSize(horizontal: true, vertical: false)
                                 } else if !existingPods.isEmpty {
-                                    // Pods exist - can join
                                     Button(action: { showingJoinPod = true }) {
                                         HStack(spacing: 6) {
                                             Image(systemName: "person.3")
@@ -233,7 +307,6 @@ struct IdeaDetailView: View {
                                         .fixedSize(horizontal: true, vertical: false)
                                     }
                                 } else {
-                                    // No pods exist - show disabled message
                                     HStack(spacing: 6) {
                                         Image(systemName: "person.3.fill")
                                             .font(.system(size: 16))
@@ -250,11 +323,33 @@ struct IdeaDetailView: View {
                                     .fixedSize(horizontal: true, vertical: false)
                                 }
                             }
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    // Comments Section
+    
+    private var ownerToolbarButtons: some View {
+        HStack(spacing: 8) {
+            Button(action: {
+                showingEditIdea = true
+            }) {
+                Image(systemName: "pencil")
+                    .foregroundColor(Color.accentGreen)
+            }
+            
+            Button(action: {
+                showingDeleteAlert = true
+            }) {
+                if isDeleting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .red))
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+            }
+            .disabled(isDeleting)
+        }
+    }
+    
+    private var commentsSection: some View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Text("Comments".localized)
@@ -269,7 +364,6 @@ struct IdeaDetailView: View {
                             }
                         }
                         
-                        // Add Comment
                         HStack(spacing: 12) {
                             TextField("Add a comment...".localized, text: $newComment)
                                 .textFieldStyle(CustomTextFieldStyle())
@@ -288,7 +382,6 @@ struct IdeaDetailView: View {
                             .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmittingComment)
                         }
                         
-                        // Comments List
                         if comments.isEmpty && !isLoadingComments {
                             VStack(spacing: 12) {
                                 Image(systemName: "message")
@@ -317,24 +410,238 @@ struct IdeaDetailView: View {
                     .background(Color.backgroundPrimary)
                     .cornerRadius(16)
                     .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-            .background(Color.backgroundSecondary)
-            .navigationTitle("Idea Details".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close".localized) {
-                        dismiss()
-                    }
+    }
+    
+    // MARK: - View Components
+    
+    private var ideaHeaderSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Circle()
+                    .fill(Color.accentGreen)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Text(String(currentIdea.authorUsername.prefix(1)).uppercased())
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(currentIdea.authorUsername)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color.textPrimary)
+                    
+                    Text(currentIdea.createdAt.timeAgoDisplay())
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.textSecondary)
                 }
                 
-                // Show delete button only if current user is the idea author
-                if let currentUser = supabaseManager.currentUser,
-                   currentUser.uid == idea.authorId {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                Spacer()
+                
+                StatusBadge(status: currentIdea.status)
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Text(currentIdea.title)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(Color.textPrimary)
+                
+                Text(currentIdea.description)
+                    .font(.system(size: 16))
+                    .foregroundColor(Color.textSecondary)
+                    .lineSpacing(4)
+                
+                if !currentIdea.tags.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(currentIdea.tags, id: \.self) { tag in
+                                Text("#\(tag)")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(Color.accentGreen)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.accentGreen.opacity(0.1))
+                                    .cornerRadius(12)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.backgroundPrimary)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+    
+    private var interactionStatsSection: some View {
+        HStack(spacing: 20) {
+            HStack(spacing: 6) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.red)
+                Text("\(currentIdea.likes)")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+            }
+            
+            HStack(spacing: 6) {
+                Image(systemName: "message.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(Color.accentGreen)
+                Text("\(currentIdea.comments)")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+            }
+            
+            Spacer()
+                }
+                .padding(.horizontal, 20)
+    }
+    
+    private var actionButtonsSection: some View {
+        HStack(spacing: 12) {
+            Button(action: likeIdea) {
+                HStack(spacing: 6) {
+                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                        .font(.system(size: 16))
+                    Text(isLiked ? "Liked".localized : "Like".localized)
+                        .font(.system(size: 14, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .foregroundColor(isLiked ? .red : Color.textSecondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isLiked ? Color.red.opacity(0.1) : Color.backgroundSecondary)
+                .cornerRadius(20)
+                .fixedSize(horizontal: true, vertical: false)
+            }
+            
+            Button(action: { showingShareSheet = true }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16))
+                    Text("Share".localized)
+                        .font(.system(size: 14, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .foregroundColor(Color.textSecondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            .background(Color.backgroundSecondary)
+                .cornerRadius(20)
+                .fixedSize(horizontal: true, vertical: false)
+            }
+            
+            Spacer()
+            
+            projectActionButton
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private var projectActionButton: some View {
+        if let _ = supabaseManager.currentUser {
+            if isOwner {
+                Button(action: { showingCreatePod = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 16))
+                        Text("Create Project".localized)
+                            .font(.system(size: 14, weight: .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.accentGreen)
+                    .cornerRadius(20)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+            } else {
+                nonOwnerProjectButton
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var nonOwnerProjectButton: some View {
+        if isLoadingPods {
+            HStack(spacing: 6) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(0.8)
+                Text("Loading...".localized)
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.textSecondary.opacity(0.6))
+            .cornerRadius(20)
+        } else if isUserInPod {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16))
+                Text("Already in Project".localized)
+                    .font(.system(size: 14, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.accentGreen.opacity(0.8))
+            .cornerRadius(20)
+            .fixedSize(horizontal: true, vertical: false)
+        } else if !existingPods.isEmpty {
+            Button(action: { showingJoinPod = true }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "person.3")
+                        .font(.system(size: 16))
+                    Text("Join Project".localized)
+                        .font(.system(size: 14, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.accentBlue)
+                .cornerRadius(20)
+                .fixedSize(horizontal: true, vertical: false)
+            }
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 16))
+                Text("No Projects Yet".localized)
+                    .font(.system(size: 14, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.textSecondary.opacity(0.6))
+            .cornerRadius(20)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+    
+    private var ownerToolbarButtons: some View {
+        HStack(spacing: 8) {
+            Button(action: {
+                showingEditIdea = true
+            }) {
+                Image(systemName: "pencil")
+                    .foregroundColor(Color.accentGreen)
+            }
+            
                         Button(action: {
                             showingDeleteAlert = true
                         }) {
@@ -348,71 +655,20 @@ struct IdeaDetailView: View {
                             }
                         }
                         .disabled(isDeleting)
-                    }
-                }
-            }
-            .onAppear {
-                loadComments()
-                checkIfLiked()
-                loadExistingPods()
-            }
-            .sheet(isPresented: $showingCreatePod, onDismiss: {
-                // Refresh pod status after potential creation
-                loadExistingPods()
-            }) {
-                CreatePodFromIdeaView(idea: idea, onCreated: {
-                    // After creating a project, switch to My Projects tab
-                    NotificationCenter.default.post(name: .switchToMyPods, object: nil)
-                })
-            }
-            .sheet(isPresented: $showingJoinPod, onDismiss: {
-                // Refresh pod status after potential join
-                loadExistingPods()
-            }) {
-                JoinPodView(availablePods: existingPods)
-            }
-            .sheet(isPresented: $showingShareSheet) {
-                ShareSheet(items: [idea.title, idea.description])
-            }
-            .alert("Delete Idea".localized, isPresented: $showingDeleteAlert) {
-                Button("Cancel".localized, role: .cancel) { }
-                Button("Delete".localized, role: .destructive) {
-                    deleteIdea()
-                }
-            } message: {
-                Text("Are you sure you want to delete this idea? This action cannot be undone.".localized)
-            }
         }
     }
+    
+    // MARK: - Functions
     
     private func loadComments() {
         isLoadingComments = true
         
         Task {
             do {
-                // TODO: Implement getIdeaComments in SupabaseManager
-                let commentData: [[String: Any]] = []
+                let commentData = try await supabaseManager.getIdeaComments(ideaId: currentIdea.id)
                 
                 await MainActor.run {
-                    comments = commentData.compactMap { data in
-                        guard let id = data["id"] as? String,
-                              let authorId = data["authorId"] as? String,
-                              let authorUsername = data["authorUsername"] as? String,
-                              let content = data["content"] as? String,
-                              let createdAt = data["timestamp"] as? Date else {
-                            print("⚠️ Failed to parse comment: \(data)")
-                            return nil
-                        }
-                        
-                        return IdeaComment(
-                            id: id,
-                            authorId: authorId,
-                            authorUsername: authorUsername,
-                            content: content,
-                            createdAt: createdAt,
-                            likes: 0  // Default value since likes aren't implemented for comments yet
-                        )
-                    }
+                    comments = commentData
                     isLoadingComments = false
                     print("✅ Loaded \(comments.count) comments successfully")
                 }
@@ -427,9 +683,6 @@ struct IdeaDetailView: View {
     
     private func checkIfLiked() {
         guard let currentUser = supabaseManager.currentUser else { return }
-        
-        // This would need to be implemented to check if the current user has liked this idea
-        // For now, we'll assume not liked
         isLiked = false
     }
     
@@ -438,8 +691,7 @@ struct IdeaDetailView: View {
         
         Task {
             do {
-                // TODO: Implement likeIdea in SupabaseManager
-                print("✅ Like idea requested: \(idea.id) by user \(currentUser.uid)")
+                print("✅ Like idea requested: \(currentIdea.id) by user \(currentUser.uid)")
                 await MainActor.run {
                     isLiked.toggle()
                 }
@@ -460,15 +712,20 @@ struct IdeaDetailView: View {
             do {
                 let username = currentUser.displayName ?? "Anonymous User"
                 print("💬 Submitting comment: '\(commentText)' by \(username)")
-                // TODO: Implement addCommentToIdea in SupabaseManager
-                print("✅ Add comment requested for idea: \(idea.id)")
-                print("Comment: \(commentText)")
+                
+                _ = try await supabaseManager.addCommentToIdea(
+                    ideaId: currentIdea.id,
+                    content: commentText,
+                    authorId: currentUser.uid,
+                    authorUsername: username
+                )
+                
                 print("✅ Comment submitted successfully, reloading comments...")
                 
                 await MainActor.run {
                     newComment = ""
                     isSubmittingComment = false
-                    loadComments() // Reload comments to show the new one
+                    loadComments()
                 }
             } catch {
                 print("❌ Error submitting comment: \(error.localizedDescription)")
@@ -483,13 +740,12 @@ struct IdeaDetailView: View {
         isLoadingPods = true
         
         print("🔄 UI: Starting to load existing pods...")
-        print("💡 UI: Idea details - ID: '\(idea.id)', Title: '\(idea.title)', Author: '\(idea.authorId)'")
+        print("💡 UI: Idea details - ID: '\(currentIdea.id)', Title: '\(currentIdea.title)', Author: '\(currentIdea.authorId)'")
         
         Task {
             do {
-                let pods = try await supabaseManager.getPodsByIdeaId(idea.id)
+                let pods = try await supabaseManager.getPodsByIdeaId(currentIdea.id)
                 
-                // Check if current user is already in any pod for this idea
                 let currentUserId = supabaseManager.currentUser?.uid ?? ""
                 let userInPod = pods.contains { pod in
                     pod.members.contains { member in
@@ -501,7 +757,7 @@ struct IdeaDetailView: View {
                     existingPods = pods
                     isUserInPod = userInPod
                     isLoadingPods = false
-                    print("📊 UI: Loaded \(pods.count) existing pods for idea '\(idea.title)'")
+                    print("📊 UI: Loaded \(pods.count) existing pods for idea '\(currentIdea.title)'")
                     print("👤 UI: User membership status - isUserInPod: \(userInPod)")
                     
                     if pods.isEmpty {
@@ -520,7 +776,7 @@ struct IdeaDetailView: View {
                     existingPods = []
                     isUserInPod = false
                     isLoadingPods = false
-                    print("❌ UI: Failed to load pods for idea '\(idea.title)': \(error.localizedDescription)")
+                    print("❌ UI: Failed to load pods for idea '\(currentIdea.title)': \(error.localizedDescription)")
                 }
             }
         }
@@ -533,18 +789,17 @@ struct IdeaDetailView: View {
         
         Task {
             do {
-                // TODO: Implement deleteIdeaSpark in SupabaseManager
-                print("✅ Delete idea requested: \(idea.id) by user \(currentUser.uid)")
+                print("🗑️ Deleting idea: \(currentIdea.id) by user \(currentUser.uid)")
+                try await supabaseManager.deleteIdeaSpark(ideaId: currentIdea.id)
                 
                 await MainActor.run {
                     isDeleting = false
-                    dismiss() // Close the detail view after successful deletion
+                    dismiss()
                 }
             } catch {
                 await MainActor.run {
                     isDeleting = false
-                    // You could show an error alert here if needed
-                    print("Error deleting idea: \(error.localizedDescription)")
+                    print("❌ Error deleting idea: \(error.localizedDescription)")
                 }
             }
         }
@@ -626,7 +881,6 @@ struct CreatePodFromIdeaView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Header
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Create Project from Idea".localized)
                             .font(.system(size: 28, weight: .bold))
@@ -638,7 +892,6 @@ struct CreatePodFromIdeaView: View {
                     }
                     .padding(.top, 20)
                     
-                    // Project Name
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Project Name".localized)
                             .font(.system(size: 16, weight: .semibold))
@@ -648,7 +901,6 @@ struct CreatePodFromIdeaView: View {
                             .textFieldStyle(CustomTextFieldStyle())
                     }
                     
-                    // Project Description
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Project Description".localized)
                             .font(.system(size: 16, weight: .semibold))
@@ -665,7 +917,6 @@ struct CreatePodFromIdeaView: View {
                             )
                     }
                     
-                    // Submit Button
                     Button(action: createPod) {
                         HStack {
                             if isSubmitting {
@@ -702,7 +953,6 @@ struct CreatePodFromIdeaView: View {
                 }
             }
             .onAppear {
-                // Pre-fill with idea data
                 if podName.isEmpty {
                     podName = idea.title
                 }
@@ -755,7 +1005,6 @@ struct CreatePodFromIdeaView: View {
                 print("❌ ERROR: Failed to create pod - \(error.localizedDescription)")
                 await MainActor.run {
                     isSubmitting = false
-                    // You could show an error alert here if needed
                 }
             }
         }
@@ -776,7 +1025,6 @@ struct JoinPodView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-            // Header
                     VStack(alignment: .leading, spacing: 8) {
                 Text("Join a Project".localized)
                             .font(.system(size: 28, weight: .bold))
@@ -788,7 +1036,6 @@ struct JoinPodView: View {
                     }
                     .padding(.top, 20)
                     
-                    // Available Pods
                     LazyVStack(spacing: 16) {
                         ForEach(availablePods) { pod in
                             PodJoinCard(
@@ -799,7 +1046,6 @@ struct JoinPodView: View {
                         }
                     }
                     
-                    // Join Button
             Button(action: joinSelectedPod) {
                         HStack {
                             if isJoining {
@@ -855,7 +1101,6 @@ struct JoinPodView: View {
         
         Task {
             do {
-                // TODO: Implement addMemberToProject in SupabaseManager
                 print("✅ Add member to project requested:")
                 print("- Project ID: \(pod.id)")
                 print("- User ID: \(currentUser.uid)")
@@ -931,6 +1176,364 @@ struct PodJoinCard: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Edit Idea View
+struct EditIdeaView: View {
+    let idea: IdeaSpark
+    let onUpdated: (IdeaSpark) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var supabaseManager: SupabaseManager
+    @EnvironmentObject private var localizationManager: LocalizationManager
+    
+    @State private var title: String
+    @State private var description: String
+    @State private var tags: [String]
+    @State private var newTag = ""
+    @State private var isPublic: Bool
+    @State private var isSubmitting = false
+    @State private var showingSuccessAlert = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
+    
+    private let maxTitleLength = 100
+    private let maxDescriptionLength = 500
+    private let maxTags = 5
+    
+    init(idea: IdeaSpark, onUpdated: @escaping (IdeaSpark) -> Void) {
+        self.idea = idea
+        self.onUpdated = onUpdated
+        self._title = State(initialValue: idea.title)
+        self._description = State(initialValue: idea.description)
+        self._tags = State(initialValue: idea.tags)
+        self._isPublic = State(initialValue: idea.isPublic)
+    }
+    
+    var isFormValid: Bool {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return !trimmedTitle.isEmpty &&
+               !trimmedDescription.isEmpty &&
+               title.count <= maxTitleLength &&
+               description.count <= maxDescriptionLength
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Edit Idea".localized)
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(Color.textPrimary)
+                        
+                        Text("Update your idea details".localized)
+                            .font(.system(size: 16))
+                            .foregroundColor(Color.textSecondary)
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Idea Title".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text("\(title.count)/\(maxTitleLength)")
+                                .font(.system(size: 12))
+                                .foregroundColor(title.count > maxTitleLength ? Color.error : Color.textSecondary)
+                        }
+                        
+                        TextField("Enter your idea title...".localized, text: $title)
+                            .textFieldStyle(CustomTextFieldStyle())
+                            .onChange(of: title) { _, newValue in
+                                if newValue.count > maxTitleLength {
+                                    title = String(newValue.prefix(maxTitleLength))
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Description".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text("\(description.count)/\(maxDescriptionLength)")
+                                .font(.system(size: 12))
+                                .foregroundColor(description.count > maxDescriptionLength ? Color.error : Color.textSecondary)
+                        }
+                        
+                        TextEditor(text: $description)
+                            .frame(minHeight: 120)
+                            .padding(12)
+                            .background(Color.backgroundSecondary)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.textSecondary.opacity(0.2), lineWidth: 1)
+                            )
+                            .onChange(of: description) { _, newValue in
+                                if newValue.count > maxDescriptionLength {
+                                    description = String(newValue.prefix(maxDescriptionLength))
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Tags".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text("\(tags.count)/\(maxTags)")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color.textSecondary)
+                        }
+                        
+                        if tags.count < maxTags {
+                            HStack {
+                                TextField("Add tags separated by commas...".localized, text: $newTag)
+                                    .textFieldStyle(CustomTextFieldStyle())
+                                
+                                Button(action: addTag) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(Color.accentGreen)
+                                }
+                                .disabled(newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            }
+                        }
+                        
+                        if !tags.isEmpty {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
+                                ForEach(tags, id: \.self) { tag in
+                                    TagView(tag: tag) {
+                                        removeTag(tag)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Privacy".localized)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color.textPrimary)
+                        
+                        VStack(spacing: 12) {
+                            PrivacyOption(
+                                title: "Make Public".localized,
+                                description: "Anyone can see and join this idea".localized,
+                                isSelected: isPublic,
+                                action: { isPublic = true }
+                            )
+                            
+                            PrivacyOption(
+                                title: "Private".localized,
+                                description: "Only invited collaborators can see your idea".localized,
+                                isSelected: !isPublic,
+                                action: { isPublic = false }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    VStack(spacing: 16) {
+                        Button(action: updateIdea) {
+                            HStack {
+                                if isSubmitting {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                
+                                Text(isSubmitting ? "Updating...".localized : "Update Idea".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(isFormValid && !isSubmitting ? Color.accentGreen : Color.textSecondary.opacity(0.3))
+                            .cornerRadius(12)
+                        }
+                        .disabled(!isFormValid || isSubmitting)
+                        .padding(.horizontal, 20)
+                    }
+                }
+                .padding(.bottom, 40)
+            }
+            .background(Color.backgroundSecondary)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel".localized) {
+                        dismiss()
+                    }
+                }
+            }
+            .alert("Idea Updated!".localized, isPresented: $showingSuccessAlert) {
+                Button("OK".localized) {
+                    dismiss()
+                }
+            } message: {
+                Text("Your idea has been updated successfully.".localized)
+            }
+            .alert("Error Updating Idea".localized, isPresented: $showingErrorAlert) {
+                Button("OK".localized) { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+    
+    private func addTag() {
+        let trimmedTag = newTag.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTag.isEmpty && !tags.contains(trimmedTag) && tags.count < maxTags {
+            tags.append(trimmedTag)
+            newTag = ""
+        }
+    }
+    
+    private func removeTag(_ tag: String) {
+        tags.removeAll { $0 == tag }
+    }
+    
+    private func updateIdea() {
+        guard isFormValid else { return }
+        
+        isSubmitting = true
+        
+        Task {
+            do {
+                print("📝 Updating idea: \(idea.id)")
+                try await supabaseManager.updateIdeaSpark(
+                    ideaId: idea.id,
+                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    description: description.trimmingCharacters(in: .whitespacesAndNewlines),
+                    tags: tags,
+                    isPublic: isPublic
+                )
+                
+                let updatedIdea = IdeaSpark(
+                    id: idea.id,
+                    authorId: idea.authorId,
+                    authorUsername: idea.authorUsername,
+                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    description: description.trimmingCharacters(in: .whitespacesAndNewlines),
+                    tags: tags,
+                    isPublic: isPublic,
+                    createdAt: idea.createdAt,
+                    updatedAt: Date(),
+                    likes: idea.likes,
+                    comments: idea.comments,
+                    status: idea.status
+                )
+                
+                await MainActor.run {
+                    isSubmitting = false
+                    onUpdated(updatedIdea)
+                    showingSuccessAlert = true
+                }
+            } catch {
+                print("❌ Error updating idea: \(error.localizedDescription)")
+                await MainActor.run {
+                    isSubmitting = false
+                    errorMessage = error.localizedDescription
+                    showingErrorAlert = true
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Missing Components
+
+struct TagView: View {
+    let tag: String
+    let onRemove: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("#\(tag)")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color.accentGreen)
+            
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color.textSecondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.accentGreen.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+struct PrivacyOption: View {
+    let title: String
+    let description: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundColor(isSelected ? Color.accentGreen : Color.textSecondary)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.textPrimary)
+                    
+                    Text(description)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.textSecondary)
+                }
+                
+                Spacer()
+            }
+            .padding(16)
+            .background(isSelected ? Color.accentGreen.opacity(0.1) : Color.backgroundPrimary)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.accentGreen : Color.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct CustomTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .foregroundColor(Color.textPrimary)
+            .padding(16)
+            .background(Color.backgroundPrimary)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.border, lineWidth: 1)
+            )
     }
 }
 
