@@ -144,8 +144,12 @@ struct PodDetailView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        // Only pod creator/admin can create tasks
-                        if currentPod.creatorId == supabaseManager.currentUser?.uid {
+                        // Debug: Always show for now, but check creator status
+                        let isCreator = currentPod.creatorId.lowercased() == (supabaseManager.currentUser?.uid.lowercased() ?? "")
+                        print("🔍 Debug - Creator check: podCreatorId='\(currentPod.creatorId)', currentUserId='\(supabaseManager.currentUser?.uid ?? "nil")', isCreator=\(isCreator)")
+                        
+                        // Show task and member options for creator
+                        if isCreator {
                             Button(action: { showingTaskSheet = true }) {
                                 Label("Add Task".localized, systemImage: "plus.circle")
                             }
