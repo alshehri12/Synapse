@@ -77,9 +77,8 @@ struct IdeaDetailView: View {
                 loadExistingPods()
             }) {
                 CreatePodFromIdeaView(idea: currentIdea, onCreated: {
-                    // Mark that user has created a project and switch to My Projects
+                    // Mark that user has created a project
                     hasCreatedProject = true
-                    NotificationCenter.default.post(name: .switchToMyPods, object: nil)
                 })
             }
             .sheet(isPresented: $showingJoinPod, onDismiss: {
@@ -241,25 +240,21 @@ struct IdeaDetailView: View {
         if let _ = supabaseManager.currentUser {
             if isOwner {
                 if hasCreatedProject {
-                    // User already created a project from this idea
-                    Button(action: { 
-                        NotificationCenter.default.post(name: .switchToMyPods, object: nil)
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 16))
-                            Text("View My Project".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.success)
-                        .cornerRadius(20)
-                        .fixedSize(horizontal: true, vertical: false)
+                    // User already created a project from this idea - show disabled state
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16))
+                        Text("Project Already Created".localized)
+                            .font(.system(size: 14, weight: .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.success.opacity(0.7))
+                    .cornerRadius(20)
+                    .fixedSize(horizontal: true, vertical: false)
                 } else {
                     // User can create a project
                     Button(action: { showingCreatePod = true }) {
@@ -490,7 +485,18 @@ struct IdeaDetailView: View {
         
         Task {
             do {
-                let username = currentUser.displayName ?? "Anonymous User"
+                // Get username from profile first, then fallback to Google display name
+                var username = "Anonymous User"
+                do {
+                    if let userData = try await supabaseManager.getUserProfile(userId: currentUser.uid) {
+                        username = userData["username"] as? String ?? currentUser.displayName ?? "Anonymous User"
+                    } else {
+                        username = currentUser.displayName ?? "Anonymous User"
+                    }
+                } catch {
+                    username = currentUser.displayName ?? "Anonymous User"
+                }
+                
                 print("💬 Submitting comment: '\(commentText)' by \(username)")
                 
                 _ = try await supabaseManager.addCommentToIdea(
