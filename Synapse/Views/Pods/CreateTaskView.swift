@@ -273,23 +273,40 @@ struct CreateTaskView: View {
         
         Task {
             do {
-                // TODO: Implement createTask in SupabaseManager
+                let trimmedTitle = taskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmedDescription = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                
                 print("✅ Task creation requested:")
                 print("- Project: \(pod.id)")
-                print("- Title: \(taskTitle.trimmingCharacters(in: .whitespacesAndNewlines))")
-                print("- Description: \(taskDescription.trimmingCharacters(in: .whitespacesAndNewlines))")
+                print("- Title: \(trimmedTitle)")
+                print("- Description: \(trimmedDescription)")
                 print("- Assigned To: \(selectedAssignee?.userId ?? "None")")
                 print("- Username: \(selectedAssignee?.username ?? "None")")
                 print("- Due Date: \(hasDueDate ? dueDate.description : "None")")
                 print("- Priority: \(selectedPriority.rawValue)")
+                
+                _ = try await supabaseManager.createTask(
+                    podId: pod.id,
+                    title: trimmedTitle,
+                    description: trimmedDescription.isEmpty ? nil : trimmedDescription,
+                    assignedTo: selectedAssignee?.userId,
+                    assignedToUsername: selectedAssignee?.username,
+                    priority: selectedPriority.rawValue,
+                    dueDate: hasDueDate ? dueDate : nil
+                )
+                
+                print("🎉 Task created successfully!")
                 
                 await MainActor.run {
                     isLoading = false
                     dismiss()
                 }
             } catch {
+                print("❌ Error creating task: \(error.localizedDescription)")
                 await MainActor.run {
                     isLoading = false
+                    errorMessage = error.localizedDescription
+                    showingError = true
                 }
             }
         }

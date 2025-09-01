@@ -675,6 +675,264 @@ class SupabaseManager: ObservableObject {
         )
     }
     
+    // MARK: - Task Management
+    
+    func createTask(podId: String, title: String, description: String?, assignedTo: String?, assignedToUsername: String?, priority: String, dueDate: Date?) async throws -> String {
+        let taskId = UUID().uuidString
+        let taskData: [String: AnyJSON] = [
+            "id": AnyJSON.string(taskId),
+            "pod_id": AnyJSON.string(podId),
+            "title": AnyJSON.string(title),
+            "description": description != nil ? AnyJSON.string(description!) : AnyJSON.null,
+            "assigned_to": assignedTo != nil ? AnyJSON.string(assignedTo!) : AnyJSON.null,
+            "assigned_to_username": assignedToUsername != nil ? AnyJSON.string(assignedToUsername!) : AnyJSON.null,
+            "status": AnyJSON.string("todo"),
+            "priority": AnyJSON.string(priority)
+        ]
+        
+        try await supabase
+            .from("tasks")
+            .insert(taskData)
+            .execute()
+        
+        print("✅ Task created with ID: \(taskId)")
+        return taskId
+    }
+    
+    func getProjectTasks(podId: String) async throws -> [ProjectTask] {
+        let response = try await supabase
+            .from("tasks")
+            .select("*")
+            .eq("pod_id", value: podId)
+            .order("created_at", ascending: false)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parseTaskFromData(item)
+        }
+    }
+    
+    func updateTaskStatus(taskId: String, status: String) async throws {
+        let updateData: [String: AnyJSON] = [
+            "status": AnyJSON.string(status)
+        ]
+        
+        try await supabase
+            .from("tasks")
+            .update(updateData)
+            .eq("id", value: taskId)
+            .execute()
+        
+        print("✅ Task status updated: \(taskId) -> \(status)")
+    }
+    
+    func updateTaskPriority(taskId: String, priority: String) async throws {
+        let updateData: [String: AnyJSON] = [
+            "priority": AnyJSON.string(priority)
+        ]
+        
+        try await supabase
+            .from("tasks")
+            .update(updateData)
+            .eq("id", value: taskId)
+            .execute()
+        
+        print("✅ Task priority updated: \(taskId) -> \(priority)")
+    }
+    
+    func deleteTask(taskId: String) async throws {
+        try await supabase
+            .from("tasks")
+            .delete()
+            .eq("id", value: taskId)
+            .execute()
+        
+        print("✅ Task deleted: \(taskId)")
+    }
+    
+    private func parseTaskFromData(_ item: [String: Any]) -> ProjectTask? {
+        guard let taskId = item["id"] as? String,
+              let title = item["title"] as? String else {
+            return nil
+        }
+        
+        let description = item["description"] as? String
+        let assignedTo = item["assigned_to"] as? String
+        let assignedToUsername = item["assigned_to_username"] as? String
+        let statusString = item["status"] as? String ?? "todo"
+        let priorityString = item["priority"] as? String ?? "medium"
+        
+        let taskStatus = ProjectTask.TaskStatus(rawValue: statusString) ?? .todo
+        let taskPriority = ProjectTask.TaskPriority(rawValue: priorityString) ?? .medium
+        
+        let taskCreatedAt = parseDate(item["created_at"]) ?? Date()
+        let taskUpdatedAt = parseDate(item["updated_at"]) ?? Date()
+        
+        return ProjectTask(
+            id: taskId,
+            title: title,
+            description: description,
+            assignedTo: assignedTo,
+            assignedToUsername: assignedToUsername,
+            dueDate: nil, // Add due_date to schema if needed
+            createdAt: taskCreatedAt,
+            updatedAt: taskUpdatedAt,
+            status: taskStatus,
+            priority: taskPriority
+        )
+    }
+    
+    // MARK: - Member Management
+    
+    func addMemberToProject(podId: String, userId: String, username: String, role: String = "Member") async throws {
+        try await addPodMember(podId: podId, userId: userId, username: username, role: role)
+    }
+    
+    func getPodMembers(podId: String) async throws -> [ProjectMember] {
+        let response = try await supabase
+            .from("pod_members")
+            .select("*")
+            .eq("pod_id", value: podId)
+            .order("joined_at", ascending: true)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parseMemberFromData(item)
+        }
+    }
+    
+    private func parseMemberFromData(_ item: [String: Any]) -> ProjectMember? {
+        guard let memberId = item["id"] as? String,
+              let userId = item["user_id"] as? String,
+              let username = item["username"] as? String,
+              let role = item["role"] as? String else {
+            return nil
+        }
+        
+        let joinedAt = parseDate(item["joined_at"]) ?? Date()
+        let permissionsArray = item["permissions"] as? [String] ?? ["view", "comment"]
+        let permissions = permissionsArray.compactMap { ProjectMember.Permission(rawValue: $0) }
+        
+        return ProjectMember(
+            id: memberId,
+            userId: userId,
+            username: username,
+            role: role,
+            joinedAt: joinedAt,
+            permissions: permissions
+        )
+    }
+    
+    // MARK: - Chat Management
+    
+    func sendChatMessage(podId: String, content: String, senderId: String, senderUsername: String) async throws -> String {
+        let messageId = UUID().uuidString
+        let messageData: [String: AnyJSON] = [
+            "id": AnyJSON.string(messageId),
+            "pod_id": AnyJSON.string(podId),
+            "sender_id": AnyJSON.string(senderId),
+            "sender_username": AnyJSON.string(senderUsername),
+            "content": AnyJSON.string(content)
+        ]
+        
+        try await supabase
+            .from("chat_messages")
+            .insert(messageData)
+            .execute()
+        
+        print("✅ Chat message sent: \(messageId)")
+        return messageId
+    }
+    
+    func getChatMessages(podId: String) async throws -> [ChatMessage] {
+        let response = try await supabase
+            .from("chat_messages")
+            .select("*")
+            .eq("pod_id", value: podId)
+            .order("timestamp", ascending: true)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parseChatMessageFromData(item)
+        }
+    }
+    
+    private func parseChatMessageFromData(_ item: [String: Any]) -> ChatMessage? {
+        guard let id = item["id"] as? String,
+              let podId = item["pod_id"] as? String,
+              let senderId = item["sender_id"] as? String,
+              let senderUsername = item["sender_username"] as? String,
+              let content = item["content"] as? String else {
+            return nil
+        }
+        
+        let timestamp = parseDate(item["timestamp"]) ?? Date()
+        
+        return ChatMessage(
+            id: id,
+            projectId: podId,
+            senderId: senderId,
+            senderName: senderUsername,
+            senderAvatar: nil,
+            content: content,
+            messageType: .text,
+            timestamp: timestamp,
+            isEdited: false,
+            replyTo: nil
+        )
+    }
+    
+    // MARK: - User Management
+    
+    func getAllUsers() async throws -> [UserProfile] {
+        let response = try await supabase
+            .from("users")
+            .select("*")
+            .order("username", ascending: true)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parseUserProfileFromData(item)
+        }
+    }
+    
+    private func parseUserProfileFromData(_ item: [String: Any]) -> UserProfile? {
+        guard let id = item["id"] as? String,
+              let username = item["username"] as? String,
+              let email = item["email"] as? String else {
+            return nil
+        }
+        
+        let bio = item["bio"] as? String
+        let avatarURL = item["avatar_url"] as? String
+        let skills = item["skills"] as? [String] ?? []
+        let interests = item["interests"] as? [String] ?? []
+        let ideasSparked = item["ideas_sparked"] as? Int ?? 0
+        let projectsContributed = item["projects_contributed"] as? Int ?? 0
+        let dateJoined = parseDate(item["date_joined"]) ?? Date()
+        
+        return UserProfile(
+            id: id,
+            username: username,
+            email: email,
+            bio: bio,
+            avatarURL: avatarURL,
+            skills: skills,
+            interests: interests,
+            ideasSparked: ideasSparked,
+            projectsContributed: projectsContributed,
+            dateJoined: dateJoined
+        )
+    }
+    
     // MARK: - Search (Placeholder)
     
     func searchIdeas(query: String) async throws -> [IdeaSpark] {

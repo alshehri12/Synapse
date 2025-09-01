@@ -195,7 +195,7 @@
 "Username is already taken" = "اسم المستخدم مستخدم بالفعل";
 "Error checking username availability" = "خطأ في التحقق من توفر اسم المستخدم";
 "Continue with Google" = "المتابعة مع جوجل";
-"Project Already Created" = "تم إنشاء المشروع بالفعل";
+"Project Created" = "تم إنشاء المشروع";
 
 /* OTP Verification */
 "Verify Your Email" = "تحقق من بريدك الإلكتروني";

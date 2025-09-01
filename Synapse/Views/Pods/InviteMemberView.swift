@@ -203,14 +203,14 @@ struct InviteMemberView: View {
     private func loadAvailableUsers() {
         Task {
             do {
-                // TODO: Implement getAllUsers in SupabaseManager
-                let userData: [UserProfile] = []
+                let userData = try await supabaseManager.getAllUsers()
+                print("👥 Loaded \(userData.count) available users for invitation")
                 
                 await MainActor.run {
                     availableUsers = userData
                 }
             } catch {
-                // Handle error
+                print("❌ Failed to load users: \(error.localizedDescription)")
             }
         }
     }
@@ -234,18 +234,29 @@ struct InviteMemberView: View {
         
         Task {
             do {
+                print("✅ Adding members to project:")
                 for user in selectedUsers {
-                                    // TODO: Implement inviteUserToProject in SupabaseManager
-                                    print("✅ Invite user to project requested: \(user.id) to \(pod.name)")
+                    print("- Adding: \(user.username) (\(user.email))")
+                    try await supabaseManager.addMemberToProject(
+                        podId: pod.id,
+                        userId: user.id,
+                        username: user.username,
+                        role: "Member"
+                    )
                 }
+                print("- To Pod: \(pod.name)")
+                print("🎉 All members added successfully!")
                 
                 await MainActor.run {
                     isLoading = false
                     dismiss()
                 }
             } catch {
+                print("❌ Error adding members: \(error.localizedDescription)")
                 await MainActor.run {
                     isLoading = false
+                    errorMessage = error.localizedDescription
+                    showingError = true
                 }
             }
         }

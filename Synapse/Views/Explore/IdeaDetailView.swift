@@ -244,7 +244,7 @@ struct IdeaDetailView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 16))
-                        Text("Project Already Created".localized)
+                        Text("Project Created".localized)
                             .font(.system(size: 14, weight: .medium))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)

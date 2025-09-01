@@ -131,8 +131,9 @@ struct PodDetailView: View {
             .background(Color.backgroundSecondary)
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                // Ensure tasks are loaded when view appears
+                // Load both tasks and members when view appears
                 refreshTasks()
+                refreshMembers()
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -168,7 +169,9 @@ struct PodDetailView: View {
             .sheet(isPresented: $showingTaskSheet, onDismiss: refreshTasks) {
                 CreateTaskView(pod: currentPod)
             }
-            .sheet(isPresented: $showingMemberSheet) {
+            .sheet(isPresented: $showingMemberSheet, onDismiss: {
+                refreshMembers() // Refresh members after adding new ones
+            }) {
                 InviteMemberView(pod: currentPod)
             }
             .sheet(isPresented: $showingSettings) {
@@ -188,8 +191,9 @@ struct PodDetailView: View {
         isRefreshingTasks = true
         Task {
             do {
-                // TODO: Implement getProjectTasks in SupabaseManager
-                let updatedTasks: [ProjectTask] = [] // Placeholder until implemented
+                let updatedTasks = try await supabaseManager.getProjectTasks(podId: currentPod.id)
+                print("📋 Loaded \(updatedTasks.count) tasks for project \(currentPod.name)")
+                
                 await MainActor.run {
                     currentPod = IncubationProject(
                         id: currentPod.id,
@@ -211,6 +215,33 @@ struct PodDetailView: View {
                     isRefreshingTasks = false
                 }
                 print("❌ Failed to refresh tasks: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func refreshMembers() {
+        Task {
+            do {
+                let updatedMembers = try await supabaseManager.getPodMembers(podId: currentPod.id)
+                print("👥 Loaded \(updatedMembers.count) members for project \(currentPod.name)")
+                
+                await MainActor.run {
+                    currentPod = IncubationProject(
+                        id: currentPod.id,
+                        ideaId: currentPod.ideaId,
+                        name: currentPod.name,
+                        description: currentPod.description,
+                        creatorId: currentPod.creatorId,
+                        isPublic: currentPod.isPublic,
+                        createdAt: currentPod.createdAt,
+                        updatedAt: currentPod.updatedAt,
+                        members: updatedMembers,
+                        tasks: currentPod.tasks,
+                        status: currentPod.status
+                    )
+                }
+            } catch {
+                print("❌ Failed to refresh members: \(error.localizedDescription)")
             }
         }
     }
@@ -455,6 +486,9 @@ struct FullScreenChatView: View {
         NavigationView {
             mainChatView
         }
+        .onAppear {
+            loadChatMessages()
+        }
         .actionSheet(item: $showingMessageOptions) { message in
             messageOptionsActionSheet(for: message)
         }
@@ -624,12 +658,42 @@ struct FullScreenChatView: View {
 
 // MARK: - FullScreenChatView Functions
 extension FullScreenChatView {
+    private func loadChatMessages() {
+        Task {
+            do {
+                let messages = try await supabaseManager.getChatMessages(podId: pod.id)
+                await MainActor.run {
+                    chatMessages = messages
+                    print("💬 Loaded \(messages.count) chat messages")
+                }
+            } catch {
+                print("❌ Failed to load chat messages: \(error.localizedDescription)")
+            }
+        }
+    }
+    
     private func sendMessage() {
-        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let currentUser = supabaseManager.currentUser else { return }
         
-        // TODO: Implement message sending
-        print("📤 Sending message: \(messageText)")
+        let messageContent = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         messageText = ""
+        
+        Task {
+            do {
+                let username = currentUser.displayName ?? "Anonymous User"
+                _ = try await supabaseManager.sendChatMessage(
+                    podId: pod.id,
+                    content: messageContent,
+                    senderId: currentUser.uid,
+                    senderUsername: username
+                )
+                print("💬 Message sent successfully")
+                loadChatMessages() // Reload to show new message
+            } catch {
+                print("❌ Failed to send message: \(error.localizedDescription)")
+            }
+        }
     }
     
     private func scrollToBottom(proxy: ScrollViewProxy) {
@@ -888,8 +952,8 @@ struct TaskRow: View {
         isUpdating = true
         Task {
             do {
-                // TODO: Implement updateTaskStatus in SupabaseManager
-                print("✅ Task status update requested: \(task.id) -> \(status.rawValue)")
+                try await supabaseManager.updateTaskStatus(taskId: task.id, status: status.rawValue)
+                print("✅ Task status updated: \(task.id) -> \(status.rawValue)")
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -907,8 +971,8 @@ struct TaskRow: View {
         isUpdating = true
         Task {
             do {
-                // TODO: Implement updateTaskPriority in SupabaseManager
-                print("✅ Task priority update requested: \(task.id) -> \(priority.rawValue)")
+                try await supabaseManager.updateTaskPriority(taskId: task.id, priority: priority.rawValue)
+                print("✅ Task priority updated: \(task.id) -> \(priority.rawValue)")
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
@@ -926,8 +990,8 @@ struct TaskRow: View {
         isUpdating = true
         Task {
             do {
-                // TODO: Implement deleteTask in SupabaseManager
-                print("✅ Task deletion requested: \(task.id)")
+                try await supabaseManager.deleteTask(taskId: task.id)
+                print("✅ Task deleted: \(task.id)")
                 await MainActor.run {
                     isUpdating = false
                     onTaskUpdated() // Refresh tasks in parent view
