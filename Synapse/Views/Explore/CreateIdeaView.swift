@@ -86,7 +86,7 @@ struct CreateIdeaView: View {
                         
                         TextField("Enter your idea title...".localized, text: $title)
                             .textFieldStyle(CustomTextFieldStyle())
-                            .onChange(of: title) { newValue in
+                            .onChange(of: title) { _, newValue in
                                 if newValue.count > maxTitleLength {
                                     title = String(newValue.prefix(maxTitleLength))
                                 }
@@ -117,7 +117,7 @@ struct CreateIdeaView: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.textSecondary.opacity(0.2), lineWidth: 1)
                             )
-                            .onChange(of: description) { newValue in
+                            .onChange(of: description) { _, newValue in
                                 if newValue.count > maxDescriptionLength {
                                     description = String(newValue.prefix(maxDescriptionLength))
                                 }
@@ -357,29 +357,7 @@ struct CreateIdeaView: View {
 
 
 
-// MARK: - Tag View
-struct TagView: View {
-    let tag: String
-    let onRemove: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Text("#\(tag)")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color.accentGreen)
-            
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color.textSecondary)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.accentGreen.opacity(0.1))
-        .cornerRadius(12)
-    }
-}
+
 
 
 

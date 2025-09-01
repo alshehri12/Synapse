@@ -83,4 +83,28 @@ struct StatCard: View {
         .background(Color.backgroundPrimary)
         .cornerRadius(12)
     }
+}
+
+// MARK: - Tag View
+struct TagView: View {
+    let tag: String
+    let onRemove: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("#\(tag)")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color.accentGreen)
+            
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color.textSecondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.accentGreen.opacity(0.1))
+        .cornerRadius(12)
+    }
 } 
