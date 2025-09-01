@@ -33,6 +33,7 @@ struct IdeaDetailView: View {
     @State private var isUserInPod = false
     @State private var showMyPods = false
     @State private var showingEditIdea = false
+    @State private var hasCreatedProject = false
 
     private var isOwner: Bool {
         guard let currentUser = supabaseManager.currentUser else { return false }
@@ -76,6 +77,8 @@ struct IdeaDetailView: View {
                 loadExistingPods()
             }) {
                 CreatePodFromIdeaView(idea: currentIdea, onCreated: {
+                    // Mark that user has created a project and switch to My Projects
+                    hasCreatedProject = true
                     NotificationCenter.default.post(name: .switchToMyPods, object: nil)
                 })
             }
@@ -237,21 +240,44 @@ struct IdeaDetailView: View {
     private var projectActionButton: some View {
         if let _ = supabaseManager.currentUser {
             if isOwner {
-                Button(action: { showingCreatePod = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 16))
-                        Text("Create Project".localized)
-                            .font(.system(size: 14, weight: .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                if hasCreatedProject {
+                    // User already created a project from this idea
+                    Button(action: { 
+                        NotificationCenter.default.post(name: .switchToMyPods, object: nil)
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 16))
+                            Text("View My Project".localized)
+                                .font(.system(size: 14, weight: .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.success)
+                        .cornerRadius(20)
+                        .fixedSize(horizontal: true, vertical: false)
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.accentGreen)
-                    .cornerRadius(20)
-                    .fixedSize(horizontal: true, vertical: false)
+                } else {
+                    // User can create a project
+                    Button(action: { showingCreatePod = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 16))
+                            Text("Create Project".localized)
+                                .font(.system(size: 14, weight: .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.accentGreen)
+                        .cornerRadius(20)
+                        .fixedSize(horizontal: true, vertical: false)
+                    }
                 }
             } else {
                 nonOwnerProjectButton
@@ -507,15 +533,24 @@ struct IdeaDetailView: View {
                     }
                 }
                 
+                // Check if current user (idea owner) has already created a project from this idea
+                let userCreatedProject = pods.contains { pod in
+                    pod.creatorId.lowercased() == currentUserId.lowercased()
+                }
+                
                 await MainActor.run {
                     existingPods = pods
                     isUserInPod = userInPod
+                    hasCreatedProject = userCreatedProject
                     isLoadingPods = false
                     print("📊 UI: Loaded \(pods.count) existing pods for idea '\(currentIdea.title)'")
                     print("👤 UI: User membership status - isUserInPod: \(userInPod)")
+                    print("🏗️ UI: User created project status - hasCreatedProject: \(userCreatedProject)")
                     
                     if pods.isEmpty {
-                        print("⚠️ UI: No pods found - will show 'No Pods Yet' button")
+                        print("⚠️ UI: No pods found - will show 'Create Project' button")
+                    } else if userCreatedProject {
+                        print("✅ UI: User already created project - will show 'View My Project' button")
                     } else if userInPod {
                         print("✅ UI: User already in pod - will show 'Already in Pod' button")
                     } else {
@@ -529,6 +564,7 @@ struct IdeaDetailView: View {
                 await MainActor.run {
                     existingPods = []
                     isUserInPod = false
+                    hasCreatedProject = false
                     isLoadingPods = false
                     print("❌ UI: Failed to load pods for idea '\(currentIdea.title)': \(error.localizedDescription)")
                 }
