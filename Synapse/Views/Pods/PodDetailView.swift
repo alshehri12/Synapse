@@ -135,13 +135,15 @@ struct PodDetailView: View {
                 refreshTasks()
                 refreshMembers()
             }
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close".localized) {
                         dismiss()
                     }
                 }
-                
+            }
+            .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         // Debug: Always show for now, but check creator status
