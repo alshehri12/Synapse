@@ -241,6 +241,16 @@ struct MessageReaction: Codable {
     let timestamp: Date
 }
 
+// MARK: - Invitation Models
+struct PodInvitation: Identifiable, Codable {
+    let id: String
+    let podId: String
+    let inviterId: String
+    let inviteeId: String
+    let status: String // pending, accepted, declined
+    let createdAt: Date
+}
+
 // MARK: - Analytics Models
 struct TaskProgressData: Identifiable, Codable {
     let id = UUID()

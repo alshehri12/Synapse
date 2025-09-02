@@ -197,6 +197,8 @@
 "Error checking username availability" = "Error checking username availability";
 "Continue with Google" = "Continue with Google";
 "Project Created" = "Project Created";
+"Request to Join" = "Request to Join";
+"Request Sent" = "Request Sent";
 
 /* OTP Verification */
 "Verify Your Email" = "Verify Your Email";

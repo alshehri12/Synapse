@@ -196,6 +196,8 @@
 "Error checking username availability" = "خطأ في التحقق من توفر اسم المستخدم";
 "Continue with Google" = "المتابعة مع جوجل";
 "Project Created" = "تم إنشاء المشروع";
+"Request to Join" = "طلب الانضمام";
+"Request Sent" = "تم إرسال الطلب";
 
 /* OTP Verification */
 "Verify Your Email" = "تحقق من بريدك الإلكتروني";

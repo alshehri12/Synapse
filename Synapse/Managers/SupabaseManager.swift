@@ -933,6 +933,155 @@ class SupabaseManager: ObservableObject {
         )
     }
     
+    // MARK: - Invitation System
+    
+    func sendJoinRequest(podId: String, inviteeId: String, inviterId: String) async throws -> String {
+        let invitationId = UUID().uuidString
+        let invitationData: [String: AnyJSON] = [
+            "id": AnyJSON.string(invitationId),
+            "pod_id": AnyJSON.string(podId),
+            "inviter_id": AnyJSON.string(inviterId), // The user requesting to join
+            "invitee_id": AnyJSON.string(inviteeId), // Actually the pod owner who will receive the request
+            "status": AnyJSON.string("pending")
+        ]
+        
+        try await supabase
+            .from("pod_invitations")
+            .insert(invitationData)
+            .execute()
+        
+        // Create notification for pod owner
+        try await createNotification(
+            userId: inviteeId,
+            type: "join_request",
+            title: "Join Request",
+            message: "Someone wants to join your project",
+            data: ["pod_id": podId, "invitation_id": invitationId]
+        )
+        
+        print("✅ Join request sent: \(invitationId)")
+        return invitationId
+    }
+    
+    func approveJoinRequest(invitationId: String, podId: String, userId: String, username: String) async throws {
+        // Update invitation status
+        try await supabase
+            .from("pod_invitations")
+            .update(["status": AnyJSON.string("accepted")])
+            .eq("id", value: invitationId)
+            .execute()
+        
+        // Add user to pod members
+        try await addPodMember(podId: podId, userId: userId, username: username, role: "Member")
+        
+        // Create notification for the user
+        try await createNotification(
+            userId: userId,
+            type: "join_approved",
+            title: "Join Request Approved",
+            message: "Your request to join the project was approved!",
+            data: ["pod_id": podId]
+        )
+        
+        print("✅ Join request approved: \(invitationId)")
+    }
+    
+    func rejectJoinRequest(invitationId: String, userId: String) async throws {
+        // Update invitation status
+        try await supabase
+            .from("pod_invitations")
+            .update(["status": AnyJSON.string("declined")])
+            .eq("id", value: invitationId)
+            .execute()
+        
+        // Create notification for the user
+        try await createNotification(
+            userId: userId,
+            type: "join_rejected",
+            title: "Join Request Declined",
+            message: "Your request to join the project was declined.",
+            data: [:]
+        )
+        
+        print("✅ Join request rejected: \(invitationId)")
+    }
+    
+    func getPendingJoinRequests(podOwnerId: String) async throws -> [PodInvitation] {
+        let response = try await supabase
+            .from("pod_invitations")
+            .select("*")
+            .eq("invitee_id", value: podOwnerId)
+            .eq("status", value: "pending")
+            .order("created_at", ascending: false)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        
+        return data.compactMap { item in
+            parseInvitationFromData(item)
+        }
+    }
+    
+    func checkJoinRequestStatus(podId: String, userId: String) async throws -> String? {
+        let response = try await supabase
+            .from("pod_invitations")
+            .select("status")
+            .eq("pod_id", value: podId)
+            .eq("inviter_id", value: userId)
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        return data.first?["status"] as? String
+    }
+    
+    private func parseInvitationFromData(_ item: [String: Any]) -> PodInvitation? {
+        guard let id = item["id"] as? String,
+              let podId = item["pod_id"] as? String,
+              let inviterId = item["inviter_id"] as? String,
+              let inviteeId = item["invitee_id"] as? String,
+              let status = item["status"] as? String else {
+            return nil
+        }
+        
+        let createdAt = parseDate(item["created_at"]) ?? Date()
+        
+        return PodInvitation(
+            id: id,
+            podId: podId,
+            inviterId: inviterId,
+            inviteeId: inviteeId,
+            status: status,
+            createdAt: createdAt
+        )
+    }
+    
+    private func createNotification(userId: String, type: String, title: String, message: String, data: [String: Any]) async throws {
+        let notificationId = UUID().uuidString
+        let notificationData: [String: AnyJSON] = [
+            "id": AnyJSON.string(notificationId),
+            "user_id": AnyJSON.string(userId),
+            "type": AnyJSON.string(type),
+            "title": AnyJSON.string(title),
+            "message": AnyJSON.string(message),
+            "is_read": AnyJSON.bool(false),
+            "data": AnyJSON.object(data.mapValues { value in
+                if let str = value as? String {
+                    return AnyJSON.string(str)
+                }
+                return AnyJSON.null
+            })
+        ]
+        
+        try await supabase
+            .from("notifications")
+            .insert(notificationData)
+            .execute()
+        
+        print("✅ Notification created: \(notificationId)")
+    }
+    
     // MARK: - Search (Placeholder)
     
     func searchIdeas(query: String) async throws -> [IdeaSpark] {

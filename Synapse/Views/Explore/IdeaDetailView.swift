@@ -34,6 +34,7 @@ struct IdeaDetailView: View {
     @State private var showMyPods = false
     @State private var showingEditIdea = false
     @State private var hasCreatedProject = false
+    @State private var joinRequestStatus: String? = nil // pending, accepted, declined, nil
 
     private var isOwner: Bool {
         guard let currentUser = supabaseManager.currentUser else { return false }
@@ -311,11 +312,12 @@ struct IdeaDetailView: View {
             .cornerRadius(20)
             .fixedSize(horizontal: true, vertical: false)
         } else if !existingPods.isEmpty {
-            Button(action: { showingJoinPod = true }) {
+            // Show different button based on join request status
+            if joinRequestStatus == "pending" {
                 HStack(spacing: 6) {
-                    Image(systemName: "person.3")
+                    Image(systemName: "clock")
                         .font(.system(size: 16))
-                    Text("Join Project".localized)
+                    Text("Request Sent".localized)
                         .font(.system(size: 14, weight: .medium))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -323,9 +325,26 @@ struct IdeaDetailView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color.accentBlue)
+                .background(Color.accentOrange.opacity(0.8))
                 .cornerRadius(20)
                 .fixedSize(horizontal: true, vertical: false)
+            } else {
+                Button(action: { sendJoinRequest() }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "person.3")
+                            .font(.system(size: 16))
+                        Text("Request to Join".localized)
+                            .font(.system(size: 14, weight: .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.accentBlue)
+                    .cornerRadius(20)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
             }
         } else {
             HStack(spacing: 6) {
@@ -544,10 +563,24 @@ struct IdeaDetailView: View {
                     pod.creatorId.lowercased() == currentUserId.lowercased()
                 }
                 
+                // Check join request status for non-owners
+                var requestStatus: String? = nil
+                if !userCreatedProject && !userInPod && !pods.isEmpty {
+                    do {
+                        requestStatus = try await supabaseManager.checkJoinRequestStatus(
+                            podId: pods.first!.id,
+                            userId: currentUserId
+                        )
+                    } catch {
+                        print("⚠️ Failed to check join request status: \(error.localizedDescription)")
+                    }
+                }
+                
                 await MainActor.run {
                     existingPods = pods
                     isUserInPod = userInPod
                     hasCreatedProject = userCreatedProject
+                    joinRequestStatus = requestStatus
                     isLoadingPods = false
                     print("📊 UI: Loaded \(pods.count) existing pods for idea '\(currentIdea.title)'")
                     print("👤 UI: User membership status - isUserInPod: \(userInPod)")
@@ -597,6 +630,28 @@ struct IdeaDetailView: View {
                     isDeleting = false
                     print("❌ Error deleting idea: \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+    
+    private func sendJoinRequest() {
+        guard let currentUser = supabaseManager.currentUser,
+              let firstPod = existingPods.first else { return }
+        
+        Task {
+            do {
+                _ = try await supabaseManager.sendJoinRequest(
+                    podId: firstPod.id,
+                    inviteeId: firstPod.creatorId, // Pod owner who will receive the request
+                    inviterId: currentUser.uid // User requesting to join
+                )
+                
+                await MainActor.run {
+                    joinRequestStatus = "pending"
+                    print("✅ Join request sent successfully")
+                }
+            } catch {
+                print("❌ Failed to send join request: \(error.localizedDescription)")
             }
         }
     }
