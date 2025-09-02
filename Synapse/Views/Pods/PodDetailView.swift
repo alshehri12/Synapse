@@ -129,21 +129,20 @@ struct PodDetailView: View {
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
             .background(Color.backgroundSecondary)
-            .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 // Load both tasks and members when view appears
                 refreshTasks()
                 refreshMembers()
             }
             .navigationBarBackButtonHidden(true)
-            .toolbar {
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(content: {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close".localized) {
                         dismiss()
                     }
                 }
-            }
-            .toolbar {
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         // Debug: Always show for now, but check creator status
@@ -171,7 +170,7 @@ struct PodDetailView: View {
                             .foregroundColor(Color.accentGreen)
                     }
                 }
-            }
+            })
             .sheet(isPresented: $showingTaskSheet, onDismiss: refreshTasks) {
                 CreateTaskView(pod: currentPod)
             }
@@ -547,7 +546,7 @@ struct FullScreenChatView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
                     }
-                    .onChange(of: chatMessages.count) { _ in
+                    .onChange(of: chatMessages.count) { _, _ in
                         scrollToBottom(proxy: proxy)
                     }
                 }
