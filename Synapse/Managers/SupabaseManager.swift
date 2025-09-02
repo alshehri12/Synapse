@@ -1102,8 +1102,45 @@ class SupabaseManager: ObservableObject {
     // MARK: - Notifications (Placeholder)
     
     func getUserNotifications(userId: String) async throws -> [AppNotification] {
-        print("🚧 getUserNotifications - Supabase implementation needed")
-        return []
+        // This is a placeholder. A real implementation would fetch from a dedicated 'notifications' table.
+        // For now, we will simulate by fetching pending invitations.
+        let invitations = try await getPendingJoinRequests(podOwnerId: userId)
+        
+        // In a real app, you would fetch all necessary user profiles in a single query to avoid multiple round trips.
+        // For simplicity here, we'll just create a basic message.
+        
+        let notifications: [AppNotification] = await withTaskGroup(of: AppNotification?.self, returning: [AppNotification].self) { group in
+            for invitation in invitations {
+                group.addTask {
+                    // Fetch inviter's username for a more descriptive message.
+                    let inviterProfile = try? await self.getUserProfile(userId: invitation.inviterId)
+                    let inviterUsername = inviterProfile?["username"] as? String ?? "Someone"
+                    
+                    let podName = "a project" // Ideally, we'd fetch the project name too.
+                    
+                    return AppNotification(
+                        id: invitation.id,
+                        userId: userId,
+                        type: .projectInvite,
+                        message: "\(inviterUsername) has requested to join \(podName).",
+                        isRead: false,
+                        timestamp: invitation.createdAt,
+                        relatedId: nil,
+                        podInvitation: invitation
+                    )
+                }
+            }
+            
+            var collected: [AppNotification] = []
+            for await notification in group {
+                if let notification = notification {
+                    collected.append(notification)
+                }
+            }
+            return collected
+        }
+        
+        return notifications
     }
     
     // MARK: - Private Helper Methods

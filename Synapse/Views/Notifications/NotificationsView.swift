@@ -81,9 +81,9 @@ struct NotificationsView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(filteredNotifications) { notification in
-                                NotificationRow(notification: notification) {
+                                NotificationRow(notification: notification, onAction: {
                                     handleNotificationAction(notification)
-                                }
+                                })
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 8)
                             }
@@ -176,19 +176,10 @@ struct NotificationsView: View {
     }
     
     private func handleNotificationAction(_ notification: AppNotification) {
-        // TODO: Handle notification actions (navigate to relevant screen)
-        switch notification.type {
-        case .projectInvite:
-            // Navigate to project invite screen
-            break
-        case .taskAssigned:
-            // Navigate to task detail
-            break
-        case .mention:
-            // Navigate to comment/mention
-            break
-        default:
-            break
+        if notification.type == .projectInvite, let invitation = notification.podInvitation {
+            // The action is handled by the buttons in NotificationRow now.
+            // This could be used for navigation if needed.
+            print("Tapped on project invite notification: \(invitation.id)")
         }
     }
 }
@@ -196,10 +187,13 @@ struct NotificationsView: View {
 // MARK: - Notification Row
 struct NotificationRow: View {
     let notification: AppNotification
-    let action: () -> Void
+    let onAction: () -> Void
+    @EnvironmentObject private var supabaseManager: SupabaseManager
+    
+    @State private var isProcessing = false
     
     var body: some View {
-        Button(action: action) {
+        Button(action: onAction) {
             HStack(spacing: 12) {
                 // Notification Icon
                 Circle()
@@ -221,10 +215,40 @@ struct NotificationRow: View {
                     Text(notification.timestamp.timeAgoDisplay())
                         .font(.system(size: 12))
                         .foregroundColor(Color.textSecondary)
+                
+                // Action buttons for project invites
+                if notification.type == .projectInvite {
+                    HStack(spacing: 12) {
+                        Button(action: { handleInvite(accepted: true) }) {
+                            Text("Approve")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.accentGreen)
+                                .cornerRadius(12)
+                        }
+                        
+                        Button(action: { handleInvite(accepted: false) }) {
+                            Text("Reject")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.backgroundPrimary)
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.border, lineWidth: 1)
+                                )
+                        }
+                    }
+                    .padding(.top, 8)
                 }
-                
-                Spacer()
-                
+            }
+            
+            Spacer()
+            
                 // Unread Indicator
                 if !notification.isRead {
                     Circle()
@@ -235,8 +259,40 @@ struct NotificationRow: View {
             .padding(16)
             .background(Color.backgroundPrimary)
             .cornerRadius(12)
+            .opacity(isProcessing ? 0.5 : 1.0)
+            .disabled(isProcessing)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+    
+    private func handleInvite(accepted: Bool) {
+        guard let invitation = notification.podInvitation else { return }
+        isProcessing = true
+        
+        Task {
+            do {
+                if accepted {
+                    // Fetch the inviter's profile to get their username
+                    let inviterProfile = try await supabaseManager.getUserProfile(userId: invitation.inviterId)
+                    let username = inviterProfile?["username"] as? String ?? "New Member"
+                    
+                    try await supabaseManager.approveJoinRequest(invitationId: invitation.id, podId: invitation.podId, userId: invitation.inviterId, username: username)
+                    print("✅ Invitation approved: \(invitation.id) for user \(username)")
+                } else {
+                    try await supabaseManager.rejectJoinRequest(invitationId: invitation.id, userId: invitation.inviterId)
+                    print("❌ Invitation rejected: \(invitation.id)")
+                }
+                
+                await MainActor.run {
+                    isProcessing = false
+                }
+            } catch {
+                print("Error handling invitation: \(error.localizedDescription)")
+                await MainActor.run {
+                    isProcessing = false
+                }
+            }
+        }
     }
     
     private var notificationColor: Color {

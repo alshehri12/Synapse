@@ -169,9 +169,22 @@ struct AppNotification: Identifiable, Codable {
     let userId: String
     let type: NotificationType
     let message: String
-    let relatedId: String?
     var isRead: Bool
     let timestamp: Date
+    
+    // Additional properties for specific notification types
+    var relatedId: String? // e.g., taskId, projectId, commentId
+    var podInvitation: PodInvitation?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId
+        case type
+        case message
+        case isRead
+        case timestamp
+        case relatedId
+    }
     
     enum NotificationType: String, Codable, CaseIterable {
         case projectInvite = "project_invite"

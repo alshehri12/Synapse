@@ -244,13 +244,17 @@ struct PodCard: View {
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingPodDetail) {
-            PodDetailView(pod: pod)
+            NavigationView {
+                PodDetailView(pod: pod)
+            }
         }
         .sheet(isPresented: $showingChat) {
             PodChatView(pod: pod)
         }
         .sheet(isPresented: $showingTasks) {
-            PodDetailView(pod: pod)
+            NavigationView {
+                PodDetailView(pod: pod)
+            }
         }
         .sheet(isPresented: $showingInvite) {
             InviteMemberView(pod: pod)
