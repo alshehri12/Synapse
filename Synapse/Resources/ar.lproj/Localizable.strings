@@ -198,6 +198,7 @@
 "Project Created" = "تم إنشاء المشروع";
 "Request to Join" = "طلب الانضمام";
 "Request Sent" = "تم إرسال الطلب";
+"Actions" = "إجراءات";
 
 /* OTP Verification */
 "Verify Your Email" = "تحقق من بريدك الإلكتروني";

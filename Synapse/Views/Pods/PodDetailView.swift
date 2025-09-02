@@ -28,164 +28,161 @@ struct PodDetailView: View {
     @State private var showingSettings = false
     @State private var showingFullScreenChat = false
     @State private var isRefreshingTasks = false
+    @State private var showingActionSheet = false
     
     init(pod: IncubationProject) {
         self._currentPod = State(initialValue: pod)
     }
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Header
-                VStack(alignment: .leading, spacing: 16) {
-                    // Pod Info
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(currentPod.name)
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Color.textPrimary)
+        VStack(spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: 16) {
+                // Pod Info
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(currentPod.name)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(Color.textPrimary)
+                    
+                    Text(currentPod.description)
+                        .font(.system(size: 16))
+                        .foregroundColor(Color.textSecondary)
+                    
+                    HStack {
+                        ProjectStatusBadge(status: currentPod.status)
                         
-                        Text(currentPod.description)
-                            .font(.system(size: 16))
+                        Spacer()
+                        
+                        Text("Created \(currentPod.createdAt.timeAgoDisplay())")
+                            .font(.system(size: 12))
                             .foregroundColor(Color.textSecondary)
-                        
-                        HStack {
-                            ProjectStatusBadge(status: currentPod.status)
-                            
-                            Spacer()
-                            
-                            Text("Created \(currentPod.createdAt.timeAgoDisplay())")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color.textSecondary)
-                        }
-                    }
-                    
-                    // Quick Stats
-                    HStack(spacing: 20) {
-                        StatCard(
-                            title: "Members".localized,
-                            value: "\(currentPod.members.count)",
-                            icon: "person.3",
-                            color: Color.accentGreen
-                        )
-                        
-                        StatCard(
-                            title: "Tasks".localized,
-                            value: "\(currentPod.tasks.count)",
-                            icon: "checklist",
-                            color: Color.accentBlue
-                        )
-                        
-                        StatCard(
-                            title: "Completed".localized,
-                            value: "\(completedTasksCount)",
-                            icon: "checkmark.circle",
-                            color: Color.success
-                        )
                     }
                 }
-                .padding(20)
-                .background(Color.backgroundPrimary)
                 
-                // Tab Selector
-                HStack(spacing: 0) {
-                    TabButton(
-                        title: "Overview".localized,
-                        isSelected: selectedTab == 0,
-                        action: { selectedTab = 0 }
-                    )
-                    
-                    TabButton(
-                        title: "Tasks".localized,
-                        isSelected: selectedTab == 1,
-                        action: { selectedTab = 1 }
-                    )
-                    
-                    TabButton(
+                // Quick Stats
+                HStack(spacing: 20) {
+                    StatCard(
                         title: "Members".localized,
-                        isSelected: selectedTab == 2,
-                        action: { selectedTab = 2 }
+                        value: "\(currentPod.members.count)",
+                        icon: "person.3",
+                        color: Color.accentGreen
                     )
                     
-                    TabButton(
-                        title: "Chat".localized,
-                        isSelected: false, // Never selected since it opens modal
-                        action: { showingFullScreenChat = true }
+                    StatCard(
+                        title: "Tasks".localized,
+                        value: "\(currentPod.tasks.count)",
+                        icon: "checklist",
+                        color: Color.accentBlue
+                    )
+                    
+                    StatCard(
+                        title: "Completed".localized,
+                        value: "\(completedTasksCount)",
+                        icon: "checkmark.circle",
+                        color: Color.success
                     )
                 }
-                .background(Color.backgroundPrimary)
-                .padding(.horizontal, 20)
+            }
+            .padding(20)
+            .background(Color.backgroundPrimary)
+            
+            // Tab Selector
+            HStack(spacing: 0) {
+                TabButton(
+                    title: "Overview".localized,
+                    isSelected: selectedTab == 0,
+                    action: { selectedTab = 0 }
+                )
                 
-                // Tab Content
-                TabView(selection: $selectedTab) {
-                    OverviewTab(pod: currentPod)
-                        .tag(0)
-                    
-                    TasksTab(pod: currentPod, showingTaskSheet: $showingTaskSheet, onTaskUpdated: refreshTasks)
-                        .tag(1)
-                    
-                    MembersTab(pod: currentPod, showingMemberSheet: $showingMemberSheet)
-                        .tag(2)
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            }
-            .background(Color.backgroundSecondary)
-            .onAppear {
-                // Load both tasks and members when view appears
-                refreshTasks()
-                refreshMembers()
-            }
-            .navigationBarBackButtonHidden(true)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(content: {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close".localized) {
-                        dismiss()
-                    }
-                }
+                TabButton(
+                    title: "Tasks".localized,
+                    isSelected: selectedTab == 1,
+                    action: { selectedTab = 1 }
+                )
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        // Debug: Always show for now, but check creator status
-                        let isCreator = currentPod.creatorId.lowercased() == (supabaseManager.currentUser?.uid.lowercased() ?? "")
-                        print("🔍 Debug - Creator check: podCreatorId='\(currentPod.creatorId)', currentUserId='\(supabaseManager.currentUser?.uid ?? "nil")', isCreator=\(isCreator)")
-                        
-                        // Show task and member options for creator
-                        if isCreator {
-                            Button(action: { showingTaskSheet = true }) {
-                                Label("Add Task".localized, systemImage: "plus.circle")
-                            }
-                            
-                            Button(action: { showingMemberSheet = true }) {
-                                Label("Invite Member".localized, systemImage: "person.badge.plus")
-                            }
-                            
-                            Divider()
-                        }
-                        
-                        Button(action: { showingSettings = true }) {
-                            Label("Pod Settings".localized, systemImage: "gear")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .foregroundColor(Color.accentGreen)
-                    }
+                TabButton(
+                    title: "Members".localized,
+                    isSelected: selectedTab == 2,
+                    action: { selectedTab = 2 }
+                )
+                
+                TabButton(
+                    title: "Chat".localized,
+                    isSelected: false, // Never selected since it opens modal
+                    action: { showingFullScreenChat = true }
+                )
+            }
+            .background(Color.backgroundPrimary)
+            .padding(.horizontal, 20)
+            
+            // Tab Content
+            TabView(selection: $selectedTab) {
+                OverviewTab(pod: currentPod)
+                    .tag(0)
+                
+                TasksTab(pod: currentPod, showingTaskSheet: $showingTaskSheet, onTaskUpdated: refreshTasks)
+                    .tag(1)
+                
+                MembersTab(pod: currentPod, showingMemberSheet: $showingMemberSheet)
+                    .tag(2)
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+        }
+        .background(Color.backgroundSecondary)
+        .navigationTitle(currentPod.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Close".localized) {
+                    dismiss()
                 }
-            })
-            .sheet(isPresented: $showingTaskSheet, onDismiss: refreshTasks) {
-                CreateTaskView(pod: currentPod)
             }
-            .sheet(isPresented: $showingMemberSheet, onDismiss: {
-                refreshMembers() // Refresh members after adding new ones
-            }) {
-                InviteMemberView(pod: currentPod)
-            }
-            .sheet(isPresented: $showingSettings) {
-                PodSettingsView(pod: currentPod)
-            }
-            .fullScreenCover(isPresented: $showingFullScreenChat) {
-                FullScreenChatView(pod: currentPod)
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingActionSheet = true }) {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundColor(Color.accentGreen)
+                }
             }
         }
+        .onAppear {
+            // Load both tasks and members when view appears
+            refreshTasks()
+            refreshMembers()
+        }
+        .sheet(isPresented: $showingTaskSheet, onDismiss: refreshTasks) {
+            CreateTaskView(pod: currentPod)
+        }
+        .sheet(isPresented: $showingMemberSheet, onDismiss: {
+            refreshMembers() // Refresh members after adding new ones
+        }) {
+            InviteMemberView(pod: currentPod)
+        }
+        .sheet(isPresented: $showingSettings) {
+            PodSettingsView(pod: currentPod)
+        }
+        .fullScreenCover(isPresented: $showingFullScreenChat) {
+            FullScreenChatView(pod: currentPod)
+        }
+        .actionSheet(isPresented: $showingActionSheet) {
+            actionSheet
+        }
+    }
+    
+    private var actionSheet: ActionSheet {
+        let isCreator = currentPod.creatorId.lowercased() == (supabaseManager.currentUser?.uid.lowercased() ?? "")
+        var buttons: [ActionSheet.Button] = []
+        
+        if isCreator {
+            buttons.append(.default(Text("Add Task".localized), action: { showingTaskSheet = true }))
+            buttons.append(.default(Text("Invite Member".localized), action: { showingMemberSheet = true }))
+        }
+        
+        buttons.append(.default(Text("Pod Settings".localized), action: { showingSettings = true }))
+        buttons.append(.cancel())
+        
+        return ActionSheet(title: Text("Actions".localized), buttons: buttons)
     }
     
     private var completedTasksCount: Int {
