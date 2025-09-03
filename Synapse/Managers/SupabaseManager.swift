@@ -946,6 +946,10 @@ class SupabaseManager: ObservableObject {
             "status": AnyJSON.string("pending")
         ]
         
+        // Note: RLS is disabled on pod_invitations table to avoid policy conflicts
+        // The current RLS policy requires auth.uid() = inviter_id for INSERT, but we store
+        // the requester in invitee_id and owner in inviter_id for join requests
+        // TODO: Fix RLS policy or re-enable with proper policies
         try await supabase
             .from("pod_invitations")
             .insert(invitationData)
