@@ -940,8 +940,9 @@ class SupabaseManager: ObservableObject {
         let invitationData: [String: AnyJSON] = [
             "id": AnyJSON.string(invitationId),
             "pod_id": AnyJSON.string(podId),
-            "inviter_id": AnyJSON.string(inviterId), // The user requesting to join
-            "invitee_id": AnyJSON.string(inviteeId), // Actually the pod owner who will receive the request
+            // For join-requests: store inviter_id as the pod owner (receiver), invitee_id as the requester
+            "inviter_id": AnyJSON.string(inviteeId),
+            "invitee_id": AnyJSON.string(inviterId),
             "status": AnyJSON.string("pending")
         ]
         
@@ -950,7 +951,7 @@ class SupabaseManager: ObservableObject {
             .insert(invitationData)
             .execute()
         
-        // Create notification for pod owner
+        // Create notification for pod owner (inviteeId parameter is the owner)
         try await createNotification(
             userId: inviteeId,
             type: "join_request",
@@ -1010,7 +1011,8 @@ class SupabaseManager: ObservableObject {
         let response = try await supabase
             .from("pod_invitations")
             .select("*")
-            .eq("invitee_id", value: podOwnerId)
+            // With join-requests stored as inviter_id = owner, invitee_id = requester
+            .eq("inviter_id", value: podOwnerId)
             .eq("status", value: "pending")
             .order("created_at", ascending: false)
             .execute()
@@ -1027,7 +1029,8 @@ class SupabaseManager: ObservableObject {
             .from("pod_invitations")
             .select("status")
             .eq("pod_id", value: podId)
-            .eq("inviter_id", value: userId)
+            // Requester is stored in invitee_id for join-requests
+            .eq("invitee_id", value: userId)
             .order("created_at", ascending: false)
             .limit(1)
             .execute()
@@ -1112,9 +1115,9 @@ class SupabaseManager: ObservableObject {
         let notifications: [AppNotification] = await withTaskGroup(of: AppNotification?.self, returning: [AppNotification].self) { group in
             for invitation in invitations {
                 group.addTask {
-                    // Fetch inviter's username for a more descriptive message.
-                    let inviterProfile = try? await self.getUserProfile(userId: invitation.inviterId)
-                    let inviterUsername = inviterProfile?["username"] as? String ?? "Someone"
+                    // Fetch requester's username (inviteeId holds requesting user)
+                    let requesterProfile = try? await self.getUserProfile(userId: invitation.inviteeId)
+                    let requesterUsername = requesterProfile?["username"] as? String ?? "Someone"
                     
                     let podName = "a project" // Ideally, we'd fetch the project name too.
                     
@@ -1122,7 +1125,7 @@ class SupabaseManager: ObservableObject {
                         id: invitation.id,
                         userId: userId,
                         type: .projectInvite,
-                        message: "\(inviterUsername) has requested to join \(podName).",
+                        message: "\(requesterUsername) has requested to join \(podName).",
                         isRead: false,
                         timestamp: invitation.createdAt,
                         relatedId: nil,

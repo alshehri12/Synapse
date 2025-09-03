@@ -272,14 +272,13 @@ struct NotificationRow: View {
         Task {
             do {
                 if accepted {
-                    // Fetch the inviter's profile to get their username
-                    let inviterProfile = try await supabaseManager.getUserProfile(userId: invitation.inviterId)
-                    let username = inviterProfile?["username"] as? String ?? "New Member"
-                    
-                    try await supabaseManager.approveJoinRequest(invitationId: invitation.id, podId: invitation.podId, userId: invitation.inviterId, username: username)
+                    // inviteeId is the requesting user in the new mapping
+                    let requesterProfile = try await supabaseManager.getUserProfile(userId: invitation.inviteeId)
+                    let username = requesterProfile?["username"] as? String ?? "New Member"
+                    try await supabaseManager.approveJoinRequest(invitationId: invitation.id, podId: invitation.podId, userId: invitation.inviteeId, username: username)
                     print("✅ Invitation approved: \(invitation.id) for user \(username)")
                 } else {
-                    try await supabaseManager.rejectJoinRequest(invitationId: invitation.id, userId: invitation.inviterId)
+                    try await supabaseManager.rejectJoinRequest(invitationId: invitation.id, userId: invitation.inviteeId)
                     print("❌ Invitation rejected: \(invitation.id)")
                 }
                 
