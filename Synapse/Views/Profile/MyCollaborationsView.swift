@@ -100,18 +100,11 @@ struct MyCollaborationsView: View {
         
         Task {
             do {
-                // Get all pods where user is a member
-                let allPods = try await supabaseManager.getUserPods(userId: currentUser.uid)
-                
-                // Filter pods where user is actually a member
-                let userPods = allPods.filter { pod in
-                    return pod.members.contains { member in
-                        return member.userId == currentUser.uid
-                    }
-                }
-                
+                // Get all pods where user is a member or creator
+                let allPods = try await supabaseManager.getPodsForUser(userId: currentUser.uid)
+
                 await MainActor.run {
-                    pods = userPods
+                    pods = allPods
                     isLoading = false
                 }
             } catch {

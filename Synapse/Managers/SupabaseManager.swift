@@ -466,6 +466,53 @@ class SupabaseManager: ObservableObject {
         return pods
     }
     
+    func getPodsForUser(userId: String) async throws -> [IncubationProject] {
+        // This function should fetch all pods a user is associated with:
+        // 1. Pods they created.
+        // 2. Pods they are a member of.
+
+        // Fetch pods where the user is the creator
+        let createdPodsResponse = try await supabase
+            .from("pods")
+            .select("*")
+            .eq("creator_id", value: userId)
+            .execute()
+        
+        let createdPodsData = try JSONSerialization.jsonObject(with: createdPodsResponse.data) as? [[String: Any]] ?? []
+        let createdPods = createdPodsData.compactMap { parsePodFromData($0) }
+        
+        // Fetch pod IDs where the user is a member
+        let memberPodsResponse = try await supabase
+            .from("pod_members")
+            .select("pod_id")
+            .eq("user_id", value: userId)
+            .execute()
+            
+        let memberPodsData = try JSONSerialization.jsonObject(with: memberPodsResponse.data) as? [[String: Any]] ?? []
+        let podIds = memberPodsData.compactMap { $0["pod_id"] as? String }
+        
+        var memberPods: [IncubationProject] = []
+        if !podIds.isEmpty {
+            let podsResponse = try await supabase
+                .from("pods")
+                .select("*")
+                .in("id", value: podIds)
+                .execute()
+            let podsData = try JSONSerialization.jsonObject(with: podsResponse.data) as? [[String: Any]] ?? []
+            memberPods = podsData.compactMap { parsePodFromData($0) }
+        }
+        
+        // Combine, remove duplicates, and return
+        var allPods = createdPods + memberPods
+        
+        var uniquePods: [String: IncubationProject] = [:]
+        for pod in allPods {
+            uniquePods[pod.id] = pod
+        }
+        
+        return Array(uniquePods.values).sorted(by: { $0.createdAt > $1.createdAt })
+    }
+
     func createPodFromIdea(ideaId: String, name: String, description: String, creatorId: String, isPublic: Bool = true) async throws -> String {
         print("💾 DEBUG: Creating pod with data:")
         print("  📛 name: '\(name)'")

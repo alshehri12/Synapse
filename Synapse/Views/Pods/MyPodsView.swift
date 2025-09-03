@@ -84,36 +84,41 @@ struct MyPodsView: View {
     }
     
     private func loadPods() {
-        guard let currentUser = supabaseManager.currentUser else { 
-            print("❌ No current user found")
-            return 
-        }
+        guard let currentUser = supabaseManager.currentUser else { return }
         
-        print("🔄 Loading pods for user: \(currentUser.uid)")
         isLoading = true
         
         Task {
             do {
-                let podData = try await supabaseManager.getUserPods(userId: currentUser.uid)
-                print("📊 Found \(podData.count) pods in database")
-                
+                let userPods = try await supabaseManager.getPodsForUser(userId: currentUser.uid)
                 await MainActor.run {
-                    pods = podData
-                    isLoading = false
+                    self.pods = userPods
+                    self.isLoading = false
+                    print("✅ Loaded \(userPods.count) pods for user.")
                 }
             } catch {
-                print("❌ Error loading pods: \(error)")
                 await MainActor.run {
-                    isLoading = false
+                    self.isLoading = false
+                    print("❌ Error loading user pods: \(error.localizedDescription)")
                 }
             }
         }
     }
     
-    @MainActor
     private func refreshPods() async {
-        print("🔄 Manual refresh triggered")
-        loadPods()
+        guard let currentUser = supabaseManager.currentUser else { return }
+        
+        do {
+            let userPods = try await supabaseManager.getPodsForUser(userId: currentUser.uid)
+            await MainActor.run {
+                self.pods = userPods
+                print("✅ Refreshed \(userPods.count) pods for user.")
+            }
+        } catch {
+            await MainActor.run {
+                print("❌ Error refreshing user pods: \(error.localizedDescription)")
+            }
+        }
     }
 }
 

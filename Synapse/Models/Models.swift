@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - User Profile Model
-struct UserProfile: Identifiable, Codable {
+struct UserProfile: Identifiable, Codable, Hashable {
     let id: String
     var username: String
     var email: String
@@ -35,7 +35,7 @@ struct UserProfile: Identifiable, Codable {
 }
 
 // MARK: - Idea Spark Model
-struct IdeaSpark: Identifiable, Codable {
+struct IdeaSpark: Identifiable, Codable, Hashable {
     let id: String
     let authorId: String
     let authorUsername: String
@@ -49,7 +49,7 @@ struct IdeaSpark: Identifiable, Codable {
     var comments: Int
     var status: IdeaStatus
     
-    enum IdeaStatus: String, Codable, CaseIterable {
+    enum IdeaStatus: String, Codable, CaseIterable, Hashable {
         case planning = "planning"
         case sparking = "sparking"
         case incubating = "incubating"
@@ -61,7 +61,7 @@ struct IdeaSpark: Identifiable, Codable {
 }
 
 // MARK: - Incubation Project Model
-struct IncubationProject: Identifiable, Codable {
+struct IncubationProject: Identifiable, Codable, Hashable {
     let id: String
     let ideaId: String
     let name: String
@@ -74,7 +74,7 @@ struct IncubationProject: Identifiable, Codable {
     var tasks: [ProjectTask]
     var status: ProjectStatus
     
-    enum ProjectStatus: String, Codable, CaseIterable {
+    enum ProjectStatus: String, Codable, CaseIterable, Hashable {
         case planning = "planning"
         case active = "active"
         case completed = "completed"
@@ -83,7 +83,7 @@ struct IncubationProject: Identifiable, Codable {
 }
 
 // MARK: - Project Member Model
-struct ProjectMember: Identifiable, Codable {
+struct ProjectMember: Identifiable, Codable, Hashable {
     let id: String
     let userId: String
     let username: String
@@ -91,7 +91,7 @@ struct ProjectMember: Identifiable, Codable {
     let joinedAt: Date
     let permissions: [Permission]
     
-    enum Permission: String, Codable, CaseIterable {
+    enum Permission: String, Codable, CaseIterable, Hashable {
         case admin = "admin"
         case edit = "edit"
         case view = "view"
@@ -100,7 +100,7 @@ struct ProjectMember: Identifiable, Codable {
 }
 
 // MARK: - Project Task Model
-struct ProjectTask: Identifiable, Codable {
+struct ProjectTask: Identifiable, Codable, Hashable {
     let id: String
     let title: String
     let description: String?
@@ -112,7 +112,7 @@ struct ProjectTask: Identifiable, Codable {
     var status: TaskStatus
     var priority: TaskPriority
     
-    enum TaskStatus: String, Codable, CaseIterable {
+    enum TaskStatus: String, Codable, CaseIterable, Hashable {
         case todo = "todo"
         case inProgress = "in_progress"
         case completed = "completed"
@@ -128,7 +128,7 @@ struct ProjectTask: Identifiable, Codable {
         }
     }
     
-    enum TaskPriority: String, Codable, CaseIterable {
+    enum TaskPriority: String, Codable, CaseIterable, Hashable {
         case low = "low"
         case medium = "medium"
         case high = "high"
