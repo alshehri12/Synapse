@@ -1064,6 +1064,10 @@ class SupabaseManager: ObservableObject {
         )
     }
     
+    // Note: RLS on the 'notifications' table must be disabled for this function to work.
+    // The RLS policy `FOR ALL USING (auth.uid() = user_id)` prevents one user from creating a notification for another.
+    // This is necessary for join requests (requester notifies owner) and approvals (owner notifies requester).
+    // TODO: A more secure solution is to use a Supabase Edge Function with a service_role key to create notifications.
     private func createNotification(userId: String, type: String, title: String, message: String, data: [String: Any]) async throws {
         let notificationId = UUID().uuidString
         let notificationData: [String: AnyJSON] = [
