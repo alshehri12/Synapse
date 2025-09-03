@@ -109,128 +109,128 @@ struct IdeaDetailView: View {
     // MARK: - View Components
     
     private var ideaHeaderSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Circle()
-                    .fill(Color.accentGreen)
-                    .frame(width: 50, height: 50)
-                    .overlay(
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Circle()
+                                .fill(Color.accentGreen)
+                                .frame(width: 50, height: 50)
+                                .overlay(
                         Text(String(currentIdea.authorUsername.prefix(1)).uppercased())
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                    )
-                
-                VStack(alignment: .leading, spacing: 4) {
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.white)
+                                )
+                            
+                            VStack(alignment: .leading, spacing: 4) {
                     Text(currentIdea.authorUsername)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color.textPrimary)
-                    
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(Color.textPrimary)
+                                
                     Text(currentIdea.createdAt.timeAgoDisplay())
-                        .font(.system(size: 14))
-                        .foregroundColor(Color.textSecondary)
-                }
-                
-                Spacer()
-                
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color.textSecondary)
+                            }
+                            
+                            Spacer()
+                            
                 StatusBadge(status: currentIdea.status)
-            }
-            
-            VStack(alignment: .leading, spacing: 12) {
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 12) {
                 Text(currentIdea.title)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(Color.textPrimary)
-                
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(Color.textPrimary)
+                            
                 Text(currentIdea.description)
-                    .font(.system(size: 16))
-                    .foregroundColor(Color.textSecondary)
-                    .lineSpacing(4)
-                
+                                .font(.system(size: 16))
+                                .foregroundColor(Color.textSecondary)
+                                .lineSpacing(4)
+                            
                 if !currentIdea.tags.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
                             ForEach(currentIdea.tags, id: \.self) { tag in
-                                Text("#\(tag)")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Color.accentGreen)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.accentGreen.opacity(0.1))
-                                    .cornerRadius(12)
+                                            Text("#\(tag)")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(Color.accentGreen)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(Color.accentGreen.opacity(0.1))
+                                                .cornerRadius(12)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            }
-        }
-        .padding(20)
-        .background(Color.backgroundPrimary)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .padding(20)
+                    .background(Color.backgroundPrimary)
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
-    
+                    
     private var interactionStatsSection: some View {
-        HStack(spacing: 20) {
-            HStack(spacing: 6) {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.red)
+                    HStack(spacing: 20) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.red)
                 Text("\(currentIdea.likes)")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
-            }
-            
-            HStack(spacing: 6) {
-                Image(systemName: "message.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(Color.accentGreen)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(Color.textPrimary)
+                        }
+                        
+                        HStack(spacing: 6) {
+                            Image(systemName: "message.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(Color.accentGreen)
                 Text("\(currentIdea.comments)")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 20)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(Color.textPrimary)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
     }
-    
+                    
     private var actionButtonsSection: some View {
-        HStack(spacing: 12) {
-            Button(action: likeIdea) {
-                HStack(spacing: 6) {
-                    Image(systemName: isLiked ? "heart.fill" : "heart")
-                        .font(.system(size: 16))
-                    Text(isLiked ? "Liked".localized : "Like".localized)
-                        .font(.system(size: 14, weight: .medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-                .foregroundColor(isLiked ? .red : Color.textSecondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isLiked ? Color.red.opacity(0.1) : Color.backgroundSecondary)
-                .cornerRadius(20)
-                .fixedSize(horizontal: true, vertical: false)
-            }
-            
-            Button(action: { showingShareSheet = true }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 16))
-                    Text("Share".localized)
-                        .font(.system(size: 14, weight: .medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-                .foregroundColor(Color.textSecondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.backgroundSecondary)
-                .cornerRadius(20)
-                .fixedSize(horizontal: true, vertical: false)
-            }
-            
-            Spacer()
-            
+                    HStack(spacing: 12) {
+                        Button(action: likeIdea) {
+                            HStack(spacing: 6) {
+                                Image(systemName: isLiked ? "heart.fill" : "heart")
+                                    .font(.system(size: 16))
+                                Text(isLiked ? "Liked".localized : "Like".localized)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            .foregroundColor(isLiked ? .red : Color.textSecondary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(isLiked ? Color.red.opacity(0.1) : Color.backgroundSecondary)
+                            .cornerRadius(20)
+                            .fixedSize(horizontal: true, vertical: false)
+                        }
+                        
+                        Button(action: { showingShareSheet = true }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 16))
+                                Text("Share".localized)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            .foregroundColor(Color.textSecondary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.backgroundSecondary)
+                            .cornerRadius(20)
+                            .fixedSize(horizontal: true, vertical: false)
+                        }
+                        
+                        Spacer()
+                        
             projectActionButton
         }
         .padding(.horizontal, 20)
@@ -258,24 +258,24 @@ struct IdeaDetailView: View {
                     .fixedSize(horizontal: true, vertical: false)
                 } else {
                     // User can create a project
-                    Button(action: { showingCreatePod = true }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus.circle")
-                                .font(.system(size: 16))
-                            Text("Create Project".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.accentGreen)
-                        .cornerRadius(20)
-                        .fixedSize(horizontal: true, vertical: false)
+                                Button(action: { showingCreatePod = true }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "plus.circle")
+                                            .font(.system(size: 16))
+                                        Text("Create Project".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.accentGreen)
+                                    .cornerRadius(20)
+                                    .fixedSize(horizontal: true, vertical: false)
                     }
-                }
-            } else {
+                                }
+                            } else {
                 nonOwnerProjectButton
             }
         }
@@ -283,35 +283,35 @@ struct IdeaDetailView: View {
     
     @ViewBuilder
     private var nonOwnerProjectButton: some View {
-        if isLoadingPods {
-            HStack(spacing: 6) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    .scaleEffect(0.8)
-                Text("Loading...".localized)
-                    .font(.system(size: 14, weight: .medium))
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color.textSecondary.opacity(0.6))
-            .cornerRadius(20)
-        } else if isUserInPod {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 16))
-                Text("Already in Project".localized)
-                    .font(.system(size: 14, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color.accentGreen.opacity(0.8))
-            .cornerRadius(20)
-            .fixedSize(horizontal: true, vertical: false)
-        } else if !existingPods.isEmpty {
+                                if isLoadingPods {
+                                    HStack(spacing: 6) {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .scaleEffect(0.8)
+                                        Text("Loading...".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.textSecondary.opacity(0.6))
+                                    .cornerRadius(20)
+                                } else if isUserInPod {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 16))
+                                        Text("Already in Project".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.accentGreen.opacity(0.8))
+                                    .cornerRadius(20)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                } else if !existingPods.isEmpty {
             // Show different button based on join request status
             if joinRequestStatus == "pending" {
                 HStack(spacing: 6) {
@@ -328,41 +328,56 @@ struct IdeaDetailView: View {
                 .background(Color.accentOrange.opacity(0.8))
                 .cornerRadius(20)
                 .fixedSize(horizontal: true, vertical: false)
+            } else if joinRequestStatus == "accepted" {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                    Text("Already in Project".localized)
+                        .font(.system(size: 14, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.accentGreen.opacity(0.8))
+                .cornerRadius(20)
+                .fixedSize(horizontal: true, vertical: false)
             } else {
                 Button(action: { sendJoinRequest() }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "person.3")
-                            .font(.system(size: 16))
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "person.3")
+                                                .font(.system(size: 16))
                         Text("Request to Join".localized)
-                            .font(.system(size: 14, weight: .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.accentBlue)
-                    .cornerRadius(20)
-                    .fixedSize(horizontal: true, vertical: false)
+                                                .font(.system(size: 14, weight: .medium))
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.8)
+                                        }
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(Color.accentBlue)
+                                        .cornerRadius(20)
+                                        .fixedSize(horizontal: true, vertical: false)
                 }
-            }
-        } else {
-            HStack(spacing: 6) {
-                Image(systemName: "person.3.fill")
-                    .font(.system(size: 16))
-                Text("No Projects Yet".localized)
-                    .font(.system(size: 14, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color.textSecondary.opacity(0.6))
-            .cornerRadius(20)
-            .fixedSize(horizontal: true, vertical: false)
-        }
-    }
+                                    }
+                                } else {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "person.3.fill")
+                                            .font(.system(size: 16))
+                                        Text("No Projects Yet".localized)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.textSecondary.opacity(0.6))
+                                    .cornerRadius(20)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                }
+                            }
     
     private var ownerToolbarButtons: some View {
         HStack(spacing: 8) {
@@ -390,67 +405,67 @@ struct IdeaDetailView: View {
     }
     
     private var commentsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Comments".localized)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(Color.textPrimary)
-                
-                Spacer()
-                
-                if isLoadingComments {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                }
-            }
-            
-            HStack(spacing: 12) {
-                TextField("Add a comment...".localized, text: $newComment)
-                    .textFieldStyle(CustomTextFieldStyle())
-                
-                Button(action: submitComment) {
-                    if isSubmittingComment {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color.accentGreen)
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("Comments".localized)
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Spacer()
+                            
+                            if isLoadingComments {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                        
+                        HStack(spacing: 12) {
+                            TextField("Add a comment...".localized, text: $newComment)
+                                .textFieldStyle(CustomTextFieldStyle())
+                            
+                            Button(action: submitComment) {
+                                if isSubmittingComment {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "paperplane.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(Color.accentGreen)
+                                }
+                            }
+                            .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmittingComment)
+                        }
+                        
+                        if comments.isEmpty && !isLoadingComments {
+                            VStack(spacing: 12) {
+                                Image(systemName: "message")
+                                    .font(.system(size: 32))
+                                    .foregroundColor(Color.textSecondary.opacity(0.5))
+                                
+                                Text("No comments yet".localized)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(Color.textSecondary)
+                                
+                                Text("Be the first to share your thoughts!".localized)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color.textSecondary.opacity(0.7))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else {
+                            LazyVStack(spacing: 12) {
+                                ForEach(comments) { comment in
+                                    CommentRow(comment: comment)
+                                }
+                            }
+                        }
                     }
+                    .padding(20)
+                    .background(Color.backgroundPrimary)
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                 }
-                .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmittingComment)
-            }
-            
-            if comments.isEmpty && !isLoadingComments {
-                VStack(spacing: 12) {
-                    Image(systemName: "message")
-                        .font(.system(size: 32))
-                        .foregroundColor(Color.textSecondary.opacity(0.5))
-                    
-                    Text("No comments yet".localized)
-                        .font(.system(size: 16))
-                        .foregroundColor(Color.textSecondary)
-                    
-                    Text("Be the first to share your thoughts!".localized)
-                        .font(.system(size: 14))
-                        .foregroundColor(Color.textSecondary.opacity(0.7))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(comments) { comment in
-                        CommentRow(comment: comment)
-                    }
-                }
-            }
-        }
-        .padding(20)
-        .background(Color.backgroundPrimary)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-    }
     
     // MARK: - Functions
     
@@ -550,11 +565,21 @@ struct IdeaDetailView: View {
         Task {
             do {
                 let pods = try await supabaseManager.getPodsByIdeaId(currentIdea.id)
-                
                 let currentUserId = supabaseManager.currentUser?.uid ?? ""
-                let userInPod = pods.contains { pod in
-                    pod.members.contains { member in
-                        member.userId == currentUserId
+                var userInPod = false
+                
+                // Determine membership using pod_members table to avoid relying on empty members in pods
+                if !pods.isEmpty && !currentUserId.isEmpty {
+                    for pod in pods {
+                        do {
+                            let members = try await supabaseManager.getPodMembers(podId: pod.id)
+                            if members.contains(where: { $0.userId.lowercased() == currentUserId.lowercased() }) {
+                                userInPod = true
+                                break
+                            }
+                        } catch {
+                            print("⚠️ Failed to load members for pod \(pod.id): \(error.localizedDescription)")
+                        }
                     }
                 }
                 
@@ -578,12 +603,13 @@ struct IdeaDetailView: View {
                 
                 await MainActor.run {
                     existingPods = pods
-                    isUserInPod = userInPod
+                    // Treat accepted requests as joined (handles slight approval propagation delay)
+                    isUserInPod = userInPod || (requestStatus == "accepted")
                     hasCreatedProject = userCreatedProject
                     joinRequestStatus = requestStatus
                     isLoadingPods = false
                     print("📊 UI: Loaded \(pods.count) existing pods for idea '\(currentIdea.title)'")
-                    print("👤 UI: User membership status - isUserInPod: \(userInPod)")
+                    print("👤 UI: User membership status - isUserInPod: \(isUserInPod)")
                     print("🏗️ UI: User created project status - hasCreatedProject: \(userCreatedProject)")
                     
                     if pods.isEmpty {
@@ -877,11 +903,11 @@ struct JoinPodView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Join a Project".localized)
+                Text("Join a Project".localized)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(Color.textPrimary)
                         
-                        Text("Select a project to join and start collaborating".localized)
+                Text("Select a project to join and start collaborating".localized)
                             .font(.system(size: 16))
                             .foregroundColor(Color.textSecondary)
                     }
@@ -897,7 +923,7 @@ struct JoinPodView: View {
                         }
                     }
                     
-                    Button(action: joinSelectedPod) {
+            Button(action: joinSelectedPod) {
                         HStack {
                             if isJoining {
                                 ProgressView()
@@ -908,7 +934,7 @@ struct JoinPodView: View {
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             
-                            Text(isJoining ? "Joining Project...".localized : "Join Selected Project".localized)
+                    Text(isJoining ? "Joining Project...".localized : "Join Selected Project".localized)
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.white)
@@ -1329,4 +1355,4 @@ struct EditIdeaView: View {
     ))
     .environmentObject(LocalizationManager.shared)
     .environmentObject(SupabaseManager.shared)
-}
+} 
