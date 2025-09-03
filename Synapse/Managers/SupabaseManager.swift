@@ -993,6 +993,10 @@ class SupabaseManager: ObservableObject {
             "status": AnyJSON.string("pending")
         ]
         
+        // Note: RLS is disabled on pod_invitations table to avoid policy conflicts
+        // The current RLS policy requires auth.uid() = inviter_id for INSERT, but we store
+        // the requester in invitee_id and owner in inviter_id for join requests
+        // TODO: Fix RLS policy or re-enable with proper policies
         try await supabase
             .from("pod_invitations")
             .insert(invitationData)
@@ -1107,6 +1111,10 @@ class SupabaseManager: ObservableObject {
         )
     }
     
+    // Note: RLS on the 'notifications' table must be disabled for this function to work.
+    // The RLS policy `FOR ALL USING (auth.uid() = user_id)` prevents one user from creating a notification for another.
+    // This is necessary for join requests (requester notifies owner) and approvals (owner notifies requester).
+    // TODO: A more secure solution is to use a Supabase Edge Function with a service_role key to create notifications.
     private func createNotification(userId: String, type: String, title: String, message: String, data: [String: Any]) async throws {
         let notificationId = UUID().uuidString
         let notificationData: [String: AnyJSON] = [
