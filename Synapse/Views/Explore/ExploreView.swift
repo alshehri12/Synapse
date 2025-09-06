@@ -391,13 +391,13 @@ struct ExploreIdeaCard: View {
         
         Task {
             do {
-                // TODO: Implement likeIdea in SupabaseManager
-                print("✅ Like idea requested: \(idea.id) by user \(currentUser.uid)")
+                try await supabaseManager.likeIdea(ideaId: idea.id, userId: currentUser.uid)
                 await MainActor.run {
                     isLiked.toggle()
                 }
+                print("✅ Like action completed for idea: \(idea.id)")
             } catch {
-                print("Error liking idea: \(error)")
+                print("❌ Error liking idea: \(error.localizedDescription)")
             }
         }
     }

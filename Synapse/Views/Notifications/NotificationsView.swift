@@ -47,63 +47,15 @@ struct NotificationsView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Filter Tabs
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(NotificationFilter.allCases, id: \.self) { filter in
-                            FilterChip(
-                                title: filter.rawValue.localized,
-                                isSelected: selectedFilter == filter
-                            ) {
-                                selectedFilter = filter
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.vertical, 16)
-                .background(Color.backgroundPrimary)
-                
-                // Notifications List
-                if isLoading {
-                    Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
-                        .scaleEffect(1.2)
-                    Spacer()
-                } else if filteredNotifications.isEmpty {
-                    EmptyStateView(
-                        icon: "bell.slash",
-                        title: "No notifications".localized,
-                        message: getEmptyMessage()
-                    )
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(filteredNotifications) { notification in
-                                NotificationRow(notification: notification, onAction: {
-                                    handleNotificationAction(notification)
-                                })
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 8)
-                            }
-                        }
-                        .padding(.vertical, 16)
-                    }
-                }
+                filterTabsSection
+                notificationsContentSection
             }
             .background(Color.backgroundSecondary)
             .navigationTitle("Notifications".localized)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if !notifications.isEmpty {
-                        Button("Mark All as Read".localized) {
-                            markAllAsRead()
-                        }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color.accentGreen)
-                    }
+                    toolbarButton
                 }
             }
             .onAppear {
@@ -112,6 +64,93 @@ struct NotificationsView: View {
             .refreshable {
                 await refreshNotifications()
             }
+        }
+    }
+    
+    // MARK: - View Components
+    
+    private var filterTabsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(NotificationFilter.allCases, id: \.self) { filter in
+                    FilterChip(
+                        title: filter.rawValue.localized,
+                        isSelected: selectedFilter == filter
+                    ) {
+                        selectedFilter = filter
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .frame(height: 44)
+        .padding(.vertical, 16)
+        .background(Color.backgroundPrimary)
+        .clipped()
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    // Only allow horizontal dragging, ignore vertical
+                    if abs(value.translation.height) > abs(value.translation.width) {
+                        return
+                    }
+                }
+        )
+    }
+    
+    private var notificationsContentSection: some View {
+        Group {
+            if isLoading {
+                loadingView
+            } else if filteredNotifications.isEmpty {
+                emptyStateView
+            } else {
+                notificationsList
+            }
+        }
+    }
+    
+    private var loadingView: some View {
+        VStack {
+            Spacer()
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                .scaleEffect(1.2)
+            Spacer()
+        }
+    }
+    
+    private var emptyStateView: some View {
+        EmptyStateView(
+            icon: "bell.slash",
+            title: "No notifications".localized,
+            message: getEmptyMessage()
+        )
+    }
+    
+    private var notificationsList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(filteredNotifications) { notification in
+                    NotificationRow(notification: notification, onAction: {
+                        handleNotificationAction(notification)
+                    })
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                }
+            }
+            .padding(.vertical, 16)
+        }
+    }
+    
+    @ViewBuilder
+    private var toolbarButton: some View {
+        if !notifications.isEmpty {
+            Button("Mark All as Read".localized) {
+                markAllAsRead()
+            }
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(Color.accentGreen)
         }
     }
     
@@ -157,20 +196,20 @@ struct NotificationsView: View {
     }
     
     private func markAllAsRead() {
+        guard let currentUser = supabaseManager.currentUser else { return }
+        
         Task {
             do {
-                for notification in notifications where !notification.isRead {
-                    // TODO: Implement markNotificationAsRead in SupabaseManager
-                    print("✅ Mark notification as read requested: \(notification.id)")
-                }
+                try await supabaseManager.markAllNotificationsAsRead(userId: currentUser.uid)
                 
                 await MainActor.run {
                     for index in notifications.indices {
                         notifications[index].isRead = true
                     }
                 }
+                print("✅ All notifications marked as read successfully")
             } catch {
-                // Handle error silently for now
+                print("❌ Error marking notifications as read: \(error.localizedDescription)")
             }
         }
     }

@@ -48,6 +48,7 @@ struct PodChatView: View {
         .navigationBarHidden(true)
         .onAppear {
             setupKeyboardObservers()
+            loadChatMessages()
         }
         .onDisappear {
             removeKeyboardObservers()
@@ -291,12 +292,42 @@ struct PodChatView: View {
     
     // MARK: - Actions
     private func sendMessage() {
-        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let currentUser = supabaseManager.currentUser else { return }
         
-        // TODO: Implement message sending
-        print("📤 Sending message: \(messageText)")
+        let trimmedMessage = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        messageText = ""
+        Task {
+            do {
+                _ = try await supabaseManager.sendChatMessage(
+                    podId: pod.id,
+                    content: trimmedMessage,
+                    senderId: currentUser.uid,
+                    senderUsername: currentUser.displayName ?? "Unknown"
+                )
+                
+                await MainActor.run {
+                    messageText = ""
+                    loadChatMessages() // Refresh messages
+                }
+                print("✅ Message sent successfully")
+            } catch {
+                print("❌ Error sending message: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func loadChatMessages() {
+        Task {
+            do {
+                let messages = try await supabaseManager.getChatMessages(podId: pod.id)
+                await MainActor.run {
+                    self.chatMessages = messages
+                }
+            } catch {
+                print("❌ Error loading chat messages: \(error.localizedDescription)")
+            }
+        }
     }
     
     // MARK: - Keyboard Handling

@@ -145,17 +145,16 @@ struct SearchView: View {
         
         Task {
             do {
-                async let ideasTask = supabaseManager.getPublicIdeaSparks()
-                async let podsTask = supabaseManager.getPublicPods()
-                // TODO: Implement getAllUsers in SupabaseManager
-                async let usersTask = Task { return [UserProfile]() }
+                async let ideasTask = supabaseManager.searchIdeas(query: searchText)
+                async let podsTask = supabaseManager.searchPods(query: searchText)
+                async let usersTask = supabaseManager.searchUsers(query: searchText)
                 
                 let (ideaData, podData, userData) = try await (ideasTask, podsTask, usersTask)
                 
                 // Get data from all tasks
                 let allIdeas = ideaData
                 let allPods = podData
-                let allUsers = try await userData.value
+                let allUsers = userData
                 
                 await MainActor.run {
                     ideas = allIdeas
@@ -283,17 +282,17 @@ struct TrendingSection: View {
         
         Task {
             do {
+                // Load trending data without search query
                 async let ideasTask = supabaseManager.getPublicIdeaSparks()
                 async let podsTask = supabaseManager.getPublicPods()
-                // TODO: Implement getAllUsers in SupabaseManager
-                async let usersTask = Task { return [UserProfile]() }
+                async let usersTask = supabaseManager.getAllUsers()
                 
                 let (ideaData, podData, userData) = try await (ideasTask, podsTask, usersTask)
                 
                 await MainActor.run {
                     trendingIdeas = ideaData
                     popularPods = podData
-                    
+                    topUsers = userData
                     isLoading = false
                 }
             } catch {
@@ -519,7 +518,7 @@ struct UserRow: View {
     }
     
     private func checkFollowStatus() {
-        guard let currentUser = supabaseManager.currentUser else { return }
+        guard supabaseManager.currentUser != nil else { return }
         
         Task {
             do {
@@ -535,7 +534,7 @@ struct UserRow: View {
     }
     
     private func toggleFollow() {
-        guard let currentUser = supabaseManager.currentUser else { return }
+        guard supabaseManager.currentUser != nil else { return }
         
         isLoading = true
         

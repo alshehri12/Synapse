@@ -192,7 +192,7 @@
 /* Username Validation */
 "Username must be at least 3 characters" = "Username must be at least 3 characters";
 "Username must be less than 20 characters" = "Username must be less than 20 characters";
-"Username can only contain letters, numbers, and underscores" = "Username can only contain letters, numbers, and underscores";
+"Username can only contain letters, numbers, and underscores" = "Username can contain letters (any language), numbers, underscores, and dots";
 "Username is already taken" = "Username is already taken";
 "Error checking username availability" = "Error checking username availability";
 "Continue with Google" = "Continue with Google";

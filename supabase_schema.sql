@@ -120,6 +120,15 @@ CREATE TABLE public.pod_invitations (
     UNIQUE(pod_id, invitee_id)
 );
 
+-- Likes table for ideas
+CREATE TABLE public.idea_likes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID REFERENCES public.idea_sparks(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(idea_id, user_id)
+);
+
 -- Create indexes for performance
 CREATE INDEX idx_idea_sparks_author_id ON public.idea_sparks(author_id);
 CREATE INDEX idx_idea_sparks_is_public ON public.idea_sparks(is_public);
@@ -148,6 +157,9 @@ CREATE INDEX idx_activities_created_at ON public.activities(created_at DESC);
 
 CREATE INDEX idx_pod_invitations_invitee_id ON public.pod_invitations(invitee_id);
 CREATE INDEX idx_pod_invitations_status ON public.pod_invitations(status);
+
+CREATE INDEX idx_idea_likes_idea_id ON public.idea_likes(idea_id);
+CREATE INDEX idx_idea_likes_user_id ON public.idea_likes(user_id);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;

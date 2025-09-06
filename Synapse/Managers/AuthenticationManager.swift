@@ -186,13 +186,18 @@ class AuthenticationManager: ObservableObject {
     }
     
     func checkUserExists(email: String) async throws -> Bool {
-        print("🔍 User existence check not implemented for Supabase yet")
-            return false
+        do {
+            let users = try await supabaseManager.getAllUsers()
+            return users.contains { $0.email.lowercased() == email.lowercased() }
+        } catch {
+            print("❌ Error checking if user exists: \(error)")
+            throw error
+        }
     }
     
     func validateUsername(_ username: String) async throws -> Bool {
-        print("🔍 Username validation not implemented for Supabase yet")
-        return !username.isEmpty && username.count >= 3
+        // Use SupabaseManager's implementation
+        return try await supabaseManager.validateUsername(username)
     }
     
     func signInAnonymously() async throws {

@@ -258,8 +258,14 @@ struct CreatePodView: View {
                     )
                     print("🎉 SUCCESS: Pod created from idea with ID: \(podId)")
                 } else {
-                    // TODO: Implement creating pod without specific idea
-                    print("🚧 Creating standalone pod - implementation needed")
+                    // Create standalone pod without specific idea
+                    let podId = try await supabaseManager.createStandalonePod(
+                        name: trimmedName,
+                        description: trimmedDescription,
+                        creatorId: currentUser.uid,
+                        isPublic: isPublic
+                    )
+                    print("🎉 SUCCESS: Standalone pod created with ID: \(podId)")
                 }
                 
                 await MainActor.run {

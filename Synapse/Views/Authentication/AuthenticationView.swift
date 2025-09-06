@@ -107,6 +107,7 @@ struct SignUpView: View {
     @State private var usernameError = ""
     @State private var isCheckingUsername = false
     @State private var showSuccessAlert = false
+    @State private var showOtpVerification = false
     
     var isFormValid: Bool {
         !email.isEmpty && !password.isEmpty && !username.isEmpty &&
@@ -133,6 +134,9 @@ struct SignUpView: View {
             }
         } message: {
             Text("Your account has been created successfully.")
+        }
+        .sheet(isPresented: $showOtpVerification) {
+            OtpVerificationView(email: email)
         }
     }
     
@@ -300,8 +304,15 @@ struct SignUpView: View {
             return
         }
         
-        if !username.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) {
-            usernameError = "Username can only contain letters, numbers, and underscores".localized
+        // Allow any Unicode letters or numbers, plus underscore and dot; disallow spaces
+        let allowed: (Character) -> Bool = { ch in
+            ch.isLetter || ch.isNumber || ch == "_" || ch == "."
+        }
+        if !username.unicodeScalars.reduce(true, { acc, _ in acc }) {
+            // noop to keep compiler happy if optimizer folds closures
+        }
+        if !username.allSatisfy(allowed) {
+            usernameError = "Username can contain letters (any language), numbers, underscores, and dots".localized
             return
         }
         
@@ -338,15 +349,16 @@ struct SignUpView: View {
                 try await supabaseManager.signUp(email: email, password: password, username: username)
                 print("✅ SignUpView: Account created successfully")
                 
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isSubmitting = false
-                    self.showSuccessAlert = true
+                    self.showOtpVerification = true  // Show OTP verification instead of success alert
                 }
                 
             } catch {
                 print("❌ SignUpView: Account creation failed - \(error.localizedDescription)")
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isSubmitting = false
+                    // You could show an error alert here if needed
                 }
             }
         }
@@ -489,22 +501,24 @@ struct LoginView: View {
     private func signIn() {
         guard isFormValid else { return }
         
-        isSubmitting = true
-        
         Task {
+            await MainActor.run {
+                isSubmitting = true
+            }
+            
             do {
                 print("🚀 LoginView: Signing in user: \(email)")
                 try await supabaseManager.signIn(email: email, password: password)
                 print("✅ LoginView: Sign in successful")
                 
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isSubmitting = false
                     dismiss()
                 }
                 
             } catch {
                 print("❌ LoginView: Sign in failed - \(error.localizedDescription)")
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isSubmitting = false
                 }
             }
@@ -551,14 +565,58 @@ struct OtpVerificationView: View {
     }
     
     private var otpSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Verification Code".localized)
                 .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color.textPrimary)
+                .foregroundColor(Color.textPrimary)
             
-            TextField("Enter code".localized, text: $otpCode)
-                .textFieldStyle(CustomTextFieldStyle())
-                .keyboardType(.numberPad)
+            // 4-digit OTP input with individual boxes
+            HStack(spacing: 12) {
+                ForEach(0..<4, id: \.self) { index in
+                    OTPDigitField(
+                        digit: otpDigit(at: index),
+                        onDigitChange: { digit in
+                            updateOtpCode(at: index, with: digit)
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    // Helper functions for OTP handling
+    private func otpDigit(at index: Int) -> String {
+        guard index < otpCode.count else { return "" }
+        let digitIndex = otpCode.index(otpCode.startIndex, offsetBy: index)
+        return String(otpCode[digitIndex])
+    }
+    
+    private func updateOtpCode(at index: Int, with digit: String) {
+        var codeArray = Array(otpCode)
+        
+        // Ensure array is long enough
+        while codeArray.count <= index {
+            codeArray.append(" ")
+        }
+        
+        // Update the digit
+        if digit.isEmpty {
+            // Remove digit (backspace)
+            if index < codeArray.count {
+                codeArray[index] = " "
+            }
+        } else {
+            // Add/replace digit
+            codeArray[index] = Character(digit)
+        }
+        
+        // Convert back to string and clean up
+        otpCode = String(codeArray).replacingOccurrences(of: " ", with: "")
+        
+        // Limit to 4 digits
+        if otpCode.count > 4 {
+            otpCode = String(otpCode.prefix(4))
         }
     }
     
@@ -571,25 +629,25 @@ struct OtpVerificationView: View {
     
     private var verifyButton: some View {
         Button(action: verifyOTP) {
-                            HStack {
+            HStack {
                 if isSubmitting {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.8)
-                                } else {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.8)
+                } else {
                     Text("Verify".localized)
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                            .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                }
+            }
+            .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(!otpCode.isEmpty && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
+                    .fill(otpCode.count == 4 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
             )
         }
-        .disabled(otpCode.isEmpty || isSubmitting)
+        .disabled(otpCode.count != 4 || isSubmitting)
     }
     
     private var resendButton: some View {
@@ -724,10 +782,11 @@ struct SecondaryButtonStyle: ButtonStyle {
             .foregroundColor(Color.accentGreen)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-                        .background(
+            .background(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.accentGreen, lineWidth: 2)
             )
+            .contentShape(Rectangle()) // This ensures the entire frame is clickable
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
@@ -796,6 +855,51 @@ struct GoogleSignInButton: View {
         .animation(.easeInOut(duration: 0.1), value: isPressed)
     }
 } 
+
+// MARK: - OTP Digit Field Component
+struct OTPDigitField: View {
+    let digit: String
+    let onDigitChange: (String) -> Void
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        TextField("", text: $text)
+            .multilineTextAlignment(.center)
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundColor(Color.textPrimary)
+            .frame(width: 50, height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isFocused ? Color.accentGreen : Color.border, lineWidth: 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.backgroundSecondary)
+                    )
+            )
+            .keyboardType(.numberPad)
+            .focused($isFocused)
+            .onChange(of: text) { _, newValue in
+                // Only allow single digits
+                let filtered = newValue.filter { $0.isNumber }
+                if filtered.count <= 1 {
+                    text = filtered
+                    onDigitChange(filtered)
+                    
+                    // Auto-focus next field if digit entered
+                    if !filtered.isEmpty {
+                        // Move focus to next field (handled by parent)
+                    }
+                } else {
+                    text = String(filtered.prefix(1))
+                    onDigitChange(text)
+                }
+            }
+            .onAppear {
+                text = digit
+            }
+    }
+}
 
 // MARK: - Language Switcher
 struct LanguageSwitcher: View {

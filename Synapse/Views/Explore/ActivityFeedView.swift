@@ -122,33 +122,40 @@ struct ActivityFeedView: View {
     
     private func loadActivitiesAsync() async {
         do {
-            // TODO: Implement getActivityFeed in SupabaseManager
-            let activityData: [[String: Any]] = []
+            // Create a basic activity feed from recent ideas and pods
+            let recentIdeas = try await supabaseManager.getPublicIdeaSparks()
+            let recentPods = try await supabaseManager.getPublicPods()
+            
+            var activityItems: [FeedActivityItem] = []
+            
+            // Add idea activities
+            for idea in recentIdeas.prefix(10) {
+                activityItems.append(FeedActivityItem(
+                    id: UUID().uuidString,
+                    userId: idea.authorId,
+                    userName: idea.authorUsername,
+                    type: .ideaCreated,
+                    message: "Created a new idea: \(idea.title)",
+                    relatedId: idea.id,
+                    timestamp: idea.createdAt
+                ))
+            }
+            
+            // Add pod activities
+            for pod in recentPods.prefix(10) {
+                activityItems.append(FeedActivityItem(
+                    id: UUID().uuidString,
+                    userId: pod.creatorId,
+                    userName: "User", // Would need to fetch username
+                    type: .podCreated,
+                    message: "Created a new pod: \(pod.name)",
+                    relatedId: pod.id,
+                    timestamp: pod.createdAt
+                ))
+            }
             
             await MainActor.run {
-                activities = activityData.compactMap { data in
-                    guard let id = data["id"] as? String,
-                          let userId = data["userId"] as? String,
-                          let userName = data["userName"] as? String,
-                          let typeString = data["type"] as? String,
-                          let type = FeedActivityItem.ActivityType(rawValue: typeString),
-                          let message = data["message"] as? String,
-                          let timestamp = data["timestamp"] as? Date else {
-                        return nil
-                    }
-                    
-                    let relatedId = data["relatedId"] as? String
-                    
-                    return FeedActivityItem(
-                        id: id,
-                        userId: userId,
-                        userName: userName,
-                        type: type,
-                        message: message,
-                        relatedId: relatedId?.isEmpty == false ? relatedId : nil,
-                        timestamp: timestamp
-                    )
-                }
+                activities = activityItems.sorted { $0.timestamp > $1.timestamp }
                 isLoading = false
             }
         } catch {

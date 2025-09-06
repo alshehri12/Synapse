@@ -153,9 +153,10 @@ struct PodSettingsView: View {
                     updateData["isPublic"] = isPublic
                 }
                 
-                // TODO: Implement updateProject in SupabaseManager
-                print("✅ Pod update requested for: \(pod.id)")
-                print("Update data: \(updateData)")
+                if !updateData.isEmpty {
+                    try await supabaseManager.updateProject(podId: pod.id, updates: updateData)
+                    print("✅ Pod updated successfully: \(pod.id)")
+                }
                 
                 await MainActor.run {
                     isLoading = false
@@ -176,9 +177,9 @@ struct PodSettingsView: View {
                 let currentUserId = supabaseManager.currentUser?.uid ?? ""
                 let updatedMembers = pod.members.filter { $0.userId != currentUserId }
                 
-                // TODO: Implement pod update in SupabaseManager
-                print("✅ Pod update requested for: \(pod.id)")
-                print("Updated members: \(updatedMembers.count) members")
+                // Remove user from pod_members table
+                try await supabaseManager.removePodMember(podId: pod.id, userId: currentUserId)
+                print("✅ User removed from pod: \(pod.id)")
                 
                 await MainActor.run {
                     dismiss()
@@ -192,14 +193,14 @@ struct PodSettingsView: View {
     private func deleteProject() {
         Task {
             do {
-                // TODO: Implement pod deletion in SupabaseManager
-                print("✅ Pod deletion requested for: \(pod.id)")
+                try await supabaseManager.deleteProject(podId: pod.id)
+                print("✅ Pod deleted successfully: \(pod.id)")
                 
                 await MainActor.run {
                     dismiss()
                 }
             } catch {
-                print("Error deleting pod: \(error)")
+                print("❌ Error deleting pod: \(error.localizedDescription)")
             }
         }
     }

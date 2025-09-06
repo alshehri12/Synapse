@@ -218,14 +218,11 @@ class SupabaseManager: ObservableObject {
                 print("⚠️ Failed to ensure user profile on sign-in: \(error.localizedDescription)")
             }
             
-            // Immediately reflect auth state in UI
-            await MainActor.run {
-                self.currentUser = user
-                self.isEmailVerified = user.emailConfirmedAt != nil
-                self.isAuthenticated = true
-                self.isAuthReady = true
-            }
-            // No verification gate: allow unverified logins per request
+            // Update auth state immediately (the listener will also update, but this ensures immediate UI response)
+            self.currentUser = user
+            self.isEmailVerified = user.emailConfirmedAt != nil
+            self.isAuthenticated = true
+            self.isAuthReady = true
         } catch {
             authError = "Sign in failed: \(error.localizedDescription)"
             throw error
@@ -449,6 +446,7 @@ class SupabaseManager: ObservableObject {
             .from("pods")
             .select("*")
             .eq("idea_id", value: ideaId)
+            .eq("is_public", value: true) // Only show public pods for discovery
             .order("created_at", ascending: false)
             .execute()
         
@@ -496,14 +494,14 @@ class SupabaseManager: ObservableObject {
             let podsResponse = try await supabase
                 .from("pods")
                 .select("*")
-                .in("id", value: podIds)
+                .in("id", values: podIds)
                 .execute()
             let podsData = try JSONSerialization.jsonObject(with: podsResponse.data) as? [[String: Any]] ?? []
             memberPods = podsData.compactMap { parsePodFromData($0) }
         }
         
         // Combine, remove duplicates, and return
-        var allPods = createdPods + memberPods
+        let allPods = createdPods + memberPods
         
         var uniquePods: [String: IncubationProject] = [:]
         for pod in allPods {
@@ -561,6 +559,53 @@ class SupabaseManager: ObservableObject {
         return newPodId
     }
     
+    func createStandalonePod(name: String, description: String, creatorId: String, isPublic: Bool = true) async throws -> String {
+        print("💾 Creating standalone pod with data:")
+        print("  📛 name: '\(name)'")
+        print("  👤 creatorId: '\(creatorId)'")
+        print("  🌍 isPublic: \(isPublic)")
+        
+        // Ensure profile exists for FK and RLS
+        do {
+            let hasProfile = try await getUserProfile(userId: creatorId) != nil
+            if !hasProfile {
+                try await createUserProfile(
+                    userId: creatorId,
+                    email: currentUser?.email ?? "",
+                    username: currentUser?.displayName ?? "Creator"
+                )
+            }
+        } catch {
+            print("⚠️ Failed to ensure profile before pod insert: \(error.localizedDescription)")
+        }
+
+        let newPodId = UUID().uuidString
+        let podData: [String: AnyJSON] = [
+            "id": AnyJSON.string(newPodId),
+            "idea_id": AnyJSON.null, // No associated idea
+            "name": AnyJSON.string(name),
+            "description": AnyJSON.string(description),
+            "creator_id": AnyJSON.string(creatorId),
+            "is_public": AnyJSON.bool(isPublic),
+            "status": AnyJSON.string("planning")
+        ]
+        
+        try await supabase
+            .from("pods")
+            .insert(podData)
+            .execute()
+        
+        // Add creator as first member with admin role
+        do {
+            try await addPodMember(podId: newPodId, userId: creatorId, username: currentUser?.displayName ?? "Creator", role: "Creator")
+        } catch {
+            print("⚠️ addPodMember failed for standalone pod: \(error.localizedDescription)")
+        }
+        
+        print("✅ VERIFICATION: Standalone pod created successfully - id: '\(newPodId)'")
+        return newPodId
+    }
+    
     func addPodMember(podId: String, userId: String, username: String, role: String = "Member") async throws {
         let memberData: [String: AnyJSON] = [
             "pod_id": AnyJSON.string(podId),
@@ -582,12 +627,13 @@ class SupabaseManager: ObservableObject {
     
     private func parsePodFromData(_ item: [String: Any]) -> IncubationProject? {
         guard let id = item["id"] as? String,
-              let ideaId = item["idea_id"] as? String,
               let name = item["name"] as? String,
               let description = item["description"] as? String,
               let creatorId = item["creator_id"] as? String else {
             return nil
         }
+        
+        let ideaId = item["idea_id"] as? String ?? ""
         
         let isPublic = item["is_public"] as? Bool ?? false
         let statusString = item["status"] as? String ?? "planning"
@@ -636,6 +682,7 @@ class SupabaseManager: ObservableObject {
     
     func verifyOtp(email: String, otp: String) async throws {
         do {
+            print("🔍 Verifying OTP: \(otp) for email: \(email)")
             let response = try await supabase.auth.verifyOTP(
                 email: email,
                 token: otp,
@@ -643,9 +690,29 @@ class SupabaseManager: ObservableObject {
             )
             
             let user = response.user
+            print("✅ OTP verification successful for user: \(user.email ?? "unknown")")
+            
+            // Ensure user profile exists after email verification
+            do {
+                let hasProfile = try await getUserProfile(userId: user.id.uuidString) != nil
+                if !hasProfile {
+                    // Get username from user metadata or generate one
+                    let username = user.userMetadata["username"]?.stringValue ?? "user_\(user.id.uuidString.prefix(6))"
+                    try await createUserProfile(
+                        userId: user.id.uuidString,
+                        email: user.email ?? email,
+                        username: username
+                    )
+                }
+            } catch {
+                print("⚠️ Failed to ensure user profile after OTP verification: \(error.localizedDescription)")
+            }
+            
             await MainActor.run {
                 self.currentUser = user
+                self.isEmailVerified = user.emailConfirmedAt != nil
                 self.isAuthenticated = true
+                self.isAuthReady = true
             }
         } catch {
             print("❌ Error verifying OTP: \(error)")
@@ -1140,21 +1207,53 @@ class SupabaseManager: ObservableObject {
         print("✅ Notification created: \(notificationId)")
     }
     
-    // MARK: - Search (Placeholder)
+    // MARK: - Search Implementation
     
     func searchIdeas(query: String) async throws -> [IdeaSpark] {
-        print("🚧 searchIdeas - Supabase implementation needed")
-        return []
+        let response = try await supabase
+            .from("idea_sparks")
+            .select("*")
+            .eq("is_public", value: true)
+            .or("title.ilike.%\(query)%,description.ilike.%\(query)%")
+            .order("created_at", ascending: false)
+            .limit(20)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        return data.compactMap { item in
+            parseIdeaFromData(item)
+        }
     }
     
     func searchPods(query: String) async throws -> [IncubationProject] {
-        print("🚧 searchPods - Supabase implementation needed")
-        return []
+        let response = try await supabase
+            .from("pods")
+            .select("*")
+            .eq("is_public", value: true)
+            .or("name.ilike.%\(query)%,description.ilike.%\(query)%")
+            .order("created_at", ascending: false)
+            .limit(20)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        return data.compactMap { item in
+            parsePodFromData(item)
+        }
     }
     
     func searchUsers(query: String) async throws -> [UserProfile] {
-        print("🚧 searchUsers - Supabase implementation needed")
-        return []
+        let response = try await supabase
+            .from("users")
+            .select("*")
+            .or("username.ilike.%\(query)%,email.ilike.%\(query)%")
+            .order("username", ascending: true)
+            .limit(20)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        return data.compactMap { item in
+            parseUserProfileFromData(item)
+        }
     }
     
     // MARK: - Notifications (Placeholder)
@@ -1364,8 +1463,173 @@ class SupabaseManager: ObservableObject {
     }
     
     func updateUserStats(userId: String) async throws {
-        // Placeholder for updating user stats - to be implemented
-        print("✅ User stats update requested for: \(userId)")
+        // Compute counts
+        async let publicIdeasTask = supabase
+            .from("idea_sparks")
+            .select("id", head: false, count: .exact)
+            .eq("author_id", value: userId)
+            .eq("is_public", value: true)
+            .execute()
+
+        async let privateIdeasTask = supabase
+            .from("idea_sparks")
+            .select("id", head: false, count: .exact)
+            .eq("author_id", value: userId)
+            .eq("is_public", value: false)
+            .execute()
+
+        async let projectsTask = supabase
+            .from("pod_members")
+            .select("id", head: false, count: .exact)
+            .eq("user_id", value: userId)
+            .execute()
+
+        let (publicIdeasResp, privateIdeasResp, projectsResp) = try await (publicIdeasTask, privateIdeasTask, projectsTask)
+
+        let publicCount = publicIdeasResp.count ?? 0
+        let privateCount = privateIdeasResp.count ?? 0
+        let totalIdeas = publicCount + privateCount
+        let contributed = projectsResp.count ?? 0
+
+        let updateData: [String: AnyJSON] = [
+            "ideas_sparked": try AnyJSON(totalIdeas),
+            "projects_contributed": try AnyJSON(contributed)
+        ]
+
+        try await supabase
+            .from("users")
+            .update(updateData)
+            .eq("id", value: userId)
+            .execute()
+
+        print("✅ Updated user stats for \(userId): ideas=\(totalIdeas), contributed=\(contributed)")
+    }
+    
+    // MARK: - Notification Management
+    
+    func markNotificationAsRead(notificationId: String) async throws {
+        let updateData: [String: AnyJSON] = [
+            "is_read": AnyJSON.bool(true)
+        ]
+        
+        try await supabase
+            .from("notifications")
+            .update(updateData)
+            .eq("id", value: notificationId)
+            .execute()
+        
+        print("✅ Notification marked as read: \(notificationId)")
+    }
+    
+    func markAllNotificationsAsRead(userId: String) async throws {
+        let updateData: [String: AnyJSON] = [
+            "is_read": AnyJSON.bool(true)
+        ]
+        
+        try await supabase
+            .from("notifications")
+            .update(updateData)
+            .eq("user_id", value: userId)
+            .eq("is_read", value: false)
+            .execute()
+        
+        print("✅ All notifications marked as read for user: \(userId)")
+    }
+    
+    // MARK: - Pod Update Management
+    
+    func updateProject(podId: String, updates: [String: Any]) async throws {
+        let updateData = updates.mapValues { value -> AnyJSON in
+            if let string = value as? String {
+                return AnyJSON.string(string)
+            } else if let bool = value as? Bool {
+                return AnyJSON.bool(bool)
+            } else if let date = value as? Date {
+                let formatter = ISO8601DateFormatter()
+                return AnyJSON.string(formatter.string(from: date))
+            } else {
+                return AnyJSON.null
+            }
+        }
+        
+        try await supabase
+            .from("pods")
+            .update(updateData)
+            .eq("id", value: podId)
+            .execute()
+        
+        print("✅ Pod updated: \(podId)")
+    }
+    
+    func deleteProject(podId: String) async throws {
+        try await supabase
+            .from("pods")
+            .delete()
+            .eq("id", value: podId)
+            .execute()
+        
+        print("✅ Pod deleted: \(podId)")
+    }
+    
+    func removePodMember(podId: String, userId: String) async throws {
+        try await supabase
+            .from("pod_members")
+            .delete()
+            .eq("pod_id", value: podId)
+            .eq("user_id", value: userId)
+            .execute()
+        
+        print("✅ Member removed from pod: \(userId) from \(podId)")
+    }
+    
+    // MARK: - Like System
+    
+    func likeIdea(ideaId: String, userId: String) async throws {
+        // First check if user already liked this idea
+        let existingLike = try await checkIfUserLikedIdea(ideaId: ideaId, userId: userId)
+        
+        if existingLike {
+            // Unlike the idea
+            try await supabase
+                .from("idea_likes")
+                .delete()
+                .eq("idea_id", value: ideaId)
+                .eq("user_id", value: userId)
+                .execute()
+            
+            // Note: Like count will be updated manually for now
+            // In a real app, you'd use a database function or trigger
+            
+            print("✅ Idea unliked: \(ideaId)")
+        } else {
+            // Like the idea
+            let likeData: [String: AnyJSON] = [
+                "idea_id": AnyJSON.string(ideaId),
+                "user_id": AnyJSON.string(userId)
+            ]
+            
+            try await supabase
+                .from("idea_likes")
+                .insert(likeData)
+                .execute()
+            
+            // Note: Like count will be updated manually for now
+            // In a real app, you'd use a database function or trigger
+            
+            print("✅ Idea liked: \(ideaId)")
+        }
+    }
+    
+    func checkIfUserLikedIdea(ideaId: String, userId: String) async throws -> Bool {
+        let response = try await supabase
+            .from("idea_likes")
+            .select("id")
+            .eq("idea_id", value: ideaId)
+            .eq("user_id", value: userId)
+            .execute()
+        
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        return !data.isEmpty
     }
 }
 

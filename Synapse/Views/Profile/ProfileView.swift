@@ -95,16 +95,20 @@ struct ProfileView: View {
                 try await supabaseManager.updateUserStats(userId: currentUser.id.uuidString)
                 
                 if let userData = try await supabaseManager.getUserProfile(userId: currentUser.id.uuidString) {
-                    // Convert Firestore data to User model
                     let username = userData["username"] as? String ?? ""
                     let email = userData["email"] as? String ?? ""
                     let bio = userData["bio"] as? String
-                    let avatarURL = userData["avatarURL"] as? String
+                    let avatarURL = userData["avatar_url"] as? String
                     let skills = userData["skills"] as? [String] ?? []
                     let interests = userData["interests"] as? [String] ?? []
-                    let ideasSparked = userData["ideasSparked"] as? Int ?? 0
-                    let projectsContributed = userData["projectsContributed"] as? Int ?? 0
-                    let dateJoined = userData["dateJoined"] as? Date ?? Date()
+                    let ideasSparked = userData["ideas_sparked"] as? Int ?? 0
+                    let projectsContributed = userData["projects_contributed"] as? Int ?? 0
+                    let dateJoined: Date = {
+                        if let s = userData["date_joined"] as? String, let d = ISO8601DateFormatter().date(from: s) {
+                            return d
+                        }
+                        return Date()
+                    }()
                     
                     await MainActor.run {
                         user = UserProfile(

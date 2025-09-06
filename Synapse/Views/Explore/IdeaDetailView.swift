@@ -492,7 +492,17 @@ struct IdeaDetailView: View {
     
     private func checkIfLiked() {
         guard let currentUser = supabaseManager.currentUser else { return }
-        isLiked = false
+        
+        Task {
+            do {
+                let liked = try await supabaseManager.checkIfUserLikedIdea(ideaId: currentIdea.id, userId: currentUser.uid)
+                await MainActor.run {
+                    isLiked = liked
+                }
+            } catch {
+                print("❌ Error checking like status: \(error.localizedDescription)")
+            }
+        }
     }
     
     private func likeIdea() {
@@ -500,12 +510,20 @@ struct IdeaDetailView: View {
         
         Task {
             do {
-                print("✅ Like idea requested: \(currentIdea.id) by user \(currentUser.uid)")
+                try await supabaseManager.likeIdea(ideaId: currentIdea.id, userId: currentUser.uid)
+                
                 await MainActor.run {
                     isLiked.toggle()
+                    // Update like count locally for immediate UI feedback
+                    if isLiked {
+                        currentIdea.likes += 1
+                    } else {
+                        currentIdea.likes = max(0, currentIdea.likes - 1)
+                    }
                 }
+                print("✅ Like action completed for idea: \(currentIdea.id)")
             } catch {
-                print("Error liking idea: \(error)")
+                print("❌ Error liking idea: \(error.localizedDescription)")
             }
         }
     }

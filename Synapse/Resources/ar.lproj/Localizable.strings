@@ -191,7 +191,7 @@
 /* Username Validation */
 "Username must be at least 3 characters" = "يجب أن يكون اسم المستخدم 3 أحرف على الأقل";
 "Username must be less than 20 characters" = "يجب أن يكون اسم المستخدم أقل من 20 حرفاً";
-"Username can only contain letters, numbers, and underscores" = "يمكن أن يحتوي اسم المستخدم على أحرف وأرقام وشرطة سفلية فقط";
+"Username can only contain letters, numbers, and underscores" = "يمكن أن يحتوي اسم المستخدم على حروف (أي لغة)، أرقام، شرطة سفلية (_) ونقطة (.)";
 "Username is already taken" = "اسم المستخدم مستخدم بالفعل";
 "Error checking username availability" = "خطأ في التحقق من توفر اسم المستخدم";
 "Continue with Google" = "المتابعة مع جوجل";

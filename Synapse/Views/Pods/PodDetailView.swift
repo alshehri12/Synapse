@@ -589,7 +589,7 @@ struct FullScreenChatView: View {
                         .cornerRadius(24)
                         
                         // Send button
-                        Button(action: sendMessage) {
+                        Button(action: sendChatMessage) {
                             Image(systemName: messageText.isEmpty ? "arrow.up.circle" : "arrow.up.circle.fill")
                                 .font(.system(size: 28, weight: .medium))
                                 .foregroundColor(messageText.isEmpty ? Color.textSecondary : Color.accentGreen)
@@ -674,7 +674,7 @@ extension FullScreenChatView {
         }
     }
     
-    private func sendMessage() {
+    private func sendChatMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let currentUser = supabaseManager.currentUser else { return }
         
