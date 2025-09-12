@@ -105,6 +105,68 @@
 "Settings" = "Settings";
 "Done" = "Done";
 
+/* Settings - Account */
+"Profile" = "Profile";
+"Manage your public information" = "Manage your public information";
+"Account" = "Account";
+"Email" = "Email";
+"Username" = "Username";
+"Security" = "Security";
+"We will email you a link to reset your password." = "We will email you a link to reset your password.";
+"Send Password Reset Email" = "Send Password Reset Email";
+"Coming Soon" = "Coming Soon";
+"Password reset via email will be available after SMTP setup." = "Password reset via email will be available after SMTP setup.";
+
+/* Settings - Notifications */
+"General" = "General";
+"Control how you get notified" = "Control how you get notified";
+"Push Notifications" = "Push Notifications";
+"In-App Notifications" = "In-App Notifications";
+"Types" = "Types";
+"Messages" = "Messages";
+"Project Updates" = "Project Updates";
+"Task Updates" = "Task Updates";
+"Likes & Comments" = "Likes & Comments";
+
+/* Settings - Privacy */
+"Profile" = "Profile";
+"Public Profile" = "Public Profile";
+"Show Online Status" = "Show Online Status";
+"Interactions" = "Interactions";
+"Allow mentions from" = "Allow mentions from";
+"Allow project invites from" = "Allow project invites from";
+"Everyone" = "Everyone";
+"People You Follow" = "People You Follow";
+"No One" = "No One";
+
+/* Settings - App Preferences */
+"App Preferences" = "App Preferences";
+"Appearance" = "Appearance";
+"Appearance changes may require app restart in this version." = "Appearance changes may require app restart in this version.";
+"Theme" = "Theme";
+"System Default" = "System Default";
+"Light" = "Light";
+"Dark" = "Dark";
+"Playback" = "Playback";
+"Autoplay Media" = "Autoplay Media";
+"Data Saver" = "Data Saver";
+"Feedback" = "Feedback";
+"Haptics" = "Haptics";
+"Share Analytics" = "Share Analytics";
+
+/* Settings - Help & Support */
+"Support" = "Support";
+"Contact Support" = "Contact Support";
+"About" = "About";
+"App Version" = "App Version";
+"Rate App" = "Rate App";
+
+/* Settings - Legal */
+"View Full Terms" = "View Full Terms";
+"These are a summary of our Terms. For full details, please visit our website." = "These are a summary of our Terms. For full details, please visit our website.";
+"View Full Policy" = "View Full Policy";
+"Learn how we collect, use, and protect your data. For full details, please visit our website." = "Learn how we collect, use, and protect your data. For full details, please visit our website.";
+
 /* Task Status */
 "To Do" = "To Do";
 "In Progress" = "In Progress";

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Supabase
+import UIKit
 
 struct ProfileView: View {
     @State private var user: UserProfile?
@@ -606,16 +607,31 @@ struct SettingsView: View {
         NavigationView {
             List {
                 Section("Account".localized) {
-                    SettingsRow(icon: "person", title: "Account Settings".localized, action: {})
-                    SettingsRow(icon: "bell", title: "Notifications".localized, action: {})
-                    SettingsRow(icon: "lock", title: "Privacy".localized, action: {})
+                    SettingsLinkRow(icon: "person", title: "Account Settings".localized) {
+                        AccountSettingsView()
+                    }
+                    SettingsLinkRow(icon: "bell", title: "Notifications".localized) {
+                        NotificationSettingsView()
+                    }
+                    SettingsLinkRow(icon: "lock", title: "Privacy".localized) {
+                        PrivacySettingsView()
+                    }
                 }
                 
                 Section("App".localized) {
                     SettingsRow(icon: "globe", title: "Language".localized, action: { showingLanguageSelector = true })
-                    SettingsRow(icon: "questionmark.circle", title: "Help & Support".localized, action: {})
-                    SettingsRow(icon: "doc.text", title: "Terms of Service".localized, action: {})
-                    SettingsRow(icon: "hand.raised", title: "Privacy Policy".localized, action: {})
+                    SettingsLinkRow(icon: "gearshape.2", title: "App Preferences".localized) {
+                        AppPreferencesView()
+                    }
+                    SettingsLinkRow(icon: "questionmark.circle", title: "Help & Support".localized) {
+                        HelpSupportView()
+                    }
+                    SettingsLinkRow(icon: "doc.text", title: "Terms of Service".localized) {
+                        TermsView()
+                    }
+                    SettingsLinkRow(icon: "hand.raised", title: "Privacy Policy".localized) {
+                        PrivacyPolicyView()
+                    }
                 }
                 
                 Section {
@@ -723,6 +739,292 @@ struct SettingsRow: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Settings Navigation Row
+struct SettingsLinkRow<Destination: View>: View {
+    let icon: String
+    let title: String
+    let destination: Destination
+    
+    init(icon: String, title: String, @ViewBuilder destination: () -> Destination) {
+        self.icon = icon
+        self.title = title
+        self.destination = destination()
+    }
+    
+    var body: some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(Color.accentGreen)
+                    .frame(width: 20)
+                
+                Text(title)
+                    .font(.system(size: 16))
+                    .foregroundColor(Color.textPrimary)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color.textSecondary)
+                    .flipsForRightToLeftLayoutDirection(true)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Account Settings
+struct AccountSettingsView: View {
+    @EnvironmentObject private var localizationManager: LocalizationManager
+    @EnvironmentObject private var supabaseManager: SupabaseManager
+    @State private var showingResetAlert = false
+    
+    private var userEmail: String {
+        supabaseManager.currentUser?.email ?? ""
+    }
+    
+    private var username: String {
+        supabaseManager.currentUser?.displayName ?? ""
+    }
+    
+    var body: some View {
+        List {
+            Section(header: Text("Profile".localized), footer: Text("Manage your public information".localized)) {
+                SettingsLinkRow(icon: "person.crop.circle", title: "Edit Profile".localized) {
+                    EditProfileView(user: mockUser)
+                }
+            }
+            
+            Section(header: Text("Account".localized)) {
+                HStack {
+                    Text("Email".localized)
+                    Spacer()
+                    Text(userEmail).foregroundColor(Color.textSecondary)
+                }
+                HStack {
+                    Text("Username".localized)
+                    Spacer()
+                    Text(username).foregroundColor(Color.textSecondary)
+                }
+            }
+            
+            Section(header: Text("Security".localized), footer: Text("We will email you a link to reset your password.".localized)) {
+                Button {
+                    showingResetAlert = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "key.fill").foregroundColor(Color.accentGreen).frame(width: 20)
+                        Text("Send Password Reset Email".localized).foregroundColor(Color.textPrimary)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .navigationTitle("Account Settings".localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Coming Soon".localized, isPresented: $showingResetAlert) {
+            Button("OK".localized, role: .cancel) {}
+        } message: {
+            Text("Password reset via email will be available after SMTP setup.".localized)
+        }
+    }
+}
+
+// MARK: - Notification Settings
+struct NotificationSettingsView: View {
+    @AppStorage("notifications.pushEnabled") private var pushEnabled = true
+    @AppStorage("notifications.inAppEnabled") private var inAppEnabled = true
+    @AppStorage("notifications.mentions") private var mentionsEnabled = true
+    @AppStorage("notifications.messages") private var messagesEnabled = true
+    @AppStorage("notifications.projectUpdates") private var projectUpdatesEnabled = true
+    @AppStorage("notifications.taskUpdates") private var taskUpdatesEnabled = true
+    @AppStorage("notifications.likesComments") private var likesCommentsEnabled = true
+    
+    var body: some View {
+        List {
+            Section(header: Text("General".localized), footer: Text("Control how you get notified".localized)) {
+                Toggle("Push Notifications".localized, isOn: $pushEnabled)
+                Toggle("In-App Notifications".localized, isOn: $inAppEnabled)
+            }
+            Section(header: Text("Types".localized)) {
+                Toggle("Mentions".localized, isOn: $mentionsEnabled)
+                Toggle("Messages".localized, isOn: $messagesEnabled)
+                Toggle("Project Updates".localized, isOn: $projectUpdatesEnabled)
+                Toggle("Task Updates".localized, isOn: $taskUpdatesEnabled)
+                Toggle("Likes & Comments".localized, isOn: $likesCommentsEnabled)
+            }
+        }
+        .navigationTitle("Notifications".localized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Privacy Settings
+struct PrivacySettingsView: View {
+    @AppStorage("privacy.publicProfile") private var publicProfile = true
+    @AppStorage("privacy.showOnlineStatus") private var showOnlineStatus = true
+    @AppStorage("privacy.mentionsScope") private var mentionsScope = 0 // 0 Everyone, 1 Following, 2 No one
+    @AppStorage("privacy.invitesScope") private var invitesScope = 0
+    
+    var body: some View {
+        List {
+            Section(header: Text("Profile".localized)) {
+                Toggle("Public Profile".localized, isOn: $publicProfile)
+                Toggle("Show Online Status".localized, isOn: $showOnlineStatus)
+            }
+            Section(header: Text("Interactions".localized)) {
+                Picker("Allow mentions from".localized, selection: $mentionsScope) {
+                    Text("Everyone".localized).tag(0)
+                    Text("People You Follow".localized).tag(1)
+                    Text("No One".localized).tag(2)
+                }
+                Picker("Allow project invites from".localized, selection: $invitesScope) {
+                    Text("Everyone".localized).tag(0)
+                    Text("People You Follow".localized).tag(1)
+                    Text("No One".localized).tag(2)
+                }
+            }
+        }
+        .navigationTitle("Privacy".localized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - App Preferences
+struct AppPreferencesView: View {
+    @AppStorage("app.appearance") private var appearance = 0 // 0 System, 1 Light, 2 Dark
+    @AppStorage("app.dataSaver") private var dataSaver = false
+    @AppStorage("app.autoplayMedia") private var autoplayMedia = true
+    @AppStorage("app.haptics") private var haptics = true
+    @AppStorage("app.analytics") private var analytics = false
+    
+    var body: some View {
+        List {
+            Section(header: Text("Appearance".localized), footer: Text("Appearance changes may require app restart in this version.".localized)) {
+                Picker("Theme".localized, selection: $appearance) {
+                    Text("System Default".localized).tag(0)
+                    Text("Light".localized).tag(1)
+                    Text("Dark".localized).tag(2)
+                }
+            }
+            Section(header: Text("Playback".localized)) {
+                Toggle("Autoplay Media".localized, isOn: $autoplayMedia)
+                Toggle("Data Saver".localized, isOn: $dataSaver)
+            }
+            Section(header: Text("Feedback".localized)) {
+                Toggle("Haptics".localized, isOn: $haptics)
+                Toggle("Share Analytics".localized, isOn: $analytics)
+            }
+        }
+        .navigationTitle("App Preferences".localized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Help & Support
+struct HelpSupportView: View {
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        return "v\(version) (\(build))"
+    }
+    
+    var body: some View {
+        List {
+            Section(header: Text("Support".localized)) {
+                Button {
+                    if let url = URL(string: "mailto:support@mysynapeses.com") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "envelope.fill").foregroundColor(Color.accentGreen).frame(width: 20)
+                        Text("Contact Support".localized).foregroundColor(Color.textPrimary)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            Section(header: Text("About".localized)) {
+                HStack {
+                    Text("App Version".localized)
+                    Spacer()
+                    Text(appVersion).foregroundColor(Color.textSecondary)
+                }
+                Button {
+                    if let url = URL(string: "https://apps.apple.com") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "star.fill").foregroundColor(Color.accentGreen).frame(width: 20)
+                        Text("Rate App".localized).foregroundColor(Color.textPrimary)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .navigationTitle("Help & Support".localized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Terms & Privacy
+struct TermsView: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Terms of Service".localized)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                Text("These are a summary of our Terms. For full details, please visit our website.".localized)
+                    .foregroundColor(Color.textSecondary)
+                Button {
+                    if let url = URL(string: "https://mysynapeses.com/terms") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("View Full Terms".localized)
+                        .foregroundColor(Color.accentGreen)
+                }
+                .padding(.top, 8)
+            }
+            .padding(16)
+        }
+        .background(Color.backgroundSecondary)
+        .navigationTitle("Terms of Service".localized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct PrivacyPolicyView: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Privacy Policy".localized)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                Text("Learn how we collect, use, and protect your data. For full details, please visit our website.".localized)
+                    .foregroundColor(Color.textSecondary)
+                Button {
+                    if let url = URL(string: "https://mysynapeses.com/privacy") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("View Full Policy".localized)
+                        .foregroundColor(Color.accentGreen)
+                }
+                .padding(.top, 8)
+            }
+            .padding(16)
+        }
+        .background(Color.backgroundSecondary)
+        .navigationTitle("Privacy Policy".localized)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

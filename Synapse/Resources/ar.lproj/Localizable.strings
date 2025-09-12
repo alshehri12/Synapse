@@ -105,6 +105,68 @@
 "Settings" = "الإعدادات";
 "Done" = "تم";
 
+/* Settings - Account */
+"Profile" = "الملف الشخصي";
+"Manage your public information" = "إدارة معلوماتك العامة";
+"Account" = "الحساب";
+"Email" = "البريد الإلكتروني";
+"Username" = "اسم المستخدم";
+"Security" = "الأمان";
+"We will email you a link to reset your password." = "سنرسل إليك رابطًا لإعادة تعيين كلمة المرور.";
+"Send Password Reset Email" = "إرسال رابط إعادة تعيين كلمة المرور";
+"Coming Soon" = "قريبًا";
+"Password reset via email will be available after SMTP setup." = "ستتوفر إعادة تعيين كلمة المرور عبر البريد بعد إعداد SMTP.";
+
+/* Settings - Notifications */
+"General" = "عام";
+"Control how you get notified" = "تحكم في كيفية تلقي الإشعارات";
+"Push Notifications" = "إشعارات الدفع";
+"In-App Notifications" = "الإشعارات داخل التطبيق";
+"Types" = "الأنواع";
+"Messages" = "الرسائل";
+"Project Updates" = "تحديثات المشاريع";
+"Task Updates" = "تحديثات المهام";
+"Likes & Comments" = "الإعجابات والتعليقات";
+
+/* Settings - Privacy */
+"Profile" = "الملف";
+"Public Profile" = "ملف عام";
+"Show Online Status" = "إظهار الحالة على الإنترنت";
+"Interactions" = "التفاعلات";
+"Allow mentions from" = "السماح بالإشارات من";
+"Allow project invites from" = "السماح بدعوات المشاريع من";
+"Everyone" = "الجميع";
+"People You Follow" = "الأشخاص الذين تتابعهم";
+"No One" = "لا أحد";
+
+/* Settings - App Preferences */
+"App Preferences" = "تفضيلات التطبيق";
+"Appearance" = "المظهر";
+"Appearance changes may require app restart in this version." = "قد تتطلب تغييرات المظهر إعادة تشغيل التطبيق في هذا الإصدار.";
+"Theme" = "السمة";
+"System Default" = "افتراضي النظام";
+"Light" = "فاتح";
+"Dark" = "داكن";
+"Playback" = "التشغيل";
+"Autoplay Media" = "تشغيل الوسائط تلقائيًا";
+"Data Saver" = "توفير البيانات";
+"Feedback" = "التغذية الراجعة";
+"Haptics" = "الاهتزازات";
+"Share Analytics" = "مشاركة التحليلات";
+
+/* Settings - Help & Support */
+"Support" = "الدعم";
+"Contact Support" = "التواصل مع الدعم";
+"About" = "حول";
+"App Version" = "إصدار التطبيق";
+"Rate App" = "قيّم التطبيق";
+
+/* Settings - Legal */
+"View Full Terms" = "عرض الشروط كاملة";
+"These are a summary of our Terms. For full details, please visit our website." = "هذه خلاصة لشروطنا. للتفاصيل الكاملة، يرجى زيارة موقعنا.";
+"View Full Policy" = "عرض السياسة كاملة";
+"Learn how we collect, use, and protect your data. For full details, please visit our website." = "تعرّف على كيفية جمع بياناتك واستخدامها وحمايتها. للتفاصيل الكاملة، يرجى زيارة موقعنا.";
+
 /* Task Status */
 "To Do" = "لم يتم";
 "In Progress" = "قيد التنفيذ";
