@@ -570,9 +570,9 @@ struct OtpVerificationView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(Color.textPrimary)
             
-            // 4-digit OTP input with individual boxes
+            // 6-digit OTP input with individual boxes
             HStack(spacing: 12) {
-                ForEach(0..<4, id: \.self) { index in
+                ForEach(0..<6, id: \.self) { index in
                     OTPDigitField(
                         digit: otpDigit(at: index),
                         onDigitChange: { digit in
@@ -614,9 +614,9 @@ struct OtpVerificationView: View {
         // Convert back to string and clean up
         otpCode = String(codeArray).replacingOccurrences(of: " ", with: "")
         
-        // Limit to 4 digits
-        if otpCode.count > 4 {
-            otpCode = String(otpCode.prefix(4))
+        // Limit to 6 digits
+        if otpCode.count > 6 {
+            otpCode = String(otpCode.prefix(6))
         }
     }
     
@@ -644,10 +644,10 @@ struct OtpVerificationView: View {
             .frame(height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(otpCode.count == 4 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
+                    .fill(otpCode.count == 6 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
             )
         }
-        .disabled(otpCode.count != 4 || isSubmitting)
+        .disabled(otpCode.count != 6 || isSubmitting)
     }
     
     private var resendButton: some View {
