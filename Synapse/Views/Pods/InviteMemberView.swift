@@ -15,6 +15,7 @@ struct InviteMemberView: View {
     @EnvironmentObject private var localizationManager: LocalizationManager
     
     @State private var searchText = ""
+    @State private var inviteEmail = ""
     @State private var selectedUsers: [UserProfile] = []
     @State private var selectedRole = "Member"
     @State private var customMessage = ""
@@ -41,17 +42,34 @@ struct InviteMemberView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
                 
-                // Search Bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(Color.textSecondary)
+                // Invite by Email
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "envelope")
+                            .foregroundColor(Color.textSecondary)
+                        TextField("Invite by email".localized, text: $inviteEmail)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                        Button("Send".localized) { inviteByEmail() }
+                            .foregroundColor(inviteEmail.contains("@") ? Color.accentGreen : Color.textSecondary)
+                            .disabled(!inviteEmail.contains("@"))
+                    }
+                    .padding(12)
+                    .background(Color.backgroundPrimary)
+                    .cornerRadius(12)
                     
-                    TextField("Search users".localized, text: $searchText)
-                        .textFieldStyle(PlainTextFieldStyle())
+                    // Or search existing users
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(Color.textSecondary)
+                        TextField("Search users".localized, text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(12)
+                    .background(Color.backgroundPrimary)
+                    .cornerRadius(12)
                 }
-                .padding(12)
-                .background(Color.backgroundPrimary)
-                .cornerRadius(12)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
                 
@@ -253,6 +271,41 @@ struct InviteMemberView: View {
                 }
             } catch {
                 print("❌ Error adding members: \(error.localizedDescription)")
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                    showingError = true
+                }
+            }
+        }
+    }
+
+    private func inviteByEmail() {
+        let email = inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard email.contains("@") else { return }
+        isLoading = true
+        Task {
+            do {
+                // Lookup user by email
+                let all = try await supabaseManager.getAllUsers()
+                if let user = all.first(where: { $0.email.lowercased() == email.lowercased() }) {
+                    try await supabaseManager.sendJoinRequest(
+                        podId: pod.id,
+                        inviteeId: supabaseManager.currentUser?.uid ?? "", // owner receives notification
+                        inviterId: user.id // requester will be the invited person in our mapping
+                    )
+                    await MainActor.run {
+                        inviteEmail = ""
+                        isLoading = false
+                    }
+                } else {
+                    await MainActor.run {
+                        isLoading = false
+                        errorMessage = "No user found with this email.".localized
+                        showingError = true
+                    }
+                }
+            } catch {
                 await MainActor.run {
                     isLoading = false
                     errorMessage = error.localizedDescription

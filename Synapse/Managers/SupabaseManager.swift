@@ -52,13 +52,20 @@ class SupabaseManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     private init() {
-        // Initialize Supabase client with your credentials
-        let supabaseURL = URL(string: "https://oocegnwdfnnjgoworrwh.supabase.co")!
-        let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vY2VnbndkZm5uamdvd29ycndoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDk1MDcsImV4cCI6MjA3MDkyNTUwN30.QA05vtt_KgQTQ_EfABuEtDnYO_2-W-L6zo_dHBLBRfw"
+        // Initialize Supabase client with credentials from Info.plist
+        let plistSupabaseURL = Bundle.main.object(forInfoDictionaryKey: "SupabaseURL") as? String
+        let plistAnonKey = Bundle.main.object(forInfoDictionaryKey: "SupabaseAnonKey") as? String
+        
+        guard let urlString = plistSupabaseURL,
+              let key = plistAnonKey,
+              let supabaseURL = URL(string: urlString),
+              !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            fatalError("Supabase URL or Anon Key missing in Info.plist. Please set SupabaseURL and SupabaseAnonKey.")
+        }
         
         self.supabase = SupabaseClient(
             supabaseURL: supabaseURL,
-            supabaseKey: supabaseKey
+            supabaseKey: key
         )
         
         // Listen for auth state changes
@@ -81,10 +88,9 @@ class SupabaseManager: ObservableObject {
                 throw AuthError.noViewController
             }
             
-            // Configure GoogleSignIn with your client ID from GoogleService-Info.plist
-            guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
-                  let plist = NSDictionary(contentsOfFile: path),
-                  let clientId = plist["CLIENT_ID"] as? String else {
+            // Configure GoogleSignIn with your client ID from Info.plist (GIDClientID)
+            guard let clientId = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String,
+                  !clientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw AuthError.missingGoogleClientId
             }
             
@@ -176,10 +182,14 @@ class SupabaseManager: ObservableObject {
         } catch {
             isSigningUp = false
             let lower = error.localizedDescription.lowercased()
-            if lower.contains("confirm") || lower.contains("email") || lower.contains("smtp") {
-                authError = "Email confirmation is required or email sending failed. Please disable email confirmations in Supabase Auth settings for now."
+            if lower.contains("user already registered") || lower.contains("already registered") || lower.contains("exists") {
+                authError = "An account with this email already exists. Try signing in."
+            } else if lower.contains("confirm") || lower.contains("email") || lower.contains("smtp") {
+                authError = "We couldn't send the confirmation email right now. Please try again later or sign in if you already verified."
+            } else if lower.contains("password") {
+                authError = "Password does not meet requirements."
             } else {
-            authError = "Failed to create account: \(error.localizedDescription)"
+                authError = "Failed to create account. Please try again."
             }
             throw error
         }

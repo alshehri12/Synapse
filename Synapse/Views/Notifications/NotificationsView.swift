@@ -23,7 +23,6 @@ struct NotificationsView: View {
         case unread = "Unread"
         case mentions = "Mentions"
         case tasks = "Tasks"
-        case pods = "Pods"
     }
     
     var filteredNotifications: [AppNotification] {
@@ -37,8 +36,7 @@ struct NotificationsView: View {
                 return notification.type == .mention
             case .tasks:
                 return notification.type == .taskAssigned || notification.type == .taskCompleted
-            case .pods:
-                return notification.type == .projectInvite || notification.type == .projectJoined
+            
             }
         }
         return filtered.sorted { $0.timestamp > $1.timestamp }
@@ -48,11 +46,22 @@ struct NotificationsView: View {
         NavigationView {
             VStack(spacing: 0) {
                 filterTabsSection
+                Divider()
+                    .background(Color.border)
                 notificationsContentSection
             }
             .background(Color.backgroundSecondary)
-            .navigationTitle("Notifications".localized)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("")
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bell")
+                            .foregroundColor(Color.accentGreen)
+                        Text("Notifications".localized)
+                            .font(.system(size: 20, weight: .semibold))
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     toolbarButton
@@ -70,32 +79,24 @@ struct NotificationsView: View {
     // MARK: - View Components
     
     private var filterTabsSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(NotificationFilter.allCases, id: \.self) { filter in
-                    FilterChip(
-                        title: filter.rawValue.localized,
-                        isSelected: selectedFilter == filter
-                    ) {
-                        selectedFilter = filter
+        // Fixed header strip with horizontally scrollable chips; no vertical gesture impact
+        VStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(NotificationFilter.allCases, id: \.self) { filter in
+                        FilterChip(
+                            title: filter.rawValue.localized,
+                            isSelected: selectedFilter == filter
+                        ) {
+                            selectedFilter = filter
+                        }
                     }
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
+            .frame(height: 44)
+            .background(Color.backgroundPrimary)
         }
-        .frame(height: 44)
-        .padding(.vertical, 16)
-        .background(Color.backgroundPrimary)
-        .clipped()
-        .gesture(
-            DragGesture()
-                .onChanged { value in
-                    // Only allow horizontal dragging, ignore vertical
-                    if abs(value.translation.height) > abs(value.translation.width) {
-                        return
-                    }
-                }
-        )
     }
     
     private var notificationsContentSection: some View {
@@ -136,10 +137,10 @@ struct NotificationsView: View {
                         handleNotificationAction(notification)
                     })
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 6)
                 }
             }
-            .padding(.vertical, 16)
+            .padding(.vertical, 8)
         }
     }
     
@@ -190,8 +191,6 @@ struct NotificationsView: View {
             return "No mentions notifications".localized
         case .tasks:
             return "No tasks notifications".localized
-        case .pods:
-            return "No pods notifications".localized
         }
     }
     

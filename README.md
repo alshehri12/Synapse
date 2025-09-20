@@ -13,20 +13,18 @@ A modern iOS app built with SwiftUI that connects creative minds and transforms 
 - **Multi-language Support**: English and Arabic localization
 
 ### 🎯 Key Capabilities
-- **Firebase Integration**: Real-time data synchronization and cloud storage
-- **Google Sign-In**: Secure authentication with Google accounts
-- **Push Notifications**: Stay updated with real-time notifications
-- **Offline Support**: Continue working even without internet connection
+- **Supabase Integration**: Auth, Postgres with RLS, and realtime
+- **Google Sign-In**: Secure authentication via Supabase OAuth (optional)
+- **Email OTP/Verification**: Postmark-ready via Supabase Auth
 - **Modern UI/UX**: Beautiful, intuitive interface designed for iOS
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: SwiftUI, iOS 18.1+
-- **Backend**: Firebase (Firestore, Authentication, Cloud Functions)
-- **Authentication**: Google Sign-In
-- **Database**: Cloud Firestore
-- **Real-time**: Firebase Realtime Database
-- **Notifications**: Firebase Cloud Messaging
+- **Backend**: Supabase (Auth, Postgres, optional Edge Functions)
+- **Authentication**: Email/Password, OTP, Google via Supabase
+- **Database**: Postgres (RLS-secured tables)
+- **Real-time**: Supabase Realtime (chat, tasks, notifications)
 - **Architecture**: MVVM with Environment Objects
 
 ## 📱 Screenshots
@@ -38,8 +36,8 @@ A modern iOS app built with SwiftUI that connects creative minds and transforms 
 ### Prerequisites
 - Xcode 16.0+
 - iOS 18.1+ deployment target
-- Firebase project setup
-- Google Sign-In configuration
+- Supabase project (URL + anon key)
+- Optional: Google OAuth set up in Supabase
 
 ### Installation
 1. Clone the repository
@@ -49,10 +47,11 @@ git clone https://github.com/alshehri12/Synapse.git
 
 2. Open `Synapse.xcodeproj` in Xcode
 
-3. Configure Firebase:
-   - Add your `GoogleService-Info.plist` to the project
-   - Enable Google Sign-In in Firebase Console
-   - Configure Firestore rules
+3. Configure Supabase:
+   - In `Synapse/Info.plist`, set `SupabaseURL` and `SupabaseAnonKey`
+   - Optional: set `GIDClientID` for Google Sign-In
+   - Open Supabase Dashboard → SQL Editor → run `supabase_schema.sql`
+   - (Recommended) Run `seed_demo_data.sql` to populate demo content
 
 4. Build and run the project
 
@@ -70,8 +69,7 @@ Synapse/
 │   ├── Profile/
 │   └── Shared/
 ├── Managers/
-│   ├── FirebaseManager.swift
-│   ├── GoogleSignInManager.swift
+│   ├── SupabaseManager.swift
 │   └── LocalizationManager.swift
 ├── Models/
 │   ├── Models.swift
@@ -90,9 +88,20 @@ Synapse/
 - **Profile**: User profile management and settings
 
 ### Managers
-- **FirebaseManager**: Handles all Firebase operations
-- **GoogleSignInManager**: Manages Google authentication
+- **SupabaseManager**: Handles authentication, ideas, pods, tasks, chat
 - **LocalizationManager**: Multi-language support
+
+## 🧪 Demo Data (for screenshots)
+
+Seed demo users, ideas, pods, tasks, and comments:
+
+1. Open Supabase SQL Editor
+2. Run `seed_demo_data.sql`
+3. Sign in and browse Explore (ideas), Idea Details (comments), My Pods (projects), Tasks, and Chat
+
+Included demo themes:
+- Mobile app for car fixing
+- Pizza restaurant project
 
 ## 🌟 Highlights
 

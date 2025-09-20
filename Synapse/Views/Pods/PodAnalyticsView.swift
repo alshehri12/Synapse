@@ -106,7 +106,7 @@ struct ProjectAnalyticsView: View {
                 let analyticsData: [String: Any] = [:]
                 
                 await MainActor.run {
-                    // Convert Firebase data to ProjectAnalytics model
+                    // Convert data to ProjectAnalytics model
                     let completionRate = analyticsData["completionRate"] as? Int ?? 0
                     let activeMembers = analyticsData["activeMembers"] as? Int ?? 0
                     let tasksCompleted = analyticsData["tasksCompleted"] as? Int ?? 0

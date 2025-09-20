@@ -135,6 +135,13 @@ struct SignUpView: View {
         } message: {
             Text("Your account has been created successfully.")
         }
+        .alert(isPresented: .constant(!(supabaseManager.authError ?? "").isEmpty)) {
+            Alert(
+                title: Text("Sign Up Error".localized),
+                message: Text(supabaseManager.authError ?? ""),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .sheet(isPresented: $showOtpVerification) {
             OtpVerificationView(email: email)
         }

@@ -52,6 +52,8 @@ struct IdeaDetailView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
+                .frame(maxWidth: 800, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
             .background(Color.backgroundSecondary)
             .navigationTitle("Idea Details".localized)
@@ -232,6 +234,7 @@ struct IdeaDetailView: View {
                         Spacer()
                         
             projectActionButton
+                .layoutPriority(1)
         }
         .padding(.horizontal, 20)
     }
@@ -283,35 +286,36 @@ struct IdeaDetailView: View {
     
     @ViewBuilder
     private var nonOwnerProjectButton: some View {
-                                if isLoadingPods {
-                                    HStack(spacing: 6) {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .scaleEffect(0.8)
-                                        Text("Loading...".localized)
-                                            .font(.system(size: 14, weight: .medium))
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.textSecondary.opacity(0.6))
-                                    .cornerRadius(20)
-                                } else if isUserInPod {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 16))
-                                        Text("Already in Project".localized)
-                                            .font(.system(size: 14, weight: .medium))
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.8)
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.accentGreen.opacity(0.8))
-                                    .cornerRadius(20)
-                                    .fixedSize(horizontal: true, vertical: false)
-                                } else if !existingPods.isEmpty {
+        if isLoadingPods {
+            HStack(spacing: 6) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(0.8)
+                Text("Loading...".localized)
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.textSecondary.opacity(0.6))
+            .cornerRadius(20)
+            .fixedSize(horizontal: true, vertical: false)
+        } else if isUserInPod {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16))
+                Text("Already in Project".localized)
+                    .font(.system(size: 14, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.accentGreen.opacity(0.8))
+            .cornerRadius(20)
+            .fixedSize(horizontal: true, vertical: false)
+        } else if !existingPods.isEmpty {
             // Show different button based on join request status
             if joinRequestStatus == "pending" {
                 HStack(spacing: 6) {
@@ -345,39 +349,37 @@ struct IdeaDetailView: View {
                 .fixedSize(horizontal: true, vertical: false)
             } else {
                 Button(action: { sendJoinRequest() }) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "person.3")
-                                                .font(.system(size: 16))
+                    HStack(spacing: 6) {
+                        Image(systemName: "person.3")
+                            .font(.system(size: 16))
                         Text("Request to Join".localized)
-                                                .font(.system(size: 14, weight: .medium))
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
-                                        }
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(Color.accentBlue)
-                                        .cornerRadius(20)
-                                        .fixedSize(horizontal: true, vertical: false)
+                            .font(.system(size: 14, weight: .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.accentBlue)
+                    .cornerRadius(20)
                 }
-                                    }
-                                } else {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "person.3.fill")
-                                            .font(.system(size: 16))
-                                        Text("No Projects Yet".localized)
-                                            .font(.system(size: 14, weight: .medium))
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.8)
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.textSecondary.opacity(0.6))
-                                    .cornerRadius(20)
-                                    .fixedSize(horizontal: true, vertical: false)
-                                }
-                            }
+            }
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 16))
+                Text("No Projects Yet".localized)
+                    .font(.system(size: 14, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.textSecondary.opacity(0.6))
+            .cornerRadius(20)
+        }
+    }
     
     private var ownerToolbarButtons: some View {
         HStack(spacing: 8) {

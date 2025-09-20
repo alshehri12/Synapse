@@ -127,7 +127,10 @@ struct PodDetailView: View {
                     .tag(2)
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.backgroundSecondary)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.backgroundSecondary)
         .navigationTitle(currentPod.name)
         .navigationBarTitleDisplayMode(.inline)

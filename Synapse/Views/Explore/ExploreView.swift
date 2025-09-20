@@ -21,9 +21,9 @@ struct ExploreView: View {
     
     enum IdeaFilter: String, CaseIterable {
         case all = "All"
-        case sparking = "Fresh"
+        case new = "New"
         case active = "Active"
-        case done = "Completed"
+        case completed = "Completed"
     }
     
     var filteredIdeas: [IdeaSpark] {
@@ -37,11 +37,11 @@ struct ExploreView: View {
         switch selectedFilter {
         case .all:
             return filtered
-        case .sparking:
-            return filtered.filter { $0.status == .sparking }
+        case .new:
+            return filtered.sorted { $0.createdAt > $1.createdAt }
         case .active:
-            return filtered.filter { $0.status == .incubating }
-        case .done:
+            return filtered.filter { $0.status == .incubating || $0.status == .planning }
+        case .completed:
             return filtered.filter { $0.status == .launched || $0.status == .completed }
         }
     }
@@ -107,8 +107,17 @@ struct ExploreView: View {
                 }
             }
             .background(Color.backgroundSecondary)
-            .navigationTitle("Explore".localized)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("")
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .foregroundColor(Color.accentGreen)
+                        Text("Explore Ideas".localized)
+                            .font(.system(size: 20, weight: .semibold))
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 8) {
@@ -124,9 +133,9 @@ struct ExploreView: View {
                             showingCreateIdea = true
                         }) {
                             HStack(spacing: 6) {
-                                Image(systemName: "sparkles")
+                                Image(systemName: "plus.circle")
                                     .font(.system(size: 14, weight: .semibold))
-                                Text("Spark".localized)
+                                Text("New Idea".localized)
                                     .font(.system(size: 14, weight: .semibold))
                             }
                             .foregroundColor(.white)
@@ -153,7 +162,7 @@ struct ExploreView: View {
             .fullScreenCover(isPresented: $showingCreateIdea) {
                 CreateIdeaView(onDismiss: {
                     showingCreateIdea = false
-                    // Add a small delay to ensure Firebase data is committed
+                    // Add a small delay to ensure data is committed
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         loadIdeas()
                     }

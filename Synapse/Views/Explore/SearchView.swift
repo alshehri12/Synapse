@@ -704,7 +704,7 @@ let mockUsers: [UserProfile] = [
         email: "alex@example.com",
         bio: "Full-stack developer passionate about AI",
         avatarURL: nil,
-        skills: ["Swift", "Python", "Firebase"],
+        skills: ["Swift", "Python", "Supabase"],
         interests: ["AI", "Education"],
         ideasSparked: 5,
         projectsContributed: 3,

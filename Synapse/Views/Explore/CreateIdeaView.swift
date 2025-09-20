@@ -60,7 +60,7 @@ struct CreateIdeaView: View {
                     
                     // Header
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Spark a New Idea".localized)
+                        Text("Create a New Idea".localized)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(Color.textPrimary)
                         
@@ -231,7 +231,7 @@ struct CreateIdeaView: View {
                                         .font(.system(size: 16, weight: .semibold))
                                 }
                                 
-                                Text(isSubmitting ? "Sparking...".localized : "Create Idea".localized)
+                                Text(isSubmitting ? "Creating...".localized : "Create Idea".localized)
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.white)

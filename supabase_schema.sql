@@ -129,6 +129,16 @@ CREATE TABLE public.idea_likes (
     UNIQUE(idea_id, user_id)
 );
 
+-- Idea comments table
+CREATE TABLE public.idea_comments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID REFERENCES public.idea_sparks(id) ON DELETE CASCADE,
+    author_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    author_username TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for performance
 CREATE INDEX idx_idea_sparks_author_id ON public.idea_sparks(author_id);
 CREATE INDEX idx_idea_sparks_is_public ON public.idea_sparks(is_public);
@@ -161,6 +171,9 @@ CREATE INDEX idx_pod_invitations_status ON public.pod_invitations(status);
 CREATE INDEX idx_idea_likes_idea_id ON public.idea_likes(idea_id);
 CREATE INDEX idx_idea_likes_user_id ON public.idea_likes(user_id);
 
+CREATE INDEX idx_idea_comments_idea_id ON public.idea_comments(idea_id);
+CREATE INDEX idx_idea_comments_created_at ON public.idea_comments(created_at DESC);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.idea_sparks ENABLE ROW LEVEL SECURITY;
@@ -171,6 +184,7 @@ ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pod_invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.idea_comments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 
@@ -265,7 +279,13 @@ CREATE POLICY "Pod members can send messages" ON public.chat_messages
 
 -- Notifications: Users can only view their own notifications
 CREATE POLICY "Users can view own notifications" ON public.notifications
-    FOR ALL USING (auth.uid() = user_id);
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Any authenticated user can create notifications (demo)" ON public.notifications
+    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Users can update own notifications" ON public.notifications
+    FOR UPDATE USING (auth.uid() = user_id);
 
 -- Activities: Users can view public activities or their own
 CREATE POLICY "Users can view activities" ON public.activities
@@ -278,11 +298,31 @@ CREATE POLICY "Users can create activities" ON public.activities
 CREATE POLICY "Users can view relevant invitations" ON public.pod_invitations
     FOR SELECT USING (auth.uid() = invitee_id OR auth.uid() = inviter_id);
 
-CREATE POLICY "Users can create invitations" ON public.pod_invitations
-    FOR INSERT WITH CHECK (auth.uid() = inviter_id);
+CREATE POLICY "Users can create invitations (owner or requester)" ON public.pod_invitations
+    FOR INSERT WITH CHECK (auth.uid() = inviter_id OR auth.uid() = invitee_id);
 
 CREATE POLICY "Users can respond to invitations" ON public.pod_invitations
     FOR UPDATE USING (auth.uid() = invitee_id);
+
+-- Idea comments policies
+CREATE POLICY "Public idea comments visible to all or author" ON public.idea_comments
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.idea_sparks i
+            WHERE i.id = idea_comments.idea_id
+              AND (i.is_public = true OR i.author_id = auth.uid())
+        )
+        OR author_id = auth.uid()
+    );
+
+CREATE POLICY "Users can create comments on ideas" ON public.idea_comments
+    FOR INSERT WITH CHECK (author_id = auth.uid());
+
+CREATE POLICY "Users can update own comments" ON public.idea_comments
+    FOR UPDATE USING (author_id = auth.uid());
+
+CREATE POLICY "Users can delete own comments" ON public.idea_comments
+    FOR DELETE USING (author_id = auth.uid());
 
 -- Functions for automatic timestamps
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -316,3 +356,4 @@ ALTER publication supabase_realtime ADD TABLE public.chat_messages;
 ALTER publication supabase_realtime ADD TABLE public.notifications;
 ALTER publication supabase_realtime ADD TABLE public.tasks;
 ALTER publication supabase_realtime ADD TABLE public.pod_members;
+ALTER publication supabase_realtime ADD TABLE public.idea_comments;

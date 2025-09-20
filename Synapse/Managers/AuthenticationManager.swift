@@ -100,7 +100,7 @@ class AuthenticationManager: ObservableObject {
             print("✅ Supabase user created successfully")
             
             // Note: User profile creation in Supabase will be handled differently
-            // For now, we'll keep using Firebase for database operations
+            // Database operations now use Supabase
             // User profile creation is now handled by SupabaseManager during sign up
             // The user profile is automatically created in Supabase when user signs up
             print("✅ User profile will be created automatically by SupabaseManager")

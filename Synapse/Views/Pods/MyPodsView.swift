@@ -367,7 +367,7 @@ let mockPods: [IncubationProject] = [
         ],
         tasks: [
             ProjectTask(id: "1", title: "Design user interface", description: "Create wireframes and mockups", assignedTo: "user2", assignedToUsername: "SarahKim", dueDate: Date().addingTimeInterval(86400), createdAt: Date().addingTimeInterval(-86400), updatedAt: Date().addingTimeInterval(-86400), status: .completed, priority: .high),
-            ProjectTask(id: "2", title: "Set up Firebase backend", description: "Configure authentication and database", assignedTo: "user1", assignedToUsername: "AlexChen", dueDate: Date().addingTimeInterval(172800), createdAt: Date().addingTimeInterval(-7200), updatedAt: Date().addingTimeInterval(-7200), status: .inProgress, priority: .high),
+            ProjectTask(id: "2", title: "Set up Supabase backend", description: "Configure authentication and database", assignedTo: "user1", assignedToUsername: "AlexChen", dueDate: Date().addingTimeInterval(172800), createdAt: Date().addingTimeInterval(-7200), updatedAt: Date().addingTimeInterval(-7200), status: .inProgress, priority: .high),
             ProjectTask(id: "3", title: "Create project roadmap", description: "Define milestones and timeline", assignedTo: "user3", assignedToUsername: "MarcusRodriguez", dueDate: Date().addingTimeInterval(259200), createdAt: Date().addingTimeInterval(-3600), updatedAt: Date().addingTimeInterval(-3600), status: .todo, priority: .medium)
         ],
         status: .active

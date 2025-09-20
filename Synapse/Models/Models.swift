@@ -204,7 +204,7 @@ let mockUser = UserProfile(
     email: "alex.chen@example.com",
     bio: "Passionate about creating innovative solutions that make a difference. Full-stack developer with a love for AI and education technology.",
     avatarURL: nil,
-    skills: ["Swift", "Python", "Firebase", "UI/UX Design", "Project Management"],
+    skills: ["Swift", "Python", "Supabase", "UI/UX Design", "Project Management"],
     interests: ["AI", "Education", "Sustainability", "Mobile Development", "Open Source"],
     ideasSparked: 3,
     projectsContributed: 7,

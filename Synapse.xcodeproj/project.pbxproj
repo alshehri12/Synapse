@@ -69,35 +69,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C428DBDA2E245541005396C0 /* FirebaseFunctions in Frameworks */,
-				C428DBD22E245541005396C0 /* FirebaseDatabase in Frameworks */,
-				C428DBC02E245541005396C0 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
-				C428DBEA2E245541005396C0 /* FirebaseStorage in Frameworks */,
-				C428DBC42E245541005396C0 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */,
-				C428DBCE2E245541005396C0 /* FirebaseCore in Frameworks */,
-				C428DBBC2E245541005396C0 /* FirebaseAnalytics in Frameworks */,
 				C4C4D98B2E299600005E64CC /* GoogleSignInSwift in Frameworks */,
-				C428DBE22E245541005396C0 /* FirebaseMLModelDownloader in Frameworks */,
-				C428DBD42E245541005396C0 /* FirebaseDynamicLinks in Frameworks */,
-				C428DBC22E245541005396C0 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */,
-				C428DBCA2E245541005396C0 /* FirebaseAuth in Frameworks */,
-				C428DBD62E245541005396C0 /* FirebaseFirestore in Frameworks */,
-				C428DBD82E245541005396C0 /* FirebaseFirestoreCombine-Community in Frameworks */,
 				C4C4D9892E299600005E64CC /* GoogleSignIn in Frameworks */,
-				C428DBEE2E245541005396C0 /* FirebaseVertexAI in Frameworks */,
-				C428DBDE2E245541005396C0 /* FirebaseInAppMessaging-Beta in Frameworks */,
-				C428DBDC2E245541005396C0 /* FirebaseFunctionsCombine-Community in Frameworks */,
-				C428DBC62E245541005396C0 /* FirebaseAppCheck in Frameworks */,
-				C428DBEC2E245541005396C0 /* FirebaseStorageCombine-Community in Frameworks */,
-				C428DBE82E245541005396C0 /* FirebaseRemoteConfig in Frameworks */,
-				C428DBBE2E245541005396C0 /* FirebaseAnalyticsCore in Frameworks */,
-				C428DBBA2E245541005396C0 /* FirebaseAI in Frameworks */,
-				C428DBE62E245541005396C0 /* FirebasePerformance in Frameworks */,
-				C428DBD02E245541005396C0 /* FirebaseCrashlytics in Frameworks */,
-				C428DBC82E245541005396C0 /* FirebaseAppDistribution-Beta in Frameworks */,
-				C428DBCC2E245541005396C0 /* FirebaseAuthCombine-Community in Frameworks */,
-				C428DBE42E245541005396C0 /* FirebaseMessaging in Frameworks */,
-				C428DBE02E245541005396C0 /* FirebaseInstallations in Frameworks */,
 				C4SUPABASE12345678901B /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -141,33 +114,6 @@
 			);
 			name = Synapse;
 			packageProductDependencies = (
-				C428DBB92E245541005396C0 /* FirebaseAI */,
-				C428DBBB2E245541005396C0 /* FirebaseAnalytics */,
-				C428DBBD2E245541005396C0 /* FirebaseAnalyticsCore */,
-				C428DBBF2E245541005396C0 /* FirebaseAnalyticsIdentitySupport */,
-				C428DBC12E245541005396C0 /* FirebaseAnalyticsOnDeviceConversion */,
-				C428DBC32E245541005396C0 /* FirebaseAnalyticsWithoutAdIdSupport */,
-				C428DBC52E245541005396C0 /* FirebaseAppCheck */,
-				C428DBC72E245541005396C0 /* FirebaseAppDistribution-Beta */,
-				C428DBC92E245541005396C0 /* FirebaseAuth */,
-				C428DBCB2E245541005396C0 /* FirebaseAuthCombine-Community */,
-				C428DBCD2E245541005396C0 /* FirebaseCore */,
-				C428DBCF2E245541005396C0 /* FirebaseCrashlytics */,
-				C428DBD12E245541005396C0 /* FirebaseDatabase */,
-				C428DBD32E245541005396C0 /* FirebaseDynamicLinks */,
-				C428DBD52E245541005396C0 /* FirebaseFirestore */,
-				C428DBD72E245541005396C0 /* FirebaseFirestoreCombine-Community */,
-				C428DBD92E245541005396C0 /* FirebaseFunctions */,
-				C428DBDB2E245541005396C0 /* FirebaseFunctionsCombine-Community */,
-				C428DBDD2E245541005396C0 /* FirebaseInAppMessaging-Beta */,
-				C428DBDF2E245541005396C0 /* FirebaseInstallations */,
-				C428DBE12E245541005396C0 /* FirebaseMLModelDownloader */,
-				C428DBE32E245541005396C0 /* FirebaseMessaging */,
-				C428DBE52E245541005396C0 /* FirebasePerformance */,
-				C428DBE72E245541005396C0 /* FirebaseRemoteConfig */,
-				C428DBE92E245541005396C0 /* FirebaseStorage */,
-				C428DBEB2E245541005396C0 /* FirebaseStorageCombine-Community */,
-				C428DBED2E245541005396C0 /* FirebaseVertexAI */,
 				C4C4D9882E299600005E64CC /* GoogleSignIn */,
 				C4C4D98A2E299600005E64CC /* GoogleSignInSwift */,
 				C4SUPABASE12345678901A /* Supabase */,
@@ -202,7 +148,6 @@
 			mainGroup = C428DB902E245046005396C0;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				C428DBB82E245541005396C0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				C4C4D9872E299600005E64CC /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				C4SUPABASE1234567890123 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);

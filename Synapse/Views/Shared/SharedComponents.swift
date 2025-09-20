@@ -30,6 +30,71 @@ struct FilterChip: View {
     }
 }
 
+// MARK: - App Alert Banner
+struct AppAlertBanner: View {
+    enum Style { case info, success, warning, error }
+    let title: String
+    let message: String
+    let style: Style
+    let onClose: (() -> Void)?
+    
+    private var backgroundColor: Color {
+        switch style {
+        case .info: return Color.accentBlue.opacity(0.1)
+        case .success: return Color.accentGreen.opacity(0.1)
+        case .warning: return Color.accentOrange.opacity(0.12)
+        case .error: return Color.error.opacity(0.1)
+        }
+    }
+    
+    private var accentColor: Color {
+        switch style {
+        case .info: return Color.accentBlue
+        case .success: return Color.accentGreen
+        case .warning: return Color.accentOrange
+        case .error: return Color.error
+        }
+    }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Circle()
+                .fill(accentColor)
+                .frame(width: 10, height: 10)
+                .padding(.top, 6)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                Text(message)
+                    .font(.system(size: 13))
+                    .foregroundColor(Color.textSecondary)
+            }
+            
+            Spacer()
+            
+            if let onClose = onClose {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color.textSecondary)
+                        .padding(6)
+                        .background(Color.backgroundPrimary)
+                        .clipShape(Circle())
+                }
+            }
+        }
+        .padding(16)
+        .background(backgroundColor)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(accentColor.opacity(0.2), lineWidth: 1)
+        )
+        .cornerRadius(12)
+    }
+}
+
 // MARK: - Empty State View
 struct EmptyStateView: View {
     let icon: String
