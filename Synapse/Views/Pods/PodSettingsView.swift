@@ -22,6 +22,7 @@ struct PodSettingsView: View {
     @State private var isLoading = false
     @State private var showingEditName = false
     @State private var showingEditDescription = false
+    @State private var showingInviteMember = false
     
     var body: some View {
         NavigationView {
@@ -49,7 +50,10 @@ struct PodSettingsView: View {
                             showingEditName: $showingEditName,
                             showingEditDescription: $showingEditDescription,
                             showingDeleteAlert: $showingDeleteAlert,
-                            showingLeaveAlert: $showingLeaveAlert
+                            showingLeaveAlert: $showingLeaveAlert,
+                            onInvite: {
+                                showingInviteMember = true
+                            }
                         )
                     } else {
                         // Regular Member View
@@ -111,6 +115,9 @@ struct PodSettingsView: View {
                     maxLength: 200,
                     isMultiline: true
                 )
+            }
+            .sheet(isPresented: $showingInviteMember) {
+                InviteMemberView(pod: pod)
             }
             .onAppear {
                 loadSettings()
@@ -363,6 +370,7 @@ struct PodOwnerSettingsView: View {
     @Binding var showingEditDescription: Bool
     @Binding var showingDeleteAlert: Bool
     @Binding var showingLeaveAlert: Bool
+    let onInvite: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -401,6 +409,26 @@ struct PodOwnerSettingsView: View {
                         action: { isPublic.toggle() },
                         showToggle: true,
                         isToggled: isPublic
+                    )
+                }
+                .background(Color.backgroundPrimary)
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
+            }
+            
+            // Invite Members
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Collaboration".localized)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                    .padding(.horizontal, 20)
+                
+                VStack(spacing: 0) {
+                    SettingRow(
+                        title: "Invite Members".localized,
+                        subtitle: "Add new members to this pod".localized,
+                        icon: "person.badge.plus",
+                        action: onInvite
                     )
                 }
                 .background(Color.backgroundPrimary)

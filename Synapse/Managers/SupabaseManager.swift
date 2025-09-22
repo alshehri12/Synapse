@@ -1589,7 +1589,21 @@ class SupabaseManager: ObservableObject {
             .eq("user_id", value: userId)
             .execute()
         
+        // Also clear any join request records for this user and pod
+        try await clearJoinRequest(podId: podId, userId: userId)
+        
         print("✅ Member removed from pod: \(userId) from \(podId)")
+    }
+    
+    func clearJoinRequest(podId: String, userId: String) async throws {
+        try await supabase
+            .from("pod_invitations")
+            .delete()
+            .eq("pod_id", value: podId)
+            .eq("invitee_id", value: userId) // Requester is stored in invitee_id
+            .execute()
+        
+        print("✅ Join request cleared for user: \(userId) from pod: \(podId)")
     }
     
     // MARK: - Like System

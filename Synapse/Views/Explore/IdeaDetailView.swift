@@ -24,7 +24,6 @@ struct IdeaDetailView: View {
     @State private var isLoadingComments = false
     @State private var isSubmittingComment = false
     @State private var showingCreatePod = false
-    @State private var showingJoinPod = false
     @State private var showingShareSheet = false
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
@@ -83,11 +82,6 @@ struct IdeaDetailView: View {
                     // Mark that user has created a project
                     hasCreatedProject = true
                 })
-            }
-            .sheet(isPresented: $showingJoinPod, onDismiss: {
-                loadExistingPods()
-            }) {
-                JoinPodView(availablePods: existingPods)
             }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheet(items: [currentIdea.title, currentIdea.description])
@@ -196,45 +190,45 @@ struct IdeaDetailView: View {
     }
                     
     private var actionButtonsSection: some View {
-                    HStack(spacing: 12) {
-                        Button(action: likeIdea) {
-                            HStack(spacing: 6) {
-                                Image(systemName: isLiked ? "heart.fill" : "heart")
-                                    .font(.system(size: 16))
-                                Text(isLiked ? "Liked".localized : "Like".localized)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                    HStack(spacing: 8) {
+                        // Like and Share buttons grouped together
+                        HStack(spacing: 4) {
+                            Button(action: likeIdea) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                                        .font(.system(size: 16))
+                                    Text(isLiked ? "Liked".localized : "Like".localized)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .lineLimit(1)
+                                        .fixedSize(horizontal: true, vertical: false)
+                                }
+                                .foregroundColor(isLiked ? .red : Color.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(isLiked ? Color.red.opacity(0.1) : Color.backgroundSecondary)
+                                .cornerRadius(20)
                             }
-                            .foregroundColor(isLiked ? .red : Color.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(isLiked ? Color.red.opacity(0.1) : Color.backgroundSecondary)
-                            .cornerRadius(20)
-                            .fixedSize(horizontal: true, vertical: false)
-                        }
-                        
-                        Button(action: { showingShareSheet = true }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 16))
-                                Text("Share".localized)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                            
+                            Button(action: { showingShareSheet = true }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.system(size: 16))
+                                    Text("Share".localized)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .lineLimit(1)
+                                        .fixedSize(horizontal: true, vertical: false)
+                                }
+                                .foregroundColor(Color.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.backgroundSecondary)
+                                .cornerRadius(20)
                             }
-                            .foregroundColor(Color.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.backgroundSecondary)
-                            .cornerRadius(20)
-                            .fixedSize(horizontal: true, vertical: false)
                         }
                         
                         Spacer()
                         
             projectActionButton
-                .layoutPriority(1)
         }
         .padding(.horizontal, 20)
     }
@@ -251,14 +245,13 @@ struct IdeaDetailView: View {
                         Text("Project Created".localized)
                             .font(.system(size: 14, weight: .medium))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(Color.success.opacity(0.7))
                     .cornerRadius(20)
-                    .fixedSize(horizontal: true, vertical: false)
                 } else {
                     // User can create a project
                                 Button(action: { showingCreatePod = true }) {
@@ -268,14 +261,13 @@ struct IdeaDetailView: View {
                                         Text("Create Project".localized)
                                             .font(.system(size: 14, weight: .medium))
                                             .lineLimit(1)
-                                            .minimumScaleFactor(0.8)
+                                            .fixedSize(horizontal: true, vertical: false)
                                     }
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
                                     .background(Color.accentGreen)
                                     .cornerRadius(20)
-                                    .fixedSize(horizontal: true, vertical: false)
                     }
                                 }
                             } else {
@@ -293,13 +285,14 @@ struct IdeaDetailView: View {
                     .scaleEffect(0.8)
                 Text("Loading...".localized)
                     .font(.system(size: 14, weight: .medium))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .foregroundColor(.white)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color.textSecondary.opacity(0.6))
             .cornerRadius(20)
-            .fixedSize(horizontal: true, vertical: false)
         } else if isUserInPod {
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
@@ -307,14 +300,13 @@ struct IdeaDetailView: View {
                 Text("Already in Project".localized)
                     .font(.system(size: 14, weight: .medium))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .foregroundColor(.white)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color.accentGreen.opacity(0.8))
             .cornerRadius(20)
-            .fixedSize(horizontal: true, vertical: false)
         } else if !existingPods.isEmpty {
             // Show different button based on join request status
             if joinRequestStatus == "pending" {
@@ -324,14 +316,13 @@ struct IdeaDetailView: View {
                     Text("Request Sent".localized)
                         .font(.system(size: 14, weight: .medium))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(Color.accentOrange.opacity(0.8))
                 .cornerRadius(20)
-                .fixedSize(horizontal: true, vertical: false)
             } else if joinRequestStatus == "accepted" {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
@@ -339,14 +330,13 @@ struct IdeaDetailView: View {
                     Text("Already in Project".localized)
                         .font(.system(size: 14, weight: .medium))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(Color.accentGreen.opacity(0.8))
                 .cornerRadius(20)
-                .fixedSize(horizontal: true, vertical: false)
             } else {
                 Button(action: { sendJoinRequest() }) {
                     HStack(spacing: 6) {
@@ -355,7 +345,7 @@ struct IdeaDetailView: View {
                         Text("Request to Join".localized)
                             .font(.system(size: 14, weight: .medium))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
@@ -371,7 +361,7 @@ struct IdeaDetailView: View {
                 Text("No Projects Yet".localized)
                     .font(.system(size: 14, weight: .medium))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .foregroundColor(.white)
             .padding(.horizontal, 16)
@@ -623,10 +613,11 @@ struct IdeaDetailView: View {
                 
                 await MainActor.run {
                     existingPods = pods
-                    // Treat accepted requests as joined (handles slight approval propagation delay)
-                    isUserInPod = userInPod || (requestStatus == "accepted")
+                    // Only treat as joined if user is actually in pod (not just accepted request)
+                    isUserInPod = userInPod
                     hasCreatedProject = userCreatedProject
-                    joinRequestStatus = requestStatus
+                    // Reset join request status if user left the project
+                    joinRequestStatus = userInPod ? nil : requestStatus
                     isLoadingPods = false
                     print("📊 UI: Loaded \(pods.count) existing pods for idea '\(currentIdea.title)'")
                     print("👤 UI: User membership status - isUserInPod: \(isUserInPod)")
@@ -686,6 +677,18 @@ struct IdeaDetailView: View {
         
         Task {
             do {
+                // Get username from profile first, then fallback to Google display name
+                var username = "Anonymous User"
+                do {
+                    if let userData = try await supabaseManager.getUserProfile(userId: currentUser.uid) {
+                        username = userData["username"] as? String ?? currentUser.displayName ?? "Anonymous User"
+                    } else {
+                        username = currentUser.displayName ?? "Anonymous User"
+                    }
+                } catch {
+                    username = currentUser.displayName ?? "Anonymous User"
+                }
+                
                 _ = try await supabaseManager.sendJoinRequest(
                     podId: firstPod.id,
                     inviteeId: firstPod.creatorId, // Pod owner who will receive the request
@@ -694,7 +697,7 @@ struct IdeaDetailView: View {
                 
                 await MainActor.run {
                     joinRequestStatus = "pending"
-                    print("✅ Join request sent successfully")
+                    print("✅ Join request sent successfully to pod owner: \(firstPod.creatorId)")
                 }
             } catch {
                 print("❌ Failed to send join request: \(error.localizedDescription)")
@@ -908,173 +911,6 @@ struct CreatePodFromIdeaView: View {
     }
 }
 
-// MARK: - Join Pod View
-struct JoinPodView: View {
-    let availablePods: [IncubationProject]
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var supabaseManager: SupabaseManager
-    @State private var selectedPod: IncubationProject?
-    @State private var isJoining = false
-    @State private var showingAlert = false
-    @State private var alertMessage = ""
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                Text("Join a Project".localized)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(Color.textPrimary)
-                        
-                Text("Select a project to join and start collaborating".localized)
-                            .font(.system(size: 16))
-                            .foregroundColor(Color.textSecondary)
-                    }
-                    .padding(.top, 20)
-                    
-                    LazyVStack(spacing: 16) {
-                        ForEach(availablePods) { pod in
-                            PodJoinCard(
-                                pod: pod,
-                                isSelected: selectedPod?.id == pod.id,
-                                onSelect: { selectedPod = pod }
-                            )
-                        }
-                    }
-                    
-            Button(action: joinSelectedPod) {
-                        HStack {
-                            if isJoining {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "person.badge.plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                            
-                    Text(isJoining ? "Joining Project...".localized : "Join Selected Project".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(selectedPod != nil && !isJoining ? Color.accentBlue : Color.textSecondary.opacity(0.3))
-                        .cornerRadius(12)
-                    }
-                    .disabled(selectedPod == nil || isJoining)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-            }
-            .background(Color.backgroundSecondary)
-            .navigationTitle("Join Project".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel".localized) {
-                        dismiss()
-                    }
-                }
-            }
-            .alert("Join Project Result".localized, isPresented: $showingAlert) {
-                Button("OK".localized) {
-                    if alertMessage.contains("successfully") {
-                        dismiss()
-                    }
-                }
-            } message: {
-                Text(alertMessage)
-            }
-        }
-    }
-    
-    private func joinSelectedPod() {
-        guard let pod = selectedPod,
-              let currentUser = supabaseManager.currentUser else { return }
-        
-        isJoining = true
-        
-        Task {
-            do {
-                print("✅ Add member to project requested:")
-                print("- Project ID: \(pod.id)")
-                print("- User ID: \(currentUser.uid)")
-                print("- Role: Member")
-                await MainActor.run {
-                    isJoining = false
-                    alertMessage = "Successfully joined project '\(pod.name)'!".localized
-                    showingAlert = true
-                }
-            } catch {
-                await MainActor.run {
-                    isJoining = false
-                    alertMessage = "Failed to join project: \(error.localizedDescription)".localized
-                    showingAlert = true
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Pod Join Card
-struct PodJoinCard: View {
-    let pod: IncubationProject
-    let isSelected: Bool
-    let onSelect: () -> Void
-    
-    var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(pod.name)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.textPrimary)
-                            .multilineTextAlignment(.leading)
-                        
-                        Text(pod.description)
-                            .font(.system(size: 14))
-                            .foregroundColor(Color.textSecondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 24))
-                        .foregroundColor(isSelected ? Color.accentBlue : Color.textSecondary)
-                }
-                
-                HStack {
-                    HStack(spacing: 4) {
-                        Image(systemName: "person.3")
-                            .font(.system(size: 12))
-                        Text("\(pod.members.count) members".localized)
-                            .font(.system(size: 12))
-                    }
-                    
-                    Spacer()
-                    
-                    Text("Created \(pod.createdAt.timeAgoDisplay())".localized)
-                        .font(.system(size: 12))
-                        .foregroundColor(Color.textSecondary)
-                }
-                .foregroundColor(Color.textSecondary)
-            }
-            .padding(16)
-            .background(Color.backgroundPrimary)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.accentBlue : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
 
 // MARK: - Edit Idea View
 struct EditIdeaView: View {

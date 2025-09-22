@@ -30,8 +30,11 @@ struct PodDetailView: View {
     @State private var isRefreshingTasks = false
     @State private var showingActionSheet = false
     
-    init(pod: IncubationProject) {
+    var onMembersUpdated: (() -> Void)?
+    
+    init(pod: IncubationProject, onMembersUpdated: (() -> Void)? = nil) {
         self._currentPod = State(initialValue: pod)
+        self.onMembersUpdated = onMembersUpdated
     }
     
     var body: some View {
@@ -153,16 +156,21 @@ struct PodDetailView: View {
             // Load both tasks and members when view appears
             refreshTasks()
             refreshMembers()
+            onMembersUpdated?()
         }
         .sheet(isPresented: $showingTaskSheet, onDismiss: refreshTasks) {
             CreateTaskView(pod: currentPod)
         }
         .sheet(isPresented: $showingMemberSheet, onDismiss: {
             refreshMembers() // Refresh members after adding new ones
+            onMembersUpdated?()
         }) {
             InviteMemberView(pod: currentPod)
         }
-        .sheet(isPresented: $showingSettings) {
+        .sheet(isPresented: $showingSettings, onDismiss: {
+            refreshMembers()
+            onMembersUpdated?()
+        }) {
             PodSettingsView(pod: currentPod)
         }
         .fullScreenCover(isPresented: $showingFullScreenChat) {
