@@ -91,18 +91,6 @@ Synapse/
 - **SupabaseManager**: Handles authentication, ideas, pods, tasks, chat
 - **LocalizationManager**: Multi-language support
 
-## 🧪 Demo Data (for screenshots)
-
-Seed demo users, ideas, pods, tasks, and comments:
-
-1. Open Supabase SQL Editor
-2. Run `seed_demo_data.sql`
-3. Sign in and browse Explore (ideas), Idea Details (comments), My Pods (projects), Tasks, and Chat
-
-Included demo themes:
-- Mobile app for car fixing
-- Pizza restaurant project
-
 ## 🌟 Highlights
 
 - **Modern Architecture**: Built with latest SwiftUI and iOS features
