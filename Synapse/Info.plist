@@ -25,5 +25,7 @@
     <string>https://oocegnwdfnnjgoworrwh.supabase.co</string>
     <key>SupabaseAnonKey</key>
     <string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vY2VnbndkZm5uamdvd29ycndoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDk1MDcsImV4cCI6MjA3MDkyNTUwN30.QA05vtt_KgQTQ_EfABuEtDnYO_2-W-L6zo_dHBLBRfw</string>
+    <key>OpenAIAPIKey</key>
+    <string>YOUR_OPENAI_API_KEY_HERE</string>
 </dict>
 </plist>
