@@ -1,0 +1,42 @@
+{
+  // Swift Language Server
+  "swift.path": "/usr/bin/swift",
+  "swift.sourcekit-lsp.serverPath": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/sourcekit-lsp",
+
+  // File associations
+  "files.associations": {
+    "*.swift": "swift",
+    "*.xcconfig": "properties",
+    "*.entitlements": "xml",
+    "*.plist": "xml"
+  },
+
+  // Editor settings for Swift
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.formatOnSave": false,
+  "editor.rulers": [120],
+
+  // File exclusions (hide build artifacts)
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/DerivedData": true,
+    "**/.build": true,
+    "**/build": true,
+    "**/*.xcworkspace": true,
+    "**/.swiftpm": true
+  },
+
+  // Search exclusions
+  "search.exclude": {
+    "**/DerivedData": true,
+    "**/.build": true,
+    "**/build": true,
+    "**/*.pbxproj": true
+  },
+
+  // Terminal settings
+  "terminal.integrated.env.osx": {
+    "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"
+  }
+}

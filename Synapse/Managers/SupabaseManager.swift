@@ -162,6 +162,7 @@ class SupabaseManager: ObservableObject {
         authError = nil
         
         do {
+            // Sign up WITHOUT email confirmation (we'll handle verification with OTP)
             let response = try await supabase.auth.signUp(
                 email: email,
                 password: password,
@@ -171,12 +172,16 @@ class SupabaseManager: ObservableObject {
             // User created successfully
             let user = response.user
             print("✅ User created: \(user.email ?? "no email") | id: \(user.id.uuidString)")
+            
             // Create profile row (best-effort)
             do {
                 try await createUserProfile(userId: user.id.uuidString, email: user.email ?? email, username: username)
             } catch {
                 print("⚠️ Failed to create user profile: \(error.localizedDescription)")
             }
+            
+            // Send OTP email instead of relying on Supabase's email verification
+            try await sendOtpEmail(email: email)
             
             isSigningUp = false
         } catch {
@@ -185,7 +190,7 @@ class SupabaseManager: ObservableObject {
             if lower.contains("user already registered") || lower.contains("already registered") || lower.contains("exists") {
                 authError = "An account with this email already exists. Try signing in."
             } else if lower.contains("confirm") || lower.contains("email") || lower.contains("smtp") {
-                authError = "We couldn't send the confirmation email right now. Please try again later or sign in if you already verified."
+                authError = "We couldn't send the verification code right now. Please try again later."
             } else if lower.contains("password") {
                 authError = "Password does not meet requirements."
             } else {
@@ -643,7 +648,7 @@ class SupabaseManager: ObservableObject {
             return nil
         }
         
-        let ideaId = item["idea_id"] as? String ?? ""
+        let _ = item["idea_id"] as? String ?? ""
         
         let isPublic = item["is_public"] as? Bool ?? false
         let statusString = item["status"] as? String ?? "planning"
@@ -658,7 +663,7 @@ class SupabaseManager: ObservableObject {
         
         return IncubationProject(
             id: id,
-            ideaId: ideaId,
+            ideaId: "",
             name: name,
             description: description,
             creatorId: creatorId,
@@ -742,6 +747,20 @@ class SupabaseManager: ObservableObject {
         }
     }
     
+    func sendOtpEmail(email: String) async throws {
+        do {
+            print("📧 Sending OTP email to: \(email)")
+            try await supabase.auth.resend(
+                email: email,
+                type: .signup
+            )
+            print("✅ OTP email sent successfully")
+        } catch {
+            print("❌ Error sending OTP email: \(error)")
+            throw error
+        }
+    }
+    
     // MARK: - Comments Management
     
     func getIdeaComments(ideaId: String) async throws -> [IdeaComment] {
@@ -780,7 +799,7 @@ class SupabaseManager: ObservableObject {
     
     private func parseCommentFromData(_ item: [String: Any]) -> IdeaComment? {
         guard let id = item["id"] as? String,
-              let ideaId = item["idea_id"] as? String,
+              let _ = item["idea_id"] as? String,
               let authorId = item["author_id"] as? String,
               let authorUsername = item["author_username"] as? String,
               let content = item["content"] as? String else {

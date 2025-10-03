@@ -16,63 +16,198 @@ struct AuthenticationView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 40) {
-                headerSection
-                authOptionsSection
+            VStack(spacing: 0) {
+                // Language Switcher
+                languageSwitcher
+                
+                // Hero Section (Compact)
+                heroSection
+                
+                // Features Section (Compact)
+                featuresSection
+                
+                // Auth Section
+                authSection
+                
                 Spacer()
             }
-            .padding(.horizontal, 24)
-            .background(Color.backgroundPrimary)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.backgroundPrimary,
+                        Color.backgroundSecondary.opacity(0.3)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
         .navigationBarHidden(true)
-            .sheet(isPresented: $showingSignUp) {
-                SignUpView()
-            }
-            .sheet(isPresented: $showingLogin) {
-                LoginView()
+        .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+        .sheet(isPresented: $showingSignUp) {
+            SignUpView()
+        }
+        .sheet(isPresented: $showingLogin) {
+            LoginView()
         }
     }
     
-    private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Icon
-            Image(systemName: "sparkles")
-                .font(.system(size: 80))
+    // MARK: - Language Switcher
+    private var languageSwitcher: some View {
+        HStack {
+            Spacer()
+            
+            Button(action: {
+                localizationManager.toggleLanguage()
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 14, weight: .medium))
+                    
+                    Text(localizationManager.currentLanguage == .arabic ? "العربية" : "English")
+                        .font(.system(size: 14, weight: .medium))
+                }
                 .foregroundColor(Color.accentGreen)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color.accentGreen.opacity(0.1))
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.accentGreen.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 10)
+    }
+    
+    // MARK: - Hero Section (Compact)
+    private var heroSection: some View {
+        VStack(spacing: 16) {
+            // App Icon (Smaller)
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.accentGreen.opacity(0.2),
+                                Color.accentGreen.opacity(0.05)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "sparkles")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundColor(Color.accentGreen)
+            }
+            .padding(.top, 40)
             
-            // Title
-            Text("Welcome to Synapse")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(Color.textPrimary)
+            // Main Title (Compact)
+            VStack(spacing: 8) {
+                Text(localizationManager.currentLanguage == .arabic ? "مرحباً بك في" : "Welcome to")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(Color.textSecondary)
+                
+                Text("Synapse")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(Color.textPrimary)
+                    .overlay(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.accentGreen,
+                                Color.accentGreen.opacity(0.7)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .mask(
+                            Text("Synapse")
+                                .font(.system(size: 36, weight: .bold))
+                        )
+                    )
+            }
             
-            // Subtitle
-            Text("Connect, collaborate, and bring your ideas to life")
-                .font(.system(size: 16))
+            // Subtitle (Shorter)
+            Text(localizationManager.currentLanguage == .arabic ? 
+                 "حول أفكارك إلى واقع من خلال التعاون" : 
+                 "Transform ideas into reality through collaboration")
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(Color.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                .padding(.horizontal, 32)
+                .lineLimit(2)
         }
-        .padding(.top, 60)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 20)
     }
     
-    private var authOptionsSection: some View {
+    // MARK: - Features Section (Compact)
+    private var featuresSection: some View {
         VStack(spacing: 16) {
-            // Google button (UI only for now)
-            GoogleSignInButton()
+            // Section Title (Smaller)
+            Text(localizationManager.currentLanguage == .arabic ? "لماذا تختار سينابس؟" : "Why Choose Synapse?")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(Color.textPrimary)
+                .padding(.horizontal, 24)
             
-            // Divider
-            orDivider
-            
-            Button("Create Account") {
-                showingSignUp = true
+            // Features Row (2 features only) - Equal width
+            HStack(spacing: 16) {
+                CompactFeatureCard(
+                    icon: "lightbulb.fill",
+                    title: localizationManager.currentLanguage == .arabic ? "شارك الأفكار" : "Share Ideas",
+                    description: localizationManager.currentLanguage == .arabic ? "حول الأفكار إلى مشاريع" : "Turn thoughts into projects"
+                )
+                .frame(maxWidth: .infinity)
+                
+                CompactFeatureCard(
+                    icon: "person.3.fill",
+                    title: localizationManager.currentLanguage == .arabic ? "بناء الفرق" : "Build Teams",
+                    description: localizationManager.currentLanguage == .arabic ? "تعاون مع المبدعين" : "Collaborate with innovators"
+                )
+                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(PrimaryButtonStyle())
-            
-            Button("Sign In") {
-                showingLogin = true
-            }
-            .buttonStyle(SecondaryButtonStyle())
+            .padding(.horizontal, 24)
         }
+        .padding(.bottom, 20)
+    }
+    
+    // MARK: - Auth Section (Compact)
+    private var authSection: some View {
+        VStack(spacing: 16) {
+            // Section Title (Smaller)
+            Text(localizationManager.currentLanguage == .arabic ? "ابدأ اليوم" : "Get Started Today")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color.textPrimary)
+                .padding(.horizontal, 24)
+            
+            VStack(spacing: 12) {
+                // Google button
+                GoogleSignInButton()
+                
+                // Divider
+                orDivider
+                
+                // Primary CTA
+                Button(localizationManager.currentLanguage == .arabic ? "إنشاء حساب" : "Create Account") {
+                    showingSignUp = true
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                
+                // Secondary CTA
+                Button(localizationManager.currentLanguage == .arabic ? "تسجيل الدخول" : "Sign In") {
+                    showingLogin = true
+                }
+                .buttonStyle(SecondaryButtonStyle())
+            }
+            .padding(.horizontal, 24)
+        }
+        .padding(.bottom, 20)
     }
 
     // Simple divider
@@ -81,7 +216,7 @@ struct AuthenticationView: View {
             Rectangle()
                 .fill(Color.textSecondary.opacity(0.3))
                 .frame(height: 1)
-            Text("or".localized)
+            Text(localizationManager.currentLanguage == .arabic ? "أو" : "or")
                 .font(.system(size: 14))
                 .foregroundColor(Color.textSecondary)
                 .padding(.horizontal, 16)
@@ -90,6 +225,51 @@ struct AuthenticationView: View {
                 .frame(height: 1)
         }
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Supporting Components
+
+struct CompactFeatureCard: View {
+    let icon: String
+    let title: String
+    let description: String
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Icon (Smaller)
+            ZStack {
+                Circle()
+                    .fill(Color.accentGreen.opacity(0.1))
+                    .frame(width: 36, height: 36)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.accentGreen)
+            }
+            
+            // Title (Smaller)
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.textPrimary)
+                .multilineTextAlignment(.center)
+            
+            // Description (Shorter)
+            Text(description)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.backgroundSecondary.opacity(0.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.accentGreen.opacity(0.2), lineWidth: 1)
+                )
+        )
     }
 }
 

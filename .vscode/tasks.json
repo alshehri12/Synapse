@@ -1,0 +1,144 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Synapse",
+      "type": "shell",
+      "command": "xcodebuild",
+      "args": [
+        "-project",
+        "Synapse.xcodeproj",
+        "-scheme",
+        "Synapse",
+        "-configuration",
+        "Debug",
+        "-sdk",
+        "iphonesimulator",
+        "-destination",
+        "platform=iOS Simulator,name=iPhone 16 Pro,OS=18.1",
+        "build"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build and Run on Simulator",
+      "type": "shell",
+      "command": "xcodebuild",
+      "args": [
+        "-project",
+        "Synapse.xcodeproj",
+        "-scheme",
+        "Synapse",
+        "-configuration",
+        "Debug",
+        "-sdk",
+        "iphonesimulator",
+        "-destination",
+        "platform=iOS Simulator,name=iPhone 16 Pro,OS=18.1",
+        "build"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "dependsOn": [],
+      "group": "build"
+    },
+    {
+      "label": "Launch App on Simulator",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "xcrun simctl boot 'iPhone 16 Pro' 2>/dev/null || true && open -a Simulator && sleep 3 && xcrun simctl install booted $(find ~/Library/Developer/Xcode/DerivedData -name 'Synapse.app' | head -1) && xcrun simctl launch booted Abdulrahman.Synapse"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Full Build and Run",
+      "dependsOn": [
+        "Build and Run on Simulator",
+        "Launch App on Simulator"
+      ],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean Build Folder",
+      "type": "shell",
+      "command": "xcodebuild",
+      "args": [
+        "-project",
+        "Synapse.xcodeproj",
+        "-scheme",
+        "Synapse",
+        "clean"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Open in Xcode",
+      "type": "shell",
+      "command": "open",
+      "args": [
+        "Synapse.xcodeproj"
+      ],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "List Available Simulators",
+      "type": "shell",
+      "command": "xcrun",
+      "args": [
+        "simctl",
+        "list",
+        "devices",
+        "available"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Boot Simulator",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "xcrun simctl boot 'iPhone 16 Pro' 2>/dev/null || echo 'Simulator already booted' && open -a Simulator"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

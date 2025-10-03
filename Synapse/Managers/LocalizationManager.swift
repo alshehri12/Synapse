@@ -64,6 +64,10 @@ class LocalizationManager: ObservableObject {
     func setLanguage(_ language: Language) {
         currentLanguage = language
     }
+    
+    func toggleLanguage() {
+        currentLanguage = currentLanguage == .english ? .arabic : .english
+    }
 }
 
 // MARK: - Localized String Extension

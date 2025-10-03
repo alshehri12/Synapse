@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug iOS App",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Debug-iphonesimulator/Synapse.app",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Build Synapse"
+    },
+    {
+      "name": "Attach to Running App",
+      "type": "lldb",
+      "request": "attach",
+      "program": "${workspaceFolder}/build/Debug-iphonesimulator/Synapse.app",
+      "waitFor": true
+    }
+  ]
+}
