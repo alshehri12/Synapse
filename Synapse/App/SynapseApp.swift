@@ -23,15 +23,22 @@ struct SynapseApp: App {
                         .environmentObject(localizationManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
-                } else if supabaseManager.isAuthenticated && !supabaseManager.isSigningUp {
-                    // User is signed in - show main app (no email verification gate per request)
+                } else if supabaseManager.isAuthenticated && supabaseManager.isEmailVerified && !supabaseManager.isSigningUp {
+                    // User is signed in AND email verified - show main app
                     ContentView()
                         .environmentObject(localizationManager)
                         .environmentObject(supabaseManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                } else if supabaseManager.isAuthenticated && !supabaseManager.isEmailVerified {
+                    // User is signed in BUT email NOT verified - show verification required screen
+                    EmailVerificationRequiredView()
+                        .environmentObject(localizationManager)
+                        .environmentObject(supabaseManager)
+                        .environment(\.locale, localizationManager.locale)
+                        .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
                 } else {
-                    // User is not signed in or email not verified - show authentication
+                    // User is not signed in - show authentication
                     AuthenticationView()
                         .environmentObject(localizationManager)
                         .environmentObject(supabaseManager)

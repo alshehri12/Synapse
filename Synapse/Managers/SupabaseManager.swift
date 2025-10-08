@@ -14,12 +14,13 @@ import UIKit
 
 // MARK: - Custom Errors
 
-enum AuthError: LocalizedError {
+enum AuthError: LocalizedError, Equatable {
     case noViewController
     case missingGoogleClientId
     case missingIdToken
     case googleSignInNotImplemented
-    
+    case emailNotVerified
+
     var errorDescription: String? {
         switch self {
         case .noViewController:
@@ -30,6 +31,8 @@ enum AuthError: LocalizedError {
             return "Google ID token not received"
         case .googleSignInNotImplemented:
             return "Google Sign-In implementation in progress"
+        case .emailNotVerified:
+            return "Please verify your email before signing in"
         }
     }
 }
@@ -160,41 +163,67 @@ class SupabaseManager: ObservableObject {
     func signUp(email: String, password: String, username: String) async throws {
         isSigningUp = true
         authError = nil
-        
+
         do {
-            // Sign up WITHOUT email confirmation (we'll handle verification with OTP)
+            print("🚀 Starting signup for: \(email)")
+
+            // Sign up WITHOUT auto-confirmation - require OTP verification
             let response = try await supabase.auth.signUp(
                 email: email,
                 password: password,
-                data: ["username": .string(username)]
+                data: ["username": .string(username)],
+                redirectTo: nil // Prevent auto-confirmation and auto-login
             )
-            
-            // User created successfully
+
+            // User created successfully but NOT logged in yet
             let user = response.user
             print("✅ User created: \(user.email ?? "no email") | id: \(user.id.uuidString)")
-            
-            // Create profile row (best-effort)
+
+            // Sign out immediately to prevent auto-login
+            try? await supabase.auth.signOut()
+            print("🚪 Signed out user to prevent auto-login")
+
+            // Reset auth state to keep user on auth screen
+            await MainActor.run {
+                self.currentUser = nil
+                self.isAuthenticated = false
+                self.isEmailVerified = false
+            }
+
+            // Create profile row (best-effort) - Store username temporarily
             do {
                 try await createUserProfile(userId: user.id.uuidString, email: user.email ?? email, username: username)
+                print("✅ User profile created")
             } catch {
                 print("⚠️ Failed to create user profile: \(error.localizedDescription)")
+                // Don't fail signup if profile creation fails
             }
-            
-            // Send OTP email instead of relying on Supabase's email verification
-            try await sendOtpEmail(email: email)
-            
+
+            // Send OTP email - Supabase should handle this automatically
+            do {
+                try await sendOtpEmail(email: email)
+                print("✅ OTP email sent")
+            } catch {
+                print("⚠️ Failed to send OTP email: \(error.localizedDescription)")
+                // Still allow signup to continue - user can resend
+            }
+
             isSigningUp = false
+            print("✅ Signup flow completed successfully")
+
         } catch {
             isSigningUp = false
+            print("❌ Signup failed: \(error.localizedDescription)")
+
             let lower = error.localizedDescription.lowercased()
             if lower.contains("user already registered") || lower.contains("already registered") || lower.contains("exists") {
                 authError = "An account with this email already exists. Try signing in."
-            } else if lower.contains("confirm") || lower.contains("email") || lower.contains("smtp") {
-                authError = "We couldn't send the verification code right now. Please try again later."
             } else if lower.contains("password") {
-                authError = "Password does not meet requirements."
+                authError = "Password must be at least 6 characters."
+            } else if lower.contains("rate") || lower.contains("too many") {
+                authError = "Too many attempts. Please wait a moment and try again."
             } else {
-                authError = "Failed to create account. Please try again."
+                authError = "Failed to create account: \(error.localizedDescription)"
             }
             throw error
         }
@@ -214,7 +243,7 @@ class SupabaseManager: ObservableObject {
     @MainActor
     func signIn(email: String, password: String) async throws {
         authError = nil
-        
+
         do {
             let response = try await supabase.auth.signIn(
                 email: email,
@@ -222,7 +251,11 @@ class SupabaseManager: ObservableObject {
             )
             let user = response.user
             print("✅ User signed in: \(user.email ?? "no email") (emailConfirmedAt: \(user.emailConfirmedAt?.description ?? "nil"))")
-            
+
+            // Check if email is verified
+            let emailVerified = user.emailConfirmedAt != nil
+            print("📧 Email verification status: \(emailVerified)")
+
             // Ensure user profile exists (best-effort)
             do {
                 let hasProfile = try await getUserProfile(userId: user.id.uuidString) != nil
@@ -232,12 +265,22 @@ class SupabaseManager: ObservableObject {
             } catch {
                 print("⚠️ Failed to ensure user profile on sign-in: \(error.localizedDescription)")
             }
-            
-            // Update auth state immediately (the listener will also update, but this ensures immediate UI response)
+
+            // Update auth state - ALWAYS set isAuthenticated even if email not verified
+            // The app will handle showing verification screen
             self.currentUser = user
-            self.isEmailVerified = user.emailConfirmedAt != nil
+            self.isEmailVerified = emailVerified
             self.isAuthenticated = true
             self.isAuthReady = true
+
+            // If email not verified, throw error to show message
+            if !emailVerified {
+                authError = "Please verify your email before signing in. Check your inbox for the verification code."
+                throw AuthError.emailNotVerified
+            }
+        } catch let error as AuthError where error == .emailNotVerified {
+            // Re-throw email not verified error
+            throw error
         } catch {
             authError = "Sign in failed: \(error.localizedDescription)"
             throw error
@@ -695,7 +738,7 @@ class SupabaseManager: ObservableObject {
         }
     }
     
-    func verifyOtp(email: String, otp: String) async throws {
+    func verifyOtp(email: String, otp: String, username: String? = nil) async throws {
         do {
             print("🔍 Verifying OTP: \(otp) for email: \(email)")
             let response = try await supabase.auth.verifyOTP(
@@ -703,26 +746,29 @@ class SupabaseManager: ObservableObject {
                 token: otp,
                 type: .signup
             )
-            
+
             let user = response.user
             print("✅ OTP verification successful for user: \(user.email ?? "unknown")")
-            
+
             // Ensure user profile exists after email verification
             do {
                 let hasProfile = try await getUserProfile(userId: user.id.uuidString) != nil
                 if !hasProfile {
-                    // Get username from user metadata or generate one
-                    let username = user.userMetadata["username"]?.stringValue ?? "user_\(user.id.uuidString.prefix(6))"
+                    // Use provided username or get from metadata or generate one
+                    let finalUsername = username ??
+                                       user.userMetadata["username"]?.stringValue ??
+                                       "user_\(user.id.uuidString.prefix(6))"
                     try await createUserProfile(
                         userId: user.id.uuidString,
                         email: user.email ?? email,
-                        username: username
+                        username: finalUsername
                     )
+                    print("✅ User profile created with username: \(finalUsername)")
                 }
             } catch {
                 print("⚠️ Failed to ensure user profile after OTP verification: \(error.localizedDescription)")
             }
-            
+
             await MainActor.run {
                 self.currentUser = user
                 self.isEmailVerified = user.emailConfirmedAt != nil

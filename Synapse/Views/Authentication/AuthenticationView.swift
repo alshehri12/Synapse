@@ -288,6 +288,8 @@ struct SignUpView: View {
     @State private var isCheckingUsername = false
     @State private var showSuccessAlert = false
     @State private var showOtpVerification = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     
     var isFormValid: Bool {
         !email.isEmpty && !password.isEmpty && !username.isEmpty &&
@@ -308,22 +310,15 @@ struct SignUpView: View {
             .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
-        .alert("Account Created", isPresented: $showSuccessAlert) {
+        .sheet(isPresented: $showOtpVerification) {
+            OtpVerificationView(email: email, username: username)
+        }
+        .alert("Sign Up Error", isPresented: $showError) {
             Button("OK") {
-                dismiss()
+                showError = false
             }
         } message: {
-            Text("Your account has been created successfully.")
-        }
-        .alert(isPresented: .constant(!(supabaseManager.authError ?? "").isEmpty)) {
-            Alert(
-                title: Text("Sign Up Error".localized),
-                message: Text(supabaseManager.authError ?? ""),
-                dismissButton: .default(Text("OK"))
-            )
-        }
-        .sheet(isPresented: $showOtpVerification) {
-            OtpVerificationView(email: email)
+            Text(errorMessage)
         }
     }
     
@@ -527,25 +522,27 @@ struct SignUpView: View {
     
     private func signUp() {
         guard isFormValid else { return }
-        
+
         isSubmitting = true
-        
+
         Task {
             do {
                 print("🚀 SignUpView: Creating account for: \(email)")
                 try await supabaseManager.signUp(email: email, password: password, username: username)
                 print("✅ SignUpView: Account created successfully")
-                
+
                 await MainActor.run {
                     self.isSubmitting = false
-                    self.showOtpVerification = true  // Show OTP verification instead of success alert
+                    // Always show OTP verification screen after successful account creation
+                    self.showOtpVerification = true
                 }
-                
+
             } catch {
                 print("❌ SignUpView: Account creation failed - \(error.localizedDescription)")
                 await MainActor.run {
                     self.isSubmitting = false
-                    // You could show an error alert here if needed
+                    self.errorMessage = supabaseManager.authError ?? error.localizedDescription
+                    self.showError = true
                 }
             }
         }
@@ -560,11 +557,13 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var isSubmitting = false
-    
+    @State private var showError = false
+    @State private var errorMessage = ""
+
     var isFormValid: Bool {
         !email.isEmpty && !password.isEmpty && email.contains("@")
     }
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -578,6 +577,13 @@ struct LoginView: View {
             .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
+        .alert("Sign In Error", isPresented: $showError) {
+            Button("OK") {
+                showError = false
+            }
+        } message: {
+            Text(errorMessage)
+        }
     }
     
     private var headerSection: some View {
@@ -687,26 +693,36 @@ struct LoginView: View {
     
     private func signIn() {
         guard isFormValid else { return }
-        
+
         Task {
             await MainActor.run {
                 isSubmitting = true
             }
-            
+
             do {
                 print("🚀 LoginView: Signing in user: \(email)")
                 try await supabaseManager.signIn(email: email, password: password)
-                print("✅ LoginView: Sign in successful")
-                
+                print("✅ LoginView: Sign in successful - email verified")
+
                 await MainActor.run {
                     self.isSubmitting = false
                     dismiss()
                 }
-                
+
+            } catch let error as AuthError where error == .emailNotVerified {
+                print("⚠️ LoginView: Email not verified")
+                await MainActor.run {
+                    self.isSubmitting = false
+                    self.errorMessage = "Please verify your email before signing in. Check your inbox for the verification code."
+                    self.showError = true
+                }
+                // Don't dismiss - let user stay on login screen to see the error
             } catch {
                 print("❌ LoginView: Sign in failed - \(error.localizedDescription)")
                 await MainActor.run {
                     self.isSubmitting = false
+                    self.errorMessage = error.localizedDescription
+                    self.showError = true
                 }
             }
         }
@@ -718,8 +734,9 @@ struct OtpVerificationView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
-    
+
     let email: String
+    let username: String
     @State private var otpCode = ""
     @State private var isSubmitting = false
     
@@ -753,13 +770,34 @@ struct OtpVerificationView: View {
     
     private var otpSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Verification Code".localized)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color.textPrimary)
-            
-            // 6-digit OTP input with individual boxes
+            HStack {
+                Text("Verification Code".localized)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+
+                Spacer()
+
+                // Paste button
+                Button(action: pasteOTP) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.system(size: 14))
+                        Text("Paste")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(Color.accentGreen)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentGreen.opacity(0.1))
+                    )
+                }
+            }
+
+            // 4-digit OTP input with individual boxes
             HStack(spacing: 12) {
-                ForEach(0..<6, id: \.self) { index in
+                ForEach(0..<4, id: \.self) { index in
                     OTPDigitField(
                         digit: otpDigit(at: index),
                         onDigitChange: { digit in
@@ -800,10 +838,10 @@ struct OtpVerificationView: View {
         
         // Convert back to string and clean up
         otpCode = String(codeArray).replacingOccurrences(of: " ", with: "")
-        
-        // Limit to 6 digits
-        if otpCode.count > 6 {
-            otpCode = String(otpCode.prefix(6))
+
+        // Limit to 4 digits
+        if otpCode.count > 4 {
+            otpCode = String(otpCode.prefix(4))
         }
     }
     
@@ -831,10 +869,10 @@ struct OtpVerificationView: View {
             .frame(height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(otpCode.count == 6 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
+                    .fill(otpCode.count == 4 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
             )
         }
-        .disabled(otpCode.count != 6 || isSubmitting)
+        .disabled(otpCode.count != 4 || isSubmitting)
     }
     
     private var resendButton: some View {
@@ -847,18 +885,18 @@ struct OtpVerificationView: View {
     
     private func verifyOTP() {
         guard !otpCode.isEmpty else { return }
-        
+
         isSubmitting = true
-        
+
         Task {
             do {
-                try await supabaseManager.verifyOtp(email: email, otp: otpCode)
-                DispatchQueue.main.async {
+                try await supabaseManager.verifyOtp(email: email, otp: otpCode, username: username)
+                await MainActor.run {
                     self.isSubmitting = false
                     dismiss()
                 }
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isSubmitting = false
                 }
             }
@@ -874,58 +912,173 @@ struct OtpVerificationView: View {
             }
         }
     }
+
+    private func pasteOTP() {
+        #if os(iOS)
+        if let clipboardContent = UIPasteboard.general.string {
+            // Extract only digits and take first 4
+            let digits = clipboardContent.filter { $0.isNumber }
+            otpCode = String(digits.prefix(4))
+        }
+        #endif
+    }
 }
 
 // MARK: - Email Verification Required View
 struct EmailVerificationRequiredView: View {
-    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var supabaseManager: SupabaseManager
     @EnvironmentObject private var localizationManager: LocalizationManager
-    
+    @State private var otpCode = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage = ""
+
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
                 headerSection
+                otpSection
                 actionSection
                 Spacer()
             }
             .padding(.horizontal, 24)
-        .background(Color.backgroundPrimary)
+            .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
     }
-    
+
     private var headerSection: some View {
         VStack(spacing: 16) {
             Image(systemName: "envelope.badge")
                 .font(.system(size: 64))
                 .foregroundColor(Color.accentGreen)
-            
-            Text("Check Your Email".localized)
+                .padding(.top, 60)
+
+            Text("Verify Your Email".localized)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(Color.textPrimary)
-            
-            Text("We've sent a verification link to your email address. Please check your email and click the link to verify your account.")
+
+            Text("You did not verify your account yet. Please enter the verification code sent to \(supabaseManager.currentUser?.email ?? "your email")")
                 .font(.system(size: 16))
                 .foregroundColor(Color.textSecondary)
                 .multilineTextAlignment(.center)
         }
-        .padding(.top, 60)
     }
-    
-    private var actionSection: some View {
-        VStack(spacing: 16) {
-            Button("I've Verified My Email".localized) {
-                Task {
-                    try await supabaseManager.reloadCurrentUser()
+
+    private var otpSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Verification Code".localized)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+
+                Spacer()
+
+                // Paste button
+                Button(action: pasteOTP) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.system(size: 14))
+                        Text("Paste")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(Color.accentGreen)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentGreen.opacity(0.1))
+                    )
                 }
             }
-            .buttonStyle(PrimaryButtonStyle())
-            
+
+            // 4-digit OTP input
+            HStack(spacing: 12) {
+                ForEach(0..<4, id: \.self) { index in
+                    OTPDigitField(
+                        digit: otpDigit(at: index),
+                        onDigitChange: { digit in
+                            updateOtpCode(at: index, with: digit)
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 20)
+
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(Color.error)
+            }
+        }
+    }
+
+    private func otpDigit(at index: Int) -> String {
+        guard index < otpCode.count else { return "" }
+        let digitIndex = otpCode.index(otpCode.startIndex, offsetBy: index)
+        return String(otpCode[digitIndex])
+    }
+
+    private func updateOtpCode(at index: Int, with digit: String) {
+        var codeArray = Array(otpCode)
+
+        while codeArray.count <= index {
+            codeArray.append(" ")
+        }
+
+        if digit.isEmpty {
+            if index < codeArray.count {
+                codeArray[index] = " "
+            }
+        } else {
+            codeArray[index] = Character(digit)
+        }
+
+        otpCode = String(codeArray).replacingOccurrences(of: " ", with: "")
+
+        if otpCode.count > 4 {
+            otpCode = String(otpCode.prefix(4))
+        }
+    }
+
+    private var actionSection: some View {
+        VStack(spacing: 16) {
+            verifyButton
+            resendButton
             signOutButton
         }
     }
-    
+
+    private var verifyButton: some View {
+        Button(action: verifyOTP) {
+            HStack {
+                if isSubmitting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.8)
+                } else {
+                    Text("Verify".localized)
+                        .fontWeight(.semibold)
+                }
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(otpCode.count == 4 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
+            )
+        }
+        .disabled(otpCode.count != 4 || isSubmitting)
+    }
+
+    private var resendButton: some View {
+        Button("Resend Code".localized) {
+            resendOTP()
+        }
+        .foregroundColor(Color.accentGreen)
+        .fontWeight(.medium)
+    }
+
     private var signOutButton: some View {
         Button {
             Task {
@@ -937,13 +1090,61 @@ struct EmailVerificationRequiredView: View {
                 .foregroundColor(Color.error)
         }
     }
-    
+
+    private func verifyOTP() {
+        guard !otpCode.isEmpty, let email = supabaseManager.currentUser?.email else { return }
+
+        isSubmitting = true
+        errorMessage = ""
+
+        Task {
+            do {
+                try await supabaseManager.verifyOtp(email: email, otp: otpCode)
+                await MainActor.run {
+                    self.isSubmitting = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isSubmitting = false
+                    self.errorMessage = "Invalid verification code. Please try again."
+                }
+            }
+        }
+    }
+
+    private func resendOTP() {
+        guard let email = supabaseManager.currentUser?.email else { return }
+
+        Task {
+            do {
+                try await supabaseManager.resendOtp(email: email)
+                await MainActor.run {
+                    self.errorMessage = ""
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = "Failed to resend code. Please try again."
+                }
+            }
+        }
+    }
+
     private func signOut() async {
         do {
             try await supabaseManager.signOut()
-            } catch {
+        } catch {
             print("Error signing out: \(error)")
         }
+    }
+
+    private func pasteOTP() {
+        #if os(iOS)
+        if let clipboardContent = UIPasteboard.general.string {
+            // Extract only digits and take first 4
+            let digits = clipboardContent.filter { $0.isNumber }
+            otpCode = String(digits.prefix(4))
+        }
+        #endif
     }
 }
 

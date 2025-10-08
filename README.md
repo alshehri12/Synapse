@@ -29,7 +29,33 @@ A modern iOS app built with SwiftUI that connects creative minds and transforms 
 
 ## 📱 Screenshots
 
-*[Screenshots will be added here]*
+### 🚀 Launch Page
+![Launch Page](screenshots/launch-page.png)
+*Beautiful launch page with Arabic/English language support*
+
+### 🔐 Authentication
+![Authentication](screenshots/authentication.png)
+*Secure login with Google Sign-In and OTP verification*
+
+### 💡 Idea Discovery
+![Idea Discovery](screenshots/idea-discovery.png)
+*Explore and share innovative ideas with the community*
+
+### 👥 Collaborative Pods
+![Collaborative Pods](screenshots/collaborative-pods.png)
+*Create and join teams to work on ideas together*
+
+### 💬 Real-time Chat
+![Real-time Chat](screenshots/chat.png)
+*Built-in messaging system for seamless team communication*
+
+### 📊 Analytics Dashboard
+![Analytics](screenshots/analytics.png)
+*Monitor project progress and team performance*
+
+### 🌍 Multi-language Support
+![Arabic Support](screenshots/arabic-support.png)
+*Full Arabic localization with RTL support*
 
 ## 🚀 Getting Started
 
