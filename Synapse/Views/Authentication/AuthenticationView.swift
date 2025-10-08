@@ -739,6 +739,7 @@ struct OtpVerificationView: View {
     let username: String
     @State private var otpCode = ""
     @State private var isSubmitting = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
@@ -795,18 +796,17 @@ struct OtpVerificationView: View {
                 }
             }
 
-            // 4-digit OTP input with individual boxes
-            HStack(spacing: 12) {
-                ForEach(0..<4, id: \.self) { index in
-                    OTPDigitField(
-                        digit: otpDigit(at: index),
-                        onDigitChange: { digit in
-                            updateOtpCode(at: index, with: digit)
-                        }
-                    )
-                }
+            // 4-digit OTP input with individual boxes and auto-focus
+            OTPInputView(otpCode: $otpCode)
+                .padding(.horizontal, 20)
+
+            // Error message
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(Color.error)
+                    .padding(.top, 4)
             }
-            .padding(.horizontal, 20)
         }
     }
     
@@ -887,6 +887,7 @@ struct OtpVerificationView: View {
         guard !otpCode.isEmpty else { return }
 
         isSubmitting = true
+        errorMessage = ""
 
         Task {
             do {
@@ -898,6 +899,9 @@ struct OtpVerificationView: View {
             } catch {
                 await MainActor.run {
                     self.isSubmitting = false
+                    self.errorMessage = "Invalid verification code. Please check and try again."
+                    // Clear OTP for retry
+                    self.otpCode = ""
                 }
             }
         }
@@ -991,18 +995,9 @@ struct EmailVerificationRequiredView: View {
                 }
             }
 
-            // 4-digit OTP input
-            HStack(spacing: 12) {
-                ForEach(0..<4, id: \.self) { index in
-                    OTPDigitField(
-                        digit: otpDigit(at: index),
-                        onDigitChange: { digit in
-                            updateOtpCode(at: index, with: digit)
-                        }
-                    )
-                }
-            }
-            .padding(.horizontal, 20)
+            // 4-digit OTP input with auto-focus
+            OTPInputView(otpCode: $otpCode)
+                .padding(.horizontal, 20)
 
             if !errorMessage.isEmpty {
                 Text(errorMessage)
@@ -1243,6 +1238,83 @@ struct GoogleSignInButton: View {
         .animation(.easeInOut(duration: 0.1), value: isPressed)
     }
 } 
+
+// MARK: - OTP Input View with Auto-Focus
+struct OTPInputView: View {
+    @Binding var otpCode: String
+    @FocusState private var focusedField: Int?
+    @State private var digits: [String] = ["", "", "", ""]
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(0..<4, id: \.self) { index in
+                TextField("", text: Binding(
+                    get: { digits[index] },
+                    set: { newValue in
+                        handleDigitChange(at: index, newValue: newValue)
+                    }
+                ))
+                .multilineTextAlignment(.center)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(Color.textPrimary)
+                .frame(width: 50, height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(focusedField == index ? Color.accentGreen : Color.border, lineWidth: 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.backgroundSecondary)
+                        )
+                )
+                .keyboardType(.numberPad)
+                .focused($focusedField, equals: index)
+                .onChange(of: digits[index]) { oldValue, newValue in
+                    // Auto-advance to next field
+                    if !newValue.isEmpty && index < 3 {
+                        focusedField = index + 1
+                    }
+                }
+            }
+        }
+        .onAppear {
+            // Auto-focus first field
+            focusedField = 0
+        }
+        .onChange(of: otpCode) { oldValue, newValue in
+            // Update digits when otpCode changes (e.g., from paste)
+            updateDigitsFromCode(newValue)
+        }
+    }
+
+    private func handleDigitChange(at index: Int, newValue: String) {
+        let filtered = newValue.filter { $0.isNumber }
+
+        if filtered.isEmpty {
+            // Backspace - move to previous field
+            digits[index] = ""
+            if index > 0 {
+                focusedField = index - 1
+            }
+        } else {
+            // Take only first digit
+            digits[index] = String(filtered.prefix(1))
+        }
+
+        // Update the bound otpCode
+        otpCode = digits.joined()
+    }
+
+    private func updateDigitsFromCode(_ code: String) {
+        let chars = Array(code)
+        for i in 0..<4 {
+            digits[i] = i < chars.count ? String(chars[i]) : ""
+        }
+        // Focus on next empty field or last field
+        if code.count < 4 {
+            focusedField = code.count
+        }
+    }
+}
 
 // MARK: - OTP Digit Field Component
 struct OTPDigitField: View {

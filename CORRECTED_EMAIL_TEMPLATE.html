@@ -76,6 +76,27 @@
             letter-spacing: 12px;
             margin: 15px 0;
             font-family: 'Courier New', monospace;
+            position: relative;
+        }
+        .copy-icon {
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            background: #10b981;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        .copy-icon:hover {
+            background: #059669;
         }
         .otp-instructions {
             color: #374151;
@@ -146,10 +167,61 @@
 
             <!-- OTP Display -->
             <div class="otp-container">
-                <div class="otp-label">Your Verification Code</div>
-                <div class="otp-code">{{ .Token }}</div>
-                <div class="otp-instructions">Enter this code to verify your account</div>
+                <div class="otp-label">Your Verification Code (First 4 Digits)</div>
+                <div class="otp-code" id="otpCode" style="display: inline-block; position: relative;">
+                    <span id="fourDigits">{{ .Token }}</span>
+                    <button onclick="copyOTP()" class="copy-icon" title="Copy code">📋</button>
+                </div>
+                <div class="otp-instructions">Enter the first 4 digits in the app</div>
             </div>
+
+            <script>
+                // Show only first 4 digits
+                window.onload = function() {
+                    var tokenElement = document.getElementById('fourDigits');
+                    var fullToken = tokenElement.textContent.trim();
+                    var first4Digits = fullToken.substring(0, 4);
+                    tokenElement.textContent = first4Digits;
+                    window.otpValue = first4Digits;
+                }
+
+                // Copy function
+                function copyOTP() {
+                    var textToCopy = window.otpValue || document.getElementById('fourDigits').textContent.trim();
+
+                    // Try modern clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(textToCopy).then(function() {
+                            var btn = document.querySelector('.copy-icon');
+                            btn.textContent = '✓';
+                            btn.style.background = '#059669';
+                            setTimeout(function() {
+                                btn.textContent = '📋';
+                                btn.style.background = '#10b981';
+                            }, 2000);
+                        });
+                    } else {
+                        // Fallback for older browsers/email clients
+                        var textarea = document.createElement('textarea');
+                        textarea.value = textToCopy;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand('copy');
+                            var btn = document.querySelector('.copy-icon');
+                            btn.textContent = '✓';
+                            setTimeout(function() {
+                                btn.textContent = '📋';
+                            }, 2000);
+                        } catch (err) {
+                            console.error('Copy failed:', err);
+                        }
+                        document.body.removeChild(textarea);
+                    }
+                }
+            </script>
 
             <!-- Security Notice -->
             <div class="security-notice">
