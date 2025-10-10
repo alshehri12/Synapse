@@ -293,4 +293,98 @@ struct ProjectAnalytics: Codable {
     let taskProgress: [TaskProgressData]
     let memberActivity: [MemberActivityData]
     let topContributors: [TopContributor]
-} 
+}
+
+// MARK: - Content Report Model
+struct ContentReport: Identifiable, Codable {
+    let id: String
+    let reporterId: String
+    let reportedContentType: ReportContentType
+    let reportedContentId: String
+    let reportedUserId: String?
+    let reason: ReportReason
+    let description: String?
+    let status: ReportStatus
+    let createdAt: Date
+
+    enum ReportContentType: String, Codable, CaseIterable {
+        case idea = "idea"
+        case comment = "comment"
+        case user = "user"
+        case project = "project"
+    }
+
+    enum ReportReason: String, Codable, CaseIterable {
+        case spam = "spam"
+        case harassment = "harassment"
+        case hateSpeech = "hate_speech"
+        case violence = "violence"
+        case nudity = "nudity"
+        case falseInformation = "false_information"
+        case intellectualProperty = "intellectual_property"
+        case other = "other"
+
+        var displayName: String {
+            switch self {
+            case .spam: return "Spam"
+            case .harassment: return "Harassment or Bullying"
+            case .hateSpeech: return "Hate Speech"
+            case .violence: return "Violence or Dangerous Content"
+            case .nudity: return "Nudity or Sexual Content"
+            case .falseInformation: return "False Information"
+            case .intellectualProperty: return "Intellectual Property Violation"
+            case .other: return "Other"
+            }
+        }
+    }
+
+    enum ReportStatus: String, Codable {
+        case pending = "pending"
+        case reviewing = "reviewing"
+        case resolved = "resolved"
+        case dismissed = "dismissed"
+    }
+}
+
+// MARK: - Blocked User Model
+struct BlockedUser: Identifiable, Codable {
+    let id: String
+    let blockerId: String
+    let blockedUserId: String
+    let blockedUsername: String
+    let blockedAt: Date
+}
+
+// MARK: - User Settings Model
+struct UserSettings: Codable {
+    var notificationsEnabled: Bool
+    var emailNotifications: Bool
+    var marketingEmails: Bool
+    var dataProcessingConsent: Bool
+    var analyticsConsent: Bool
+    var ageVerified: Bool
+    var gdprConsentDate: Date?
+    var coppaParentalConsent: Bool?
+
+    static var `default`: UserSettings {
+        UserSettings(
+            notificationsEnabled: true,
+            emailNotifications: true,
+            marketingEmails: false,
+            dataProcessingConsent: false,
+            analyticsConsent: false,
+            ageVerified: false,
+            gdprConsentDate: nil,
+            coppaParentalConsent: nil
+        )
+    }
+}
+
+// MARK: - Onboarding Model
+struct OnboardingPage: Identifiable {
+    let id = UUID()
+    let imageName: String
+    let title: String
+    let description: String
+    let systemIcon: String?
+}
