@@ -1720,6 +1720,38 @@ class SupabaseManager: ObservableObject {
         let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
         return !data.isEmpty
     }
+
+    // MARK: - Account Deletion
+    func requestAccountDeletion(reason: String?) async throws {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+
+        // Calculate deletion date (30 days from now)
+        let scheduledDeletionDate = Calendar.current.date(byAdding: .day, value: 30, to: Date())!
+
+        // Create deletion request
+        struct DeletionRequest: Encodable {
+            let user_id: String
+            let reason: String?
+            let status: String
+            let requested_at: String
+            let scheduled_deletion_at: String
+        }
+
+        let request = DeletionRequest(
+            user_id: userId.uuidString,
+            reason: reason,
+            status: "pending",
+            requested_at: ISO8601DateFormatter().string(from: Date()),
+            scheduled_deletion_at: ISO8601DateFormatter().string(from: scheduledDeletionDate)
+        )
+
+        _ = try await supabase
+            .from("account_deletion_requests")
+            .insert(request)
+            .execute()
+    }
 }
 
 // MARK: - User Model Extensions

@@ -178,5 +178,4 @@ struct OnboardingPageView: View {
 
 #Preview {
     OnboardingView()
-        .environmentObject(LocalizationManager())
 }

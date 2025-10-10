@@ -13,11 +13,18 @@ import Supabase
 struct SynapseApp: App {
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var supabaseManager = SupabaseManager.shared
-    
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
     var body: some Scene {
         WindowGroup {
             Group {
-                if !supabaseManager.isAuthReady {
+                if !hasCompletedOnboarding {
+                    // Show onboarding first
+                    OnboardingView()
+                        .environmentObject(localizationManager)
+                        .environment(\.locale, localizationManager.locale)
+                        .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                } else if !supabaseManager.isAuthReady {
                     // Show loading while checking auth state
                     LoadingView()
                         .environmentObject(localizationManager)

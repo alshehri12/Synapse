@@ -290,11 +290,13 @@ struct SignUpView: View {
     @State private var showOtpVerification = false
     @State private var showError = false
     @State private var errorMessage = ""
-    
+    @State private var isOver13 = false
+    @State private var agreedToTerms = false
+
     var isFormValid: Bool {
         !email.isEmpty && !password.isEmpty && !username.isEmpty &&
         password == confirmPassword && password.count >= 6 &&
-        email.contains("@") && usernameError.isEmpty
+        email.contains("@") && usernameError.isEmpty && isOver13 && agreedToTerms
     }
     
     var body: some View {
@@ -354,6 +356,8 @@ struct SignUpView: View {
             emailField
             passwordField
             confirmPasswordField
+            ageVerificationCheckbox
+            termsCheckbox
         }
         .padding(.horizontal, 24)
     }
@@ -426,7 +430,45 @@ struct SignUpView: View {
                         }
                     }
     }
-    
+
+    private var ageVerificationCheckbox: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button(action: { isOver13.toggle() }) {
+                Image(systemName: isOver13 ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 22))
+                    .foregroundColor(isOver13 ? Color.accentGreen : Color.textSecondary)
+            }
+
+            Text("I confirm that I am 13 years of age or older")
+                .font(.system(size: 14))
+                .foregroundColor(Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+        .padding(.top, 8)
+    }
+
+    private var termsCheckbox: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button(action: { agreedToTerms.toggle() }) {
+                Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 22))
+                    .foregroundColor(agreedToTerms ? Color.accentGreen : Color.textSecondary)
+            }
+
+            (Text("I agree to the ") +
+             Text("Terms of Service").foregroundColor(Color.accentGreen).underline() +
+             Text(" and ") +
+             Text("Privacy Policy").foregroundColor(Color.accentGreen).underline())
+                .font(.system(size: 14))
+                .foregroundColor(Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+    }
+
     private var actionSection: some View {
         VStack(spacing: 16) {
             signUpButton
