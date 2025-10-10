@@ -796,7 +796,7 @@ struct OtpVerificationView: View {
                 }
             }
 
-            // 4-digit OTP input with individual boxes and auto-focus
+            // 6-digit OTP input with individual boxes and auto-focus
             OTPInputView(otpCode: $otpCode)
                 .padding(.horizontal, 20)
 
@@ -839,9 +839,9 @@ struct OtpVerificationView: View {
         // Convert back to string and clean up
         otpCode = String(codeArray).replacingOccurrences(of: " ", with: "")
 
-        // Limit to 4 digits
-        if otpCode.count > 4 {
-            otpCode = String(otpCode.prefix(4))
+        // Limit to 6 digits
+        if otpCode.count > 6 {
+            otpCode = String(otpCode.prefix(6))
         }
     }
     
@@ -995,7 +995,7 @@ struct EmailVerificationRequiredView: View {
                 }
             }
 
-            // 4-digit OTP input with auto-focus
+            // 6-digit OTP input with auto-focus
             OTPInputView(otpCode: $otpCode)
                 .padding(.horizontal, 20)
 
@@ -1030,8 +1030,8 @@ struct EmailVerificationRequiredView: View {
 
         otpCode = String(codeArray).replacingOccurrences(of: " ", with: "")
 
-        if otpCode.count > 4 {
-            otpCode = String(otpCode.prefix(4))
+        if otpCode.count > 6 {
+            otpCode = String(otpCode.prefix(6))
         }
     }
 
