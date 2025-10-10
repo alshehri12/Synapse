@@ -740,6 +740,7 @@ struct OtpVerificationView: View {
     @State private var otpCode = ""
     @State private var isSubmitting = false
     @State private var errorMessage = ""
+    @State private var showSuccessAlert = false
     
     var body: some View {
         NavigationView {
@@ -753,8 +754,15 @@ struct OtpVerificationView: View {
             .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
+        .alert("Success!", isPresented: $showSuccessAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Your email has been verified successfully! Welcome to Synapse.")
+        }
     }
-    
+
     private var headerSection: some View {
         VStack(spacing: 16) {
                     Text("Verify Your Email".localized)
@@ -894,7 +902,7 @@ struct OtpVerificationView: View {
                 try await supabaseManager.verifyOtp(email: email, otp: otpCode, username: username)
                 await MainActor.run {
                     self.isSubmitting = false
-                    dismiss()
+                    self.showSuccessAlert = true
                 }
             } catch {
                 await MainActor.run {
@@ -935,6 +943,7 @@ struct EmailVerificationRequiredView: View {
     @State private var otpCode = ""
     @State private var isSubmitting = false
     @State private var errorMessage = ""
+    @State private var showSuccessAlert = false
 
     var body: some View {
         NavigationView {
@@ -948,6 +957,13 @@ struct EmailVerificationRequiredView: View {
             .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
+        .alert("Success!", isPresented: $showSuccessAlert) {
+            Button("OK") {
+                // Alert will auto-dismiss and user will see main app
+            }
+        } message: {
+            Text("Your email has been verified successfully! Welcome to Synapse.")
+        }
     }
 
     private var headerSection: some View {
@@ -1097,6 +1113,7 @@ struct EmailVerificationRequiredView: View {
                 try await supabaseManager.verifyOtp(email: email, otp: otpCode)
                 await MainActor.run {
                     self.isSubmitting = false
+                    self.showSuccessAlert = true
                 }
             } catch {
                 await MainActor.run {
