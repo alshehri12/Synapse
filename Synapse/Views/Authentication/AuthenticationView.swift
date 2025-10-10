@@ -869,10 +869,10 @@ struct OtpVerificationView: View {
             .frame(height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(otpCode.count == 4 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
+                    .fill(otpCode.count == 6 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
             )
         }
-        .disabled(otpCode.count != 4 || isSubmitting)
+        .disabled(otpCode.count != 6 || isSubmitting)
     }
     
     private var resendButton: some View {
@@ -920,9 +920,9 @@ struct OtpVerificationView: View {
     private func pasteOTP() {
         #if os(iOS)
         if let clipboardContent = UIPasteboard.general.string {
-            // Extract only digits and take first 4
+            // Extract only digits and take first 6
             let digits = clipboardContent.filter { $0.isNumber }
-            otpCode = String(digits.prefix(4))
+            otpCode = String(digits.prefix(6))
         }
         #endif
     }
@@ -1060,10 +1060,10 @@ struct EmailVerificationRequiredView: View {
             .frame(height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(otpCode.count == 4 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
+                    .fill(otpCode.count == 6 && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
             )
         }
-        .disabled(otpCode.count != 4 || isSubmitting)
+        .disabled(otpCode.count != 6 || isSubmitting)
     }
 
     private var resendButton: some View {
@@ -1135,9 +1135,9 @@ struct EmailVerificationRequiredView: View {
     private func pasteOTP() {
         #if os(iOS)
         if let clipboardContent = UIPasteboard.general.string {
-            // Extract only digits and take first 4
+            // Extract only digits and take first 6
             let digits = clipboardContent.filter { $0.isNumber }
-            otpCode = String(digits.prefix(4))
+            otpCode = String(digits.prefix(6))
         }
         #endif
     }
