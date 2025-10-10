@@ -1248,71 +1248,108 @@ struct OTPInputView: View {
     var body: some View {
         HStack(spacing: 12) {
             ForEach(0..<4, id: \.self) { index in
-                TextField("", text: Binding(
-                    get: { digits[index] },
-                    set: { newValue in
+                OTPTextField(
+                    text: $digits[index],
+                    isFocused: focusedField == index,
+                    onTextChange: { newValue in
                         handleDigitChange(at: index, newValue: newValue)
                     }
-                ))
-                .multilineTextAlignment(.center)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(Color.textPrimary)
-                .frame(width: 50, height: 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(focusedField == index ? Color.accentGreen : Color.border, lineWidth: 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.backgroundSecondary)
-                        )
                 )
-                .keyboardType(.numberPad)
                 .focused($focusedField, equals: index)
-                .onChange(of: digits[index]) { oldValue, newValue in
-                    // Auto-advance to next field
-                    if !newValue.isEmpty && index < 3 {
-                        focusedField = index + 1
-                    }
-                }
             }
         }
         .onAppear {
-            // Auto-focus first field
-            focusedField = 0
+            // Auto-focus first field with delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                focusedField = 0
+            }
         }
         .onChange(of: otpCode) { oldValue, newValue in
             // Update digits when otpCode changes (e.g., from paste)
-            updateDigitsFromCode(newValue)
+            if newValue != digits.joined() {
+                updateDigitsFromCode(newValue)
+            }
         }
     }
 
     private func handleDigitChange(at index: Int, newValue: String) {
         let filtered = newValue.filter { $0.isNumber }
+        let oldValue = digits[index]
 
         if filtered.isEmpty {
-            // Backspace - move to previous field
+            // Backspace/delete - clear field and move to previous
             digits[index] = ""
-            if index > 0 {
+            otpCode = digits.joined()
+
+            if oldValue.isEmpty && index > 0 {
+                // If already empty, move back
                 focusedField = index - 1
             }
-        } else {
-            // Take only first digit
-            digits[index] = String(filtered.prefix(1))
-        }
+        } else if filtered.count == 1 {
+            // Single digit entered
+            digits[index] = filtered
+            otpCode = digits.joined()
 
-        // Update the bound otpCode
-        otpCode = digits.joined()
+            // Auto-advance to next field
+            if index < 3 {
+                focusedField = index + 1
+            }
+        } else {
+            // Multiple digits (paste scenario)
+            let chars = Array(filtered.prefix(4))
+            for (i, char) in chars.enumerated() {
+                if i < 4 {
+                    digits[i] = String(char)
+                }
+            }
+            otpCode = digits.joined()
+
+            // Focus on last filled field or 4th field
+            focusedField = min(chars.count, 3)
+        }
     }
 
     private func updateDigitsFromCode(_ code: String) {
-        let chars = Array(code)
+        let chars = Array(code.filter { $0.isNumber }.prefix(4))
         for i in 0..<4 {
             digits[i] = i < chars.count ? String(chars[i]) : ""
         }
+
         // Focus on next empty field or last field
         if code.count < 4 {
             focusedField = code.count
+        } else {
+            focusedField = 3
         }
+    }
+}
+
+// MARK: - OTP TextField Component
+struct OTPTextField: View {
+    @Binding var text: String
+    let isFocused: Bool
+    let onTextChange: (String) -> Void
+
+    var body: some View {
+        TextField("", text: Binding(
+            get: { text },
+            set: { newValue in
+                onTextChange(newValue)
+            }
+        ))
+        .multilineTextAlignment(.center)
+        .font(.system(size: 24, weight: .semibold))
+        .foregroundColor(Color.textPrimary)
+        .frame(width: 50, height: 50)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isFocused ? Color.accentGreen : Color.border, lineWidth: 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.backgroundSecondary)
+                )
+        )
+        .keyboardType(.numberPad)
     }
 }
 
