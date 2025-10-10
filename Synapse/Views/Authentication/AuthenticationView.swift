@@ -1239,7 +1239,7 @@ struct GoogleSignInButton: View {
     }
 } 
 
-// MARK: - OTP Input View with Auto-Focus
+// MARK: - OTP Input View with Auto-Focus (6-Digit)
 struct OTPInputView: View {
     @Binding var otpCode: String
     @FocusState private var focusedField: Int?
@@ -1247,10 +1247,12 @@ struct OTPInputView: View {
     @State private var digit2: String = ""
     @State private var digit3: String = ""
     @State private var digit4: String = ""
+    @State private var digit5: String = ""
+    @State private var digit6: String = ""
     @State private var isUpdatingFromParent = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             // Field 1
             OTPSingleField(text: $digit1, isFocused: focusedField == 0)
                 .focused($focusedField, equals: 0)
@@ -1282,6 +1284,22 @@ struct OTPInputView: View {
                     guard !isUpdatingFromParent else { return }
                     handleChange(field: 3, oldValue: oldValue, newValue: newValue)
                 }
+
+            // Field 5
+            OTPSingleField(text: $digit5, isFocused: focusedField == 4)
+                .focused($focusedField, equals: 4)
+                .onChange(of: digit5) { oldValue, newValue in
+                    guard !isUpdatingFromParent else { return }
+                    handleChange(field: 4, oldValue: oldValue, newValue: newValue)
+                }
+
+            // Field 6
+            OTPSingleField(text: $digit6, isFocused: focusedField == 5)
+                .focused($focusedField, equals: 5)
+                .onChange(of: digit6) { oldValue, newValue in
+                    guard !isUpdatingFromParent else { return }
+                    handleChange(field: 5, oldValue: oldValue, newValue: newValue)
+                }
         }
         .environment(\.layoutDirection, .leftToRight) // Force LTR for OTP fields
         .onAppear {
@@ -1293,21 +1311,23 @@ struct OTPInputView: View {
         .onChange(of: otpCode) { oldValue, newValue in
             // Only update if pasted from outside (not from our own updates)
             let currentCode = getCurrentCode()
-            if newValue != currentCode && newValue.count >= 4 {
+            if newValue != currentCode && newValue.count >= 6 {
                 isUpdatingFromParent = true
-                let digits = Array(newValue.filter { $0.isNumber }.prefix(4))
+                let digits = Array(newValue.filter { $0.isNumber }.prefix(6))
                 digit1 = digits.count > 0 ? String(digits[0]) : ""
                 digit2 = digits.count > 1 ? String(digits[1]) : ""
                 digit3 = digits.count > 2 ? String(digits[2]) : ""
                 digit4 = digits.count > 3 ? String(digits[3]) : ""
-                focusedField = 3
+                digit5 = digits.count > 4 ? String(digits[4]) : ""
+                digit6 = digits.count > 5 ? String(digits[5]) : ""
+                focusedField = 5
                 isUpdatingFromParent = false
             }
         }
     }
 
     private func getCurrentCode() -> String {
-        return digit1 + digit2 + digit3 + digit4
+        return digit1 + digit2 + digit3 + digit4 + digit5 + digit6
     }
 
     private func handleChange(field: Int, oldValue: String, newValue: String) {
@@ -1359,6 +1379,30 @@ struct OTPInputView: View {
                 }
             } else {
                 digit4 = String(filtered.prefix(1))
+                if !digit4.isEmpty {
+                    focusedField = 4
+                }
+            }
+        case 4:
+            if filtered.isEmpty {
+                digit5 = ""
+                if wasEmpty {
+                    focusedField = 3
+                }
+            } else {
+                digit5 = String(filtered.prefix(1))
+                if !digit5.isEmpty {
+                    focusedField = 5
+                }
+            }
+        case 5:
+            if filtered.isEmpty {
+                digit6 = ""
+                if wasEmpty {
+                    focusedField = 4
+                }
+            } else {
+                digit6 = String(filtered.prefix(1))
             }
         default:
             break
