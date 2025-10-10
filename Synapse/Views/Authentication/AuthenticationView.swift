@@ -1243,113 +1243,156 @@ struct GoogleSignInButton: View {
 struct OTPInputView: View {
     @Binding var otpCode: String
     @FocusState private var focusedField: Int?
-    @State private var digits: [String] = ["", "", "", ""]
+    @State private var digit1: String = ""
+    @State private var digit2: String = ""
+    @State private var digit3: String = ""
+    @State private var digit4: String = ""
+    @State private var isUpdatingFromParent = false
 
     var body: some View {
         HStack(spacing: 12) {
-            ForEach(0..<4, id: \.self) { index in
-                OTPTextField(
-                    text: $digits[index],
-                    isFocused: focusedField == index,
-                    onTextChange: { newValue in
-                        handleDigitChange(at: index, newValue: newValue)
-                    }
-                )
-                .focused($focusedField, equals: index)
-            }
+            // Field 1
+            OTPSingleField(text: $digit1, isFocused: focusedField == 0)
+                .focused($focusedField, equals: 0)
+                .onChange(of: digit1) { oldValue, newValue in
+                    guard !isUpdatingFromParent else { return }
+                    handleChange(field: 0, oldValue: oldValue, newValue: newValue)
+                }
+
+            // Field 2
+            OTPSingleField(text: $digit2, isFocused: focusedField == 1)
+                .focused($focusedField, equals: 1)
+                .onChange(of: digit2) { oldValue, newValue in
+                    guard !isUpdatingFromParent else { return }
+                    handleChange(field: 1, oldValue: oldValue, newValue: newValue)
+                }
+
+            // Field 3
+            OTPSingleField(text: $digit3, isFocused: focusedField == 2)
+                .focused($focusedField, equals: 2)
+                .onChange(of: digit3) { oldValue, newValue in
+                    guard !isUpdatingFromParent else { return }
+                    handleChange(field: 2, oldValue: oldValue, newValue: newValue)
+                }
+
+            // Field 4
+            OTPSingleField(text: $digit4, isFocused: focusedField == 3)
+                .focused($focusedField, equals: 3)
+                .onChange(of: digit4) { oldValue, newValue in
+                    guard !isUpdatingFromParent else { return }
+                    handleChange(field: 3, oldValue: oldValue, newValue: newValue)
+                }
         }
+        .environment(\.layoutDirection, .leftToRight) // Force LTR for OTP fields
         .onAppear {
-            // Auto-focus first field with delay
+            // Auto-focus first field on appear
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 focusedField = 0
             }
         }
         .onChange(of: otpCode) { oldValue, newValue in
-            // Update digits when otpCode changes (e.g., from paste)
-            if newValue != digits.joined() {
-                updateDigitsFromCode(newValue)
+            // Only update if pasted from outside (not from our own updates)
+            let currentCode = getCurrentCode()
+            if newValue != currentCode && newValue.count >= 4 {
+                isUpdatingFromParent = true
+                let digits = Array(newValue.filter { $0.isNumber }.prefix(4))
+                digit1 = digits.count > 0 ? String(digits[0]) : ""
+                digit2 = digits.count > 1 ? String(digits[1]) : ""
+                digit3 = digits.count > 2 ? String(digits[2]) : ""
+                digit4 = digits.count > 3 ? String(digits[3]) : ""
+                focusedField = 3
+                isUpdatingFromParent = false
             }
         }
     }
 
-    private func handleDigitChange(at index: Int, newValue: String) {
+    private func getCurrentCode() -> String {
+        return digit1 + digit2 + digit3 + digit4
+    }
+
+    private func handleChange(field: Int, oldValue: String, newValue: String) {
         let filtered = newValue.filter { $0.isNumber }
-        let oldValue = digits[index]
+        let wasEmpty = oldValue.isEmpty
 
-        if filtered.isEmpty {
-            // Backspace/delete - clear field and move to previous
-            digits[index] = ""
-            otpCode = digits.joined()
+        // Prevent re-entrancy
+        guard !isUpdatingFromParent else { return }
 
-            if oldValue.isEmpty && index > 0 {
-                // If already empty, move back
-                focusedField = index - 1
-            }
-        } else if filtered.count == 1 {
-            // Single digit entered
-            digits[index] = filtered
-            otpCode = digits.joined()
-
-            // Auto-advance to next field
-            if index < 3 {
-                focusedField = index + 1
-            }
-        } else {
-            // Multiple digits (paste scenario)
-            let chars = Array(filtered.prefix(4))
-            for (i, char) in chars.enumerated() {
-                if i < 4 {
-                    digits[i] = String(char)
+        switch field {
+        case 0:
+            if filtered.isEmpty {
+                digit1 = ""
+            } else {
+                digit1 = String(filtered.prefix(1))
+                if !digit1.isEmpty {
+                    focusedField = 1
                 }
             }
-            otpCode = digits.joined()
-
-            // Focus on last filled field or 4th field
-            focusedField = min(chars.count, 3)
+        case 1:
+            if filtered.isEmpty {
+                digit2 = ""
+                if wasEmpty {
+                    focusedField = 0
+                }
+            } else {
+                digit2 = String(filtered.prefix(1))
+                if !digit2.isEmpty {
+                    focusedField = 2
+                }
+            }
+        case 2:
+            if filtered.isEmpty {
+                digit3 = ""
+                if wasEmpty {
+                    focusedField = 1
+                }
+            } else {
+                digit3 = String(filtered.prefix(1))
+                if !digit3.isEmpty {
+                    focusedField = 3
+                }
+            }
+        case 3:
+            if filtered.isEmpty {
+                digit4 = ""
+                if wasEmpty {
+                    focusedField = 2
+                }
+            } else {
+                digit4 = String(filtered.prefix(1))
+            }
+        default:
+            break
         }
-    }
 
-    private func updateDigitsFromCode(_ code: String) {
-        let chars = Array(code.filter { $0.isNumber }.prefix(4))
-        for i in 0..<4 {
-            digits[i] = i < chars.count ? String(chars[i]) : ""
-        }
-
-        // Focus on next empty field or last field
-        if code.count < 4 {
-            focusedField = code.count
-        } else {
-            focusedField = 3
+        // Update binding after state changes
+        DispatchQueue.main.async {
+            otpCode = getCurrentCode()
         }
     }
 }
 
-// MARK: - OTP TextField Component
-struct OTPTextField: View {
+// MARK: - OTP Single Field Component
+struct OTPSingleField: View {
     @Binding var text: String
     let isFocused: Bool
-    let onTextChange: (String) -> Void
 
     var body: some View {
-        TextField("", text: Binding(
-            get: { text },
-            set: { newValue in
-                onTextChange(newValue)
-            }
-        ))
-        .multilineTextAlignment(.center)
-        .font(.system(size: 24, weight: .semibold))
-        .foregroundColor(Color.textPrimary)
-        .frame(width: 50, height: 50)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isFocused ? Color.accentGreen : Color.border, lineWidth: 2)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.backgroundSecondary)
-                )
-        )
-        .keyboardType(.numberPad)
+        TextField("", text: $text)
+            .multilineTextAlignment(.center)
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundColor(Color.textPrimary)
+            .frame(width: 50, height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isFocused ? Color.accentGreen : Color.border, lineWidth: 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.backgroundSecondary)
+                    )
+            )
+            .keyboardType(.numberPad)
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
     }
 }
 
