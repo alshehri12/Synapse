@@ -183,15 +183,9 @@ struct SuccessAlertView: View {
 
     var body: some View {
         ZStack {
-            // Semi-transparent background
-            Color.black.opacity(0.4)
+            // Semi-transparent background (no tap to dismiss - button only)
+            Color.black.opacity(0.5)
                 .edgesIgnoringSafeArea(.all)
-                .onTapGesture {
-                    withAnimation {
-                        isPresented = false
-                    }
-                    onDismiss()
-                }
 
             // Alert content
             VStack(spacing: 20) {
@@ -218,13 +212,17 @@ struct SuccessAlertView: View {
                     .foregroundColor(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                // OK Button
+                // Continue Button
                 Button(action: {
-                    withAnimation {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         isPresented = false
                     }
-                    onDismiss()
+                    // Small delay before calling onDismiss to let animation complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        onDismiss()
+                    }
                 }) {
                     Text("Continue")
                         .font(.system(size: 17, weight: .semibold))
@@ -256,15 +254,9 @@ struct ErrorAlertView: View {
 
     var body: some View {
         ZStack {
-            // Semi-transparent background
-            Color.black.opacity(0.4)
+            // Semi-transparent background (no tap to dismiss - button only)
+            Color.black.opacity(0.5)
                 .edgesIgnoringSafeArea(.all)
-                .onTapGesture {
-                    withAnimation {
-                        isPresented = false
-                    }
-                    onDismiss()
-                }
 
             // Alert content
             VStack(spacing: 20) {
@@ -291,13 +283,17 @@ struct ErrorAlertView: View {
                     .foregroundColor(Color.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 // Try Again Button
                 Button(action: {
-                    withAnimation {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         isPresented = false
                     }
-                    onDismiss()
+                    // Small delay before calling onDismiss to let animation complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        onDismiss()
+                    }
                 }) {
                     Text("Try Again")
                         .font(.system(size: 17, weight: .semibold))
