@@ -172,4 +172,150 @@ struct TagView: View {
         .background(Color.accentGreen.opacity(0.1))
         .cornerRadius(12)
     }
-} 
+}
+
+// MARK: - Elegant Success Alert
+struct SuccessAlertView: View {
+    @Binding var isPresented: Bool
+    let title: String
+    let message: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.4)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    withAnimation {
+                        isPresented = false
+                    }
+                    onDismiss()
+                }
+
+            // Alert content
+            VStack(spacing: 20) {
+                // Success icon with animation
+                ZStack {
+                    Circle()
+                        .fill(Color.accentGreen.opacity(0.15))
+                        .frame(width: 80, height: 80)
+
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(Color.accentGreen)
+                }
+                .padding(.top, 8)
+
+                // Title
+                Text(title)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(Color.textPrimary)
+
+                // Message
+                Text(message)
+                    .font(.system(size: 16))
+                    .foregroundColor(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+
+                // OK Button
+                Button(action: {
+                    withAnimation {
+                        isPresented = false
+                    }
+                    onDismiss()
+                }) {
+                    Text("Continue")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color.accentGreen)
+                        .cornerRadius(12)
+                }
+                .padding(.top, 8)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.backgroundPrimary)
+                    .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
+            )
+            .padding(.horizontal, 40)
+        }
+    }
+}
+
+// MARK: - Elegant Error Alert
+struct ErrorAlertView: View {
+    @Binding var isPresented: Bool
+    let title: String
+    let message: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.4)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    withAnimation {
+                        isPresented = false
+                    }
+                    onDismiss()
+                }
+
+            // Alert content
+            VStack(spacing: 20) {
+                // Error icon with animation
+                ZStack {
+                    Circle()
+                        .fill(Color.error.opacity(0.15))
+                        .frame(width: 80, height: 80)
+
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(Color.error)
+                }
+                .padding(.top, 8)
+
+                // Title
+                Text(title)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(Color.textPrimary)
+
+                // Message
+                Text(message)
+                    .font(.system(size: 16))
+                    .foregroundColor(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+
+                // Try Again Button
+                Button(action: {
+                    withAnimation {
+                        isPresented = false
+                    }
+                    onDismiss()
+                }) {
+                    Text("Try Again")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color.error)
+                        .cornerRadius(12)
+                }
+                .padding(.top, 8)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.backgroundPrimary)
+                    .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
+            )
+            .padding(.horizontal, 40)
+        }
+    }
+}

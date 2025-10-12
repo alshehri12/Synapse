@@ -783,26 +783,52 @@ struct OtpVerificationView: View {
     @State private var isSubmitting = false
     @State private var errorMessage = ""
     @State private var showSuccessAlert = false
-    
+    @State private var showErrorAlert = false
+
     var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                headerSection
-                otpSection
-                actionSection
-                Spacer()
+        ZStack {
+            NavigationView {
+                VStack(spacing: 24) {
+                    headerSection
+                    otpSection
+                    actionSection
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .background(Color.backgroundPrimary)
             }
-            .padding(.horizontal, 24)
-            .background(Color.backgroundPrimary)
-        }
-        .navigationBarHidden(true)
-        .alert("Success!", isPresented: $showSuccessAlert) {
-            Button("OK") {
-                dismiss()
+            .navigationBarHidden(true)
+
+            // Elegant Success Popup
+            if showSuccessAlert {
+                SuccessAlertView(
+                    isPresented: $showSuccessAlert,
+                    title: "Email Verified!",
+                    message: "Your account has been successfully verified. Welcome to Synapse!",
+                    onDismiss: {
+                        dismiss()
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(999)
             }
-        } message: {
-            Text("Your email has been verified successfully! Welcome to Synapse.")
+
+            // Elegant Error Popup
+            if showErrorAlert {
+                ErrorAlertView(
+                    isPresented: $showErrorAlert,
+                    title: "Invalid Code",
+                    message: errorMessage,
+                    onDismiss: {
+                        otpCode = ""
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(999)
+            }
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showSuccessAlert)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showErrorAlert)
     }
 
     private var headerSection: some View {
@@ -949,9 +975,8 @@ struct OtpVerificationView: View {
             } catch {
                 await MainActor.run {
                     self.isSubmitting = false
-                    self.errorMessage = "Invalid verification code. Please check and try again."
-                    // Clear OTP for retry
-                    self.otpCode = ""
+                    self.errorMessage = "The verification code you entered is incorrect. Please check your email and try again."
+                    self.showErrorAlert = true
                 }
             }
         }
@@ -986,26 +1011,52 @@ struct EmailVerificationRequiredView: View {
     @State private var isSubmitting = false
     @State private var errorMessage = ""
     @State private var showSuccessAlert = false
+    @State private var showErrorAlert = false
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                headerSection
-                otpSection
-                actionSection
-                Spacer()
+        ZStack {
+            NavigationView {
+                VStack(spacing: 24) {
+                    headerSection
+                    otpSection
+                    actionSection
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .background(Color.backgroundPrimary)
             }
-            .padding(.horizontal, 24)
-            .background(Color.backgroundPrimary)
-        }
-        .navigationBarHidden(true)
-        .alert("Success!", isPresented: $showSuccessAlert) {
-            Button("OK") {
-                // Alert will auto-dismiss and user will see main app
+            .navigationBarHidden(true)
+
+            // Elegant Success Popup
+            if showSuccessAlert {
+                SuccessAlertView(
+                    isPresented: $showSuccessAlert,
+                    title: "Email Verified!",
+                    message: "Your account has been successfully verified. Welcome to Synapse!",
+                    onDismiss: {
+                        // Alert will auto-dismiss and user will see main app
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(999)
             }
-        } message: {
-            Text("Your email has been verified successfully! Welcome to Synapse.")
+
+            // Elegant Error Popup
+            if showErrorAlert {
+                ErrorAlertView(
+                    isPresented: $showErrorAlert,
+                    title: "Invalid Code",
+                    message: errorMessage,
+                    onDismiss: {
+                        otpCode = ""
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(999)
+            }
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showSuccessAlert)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showErrorAlert)
     }
 
     private var headerSection: some View {
@@ -1160,7 +1211,8 @@ struct EmailVerificationRequiredView: View {
             } catch {
                 await MainActor.run {
                     self.isSubmitting = false
-                    self.errorMessage = "Invalid verification code. Please try again."
+                    self.errorMessage = "The verification code you entered is incorrect. Please check your email and try again."
+                    self.showErrorAlert = true
                 }
             }
         }

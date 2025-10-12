@@ -179,6 +179,16 @@ class SupabaseManager: ObservableObject {
             let user = response.user
             print("✅ User created: \(user.email ?? "no email") | id: \(user.id.uuidString)")
 
+            // Create profile row BEFORE signing out (while still authenticated)
+            // This ensures RLS policies allow the insert
+            do {
+                try await createUserProfile(userId: user.id.uuidString, email: user.email ?? email, username: username)
+                print("✅ User profile created")
+            } catch {
+                print("⚠️ Failed to create user profile: \(error.localizedDescription)")
+                // Don't fail signup if profile creation fails - database trigger might handle it
+            }
+
             // Sign out immediately to prevent auto-login
             try? await supabase.auth.signOut()
             print("🚪 Signed out user to prevent auto-login")
@@ -188,15 +198,6 @@ class SupabaseManager: ObservableObject {
                 self.currentUser = nil
                 self.isAuthenticated = false
                 self.isEmailVerified = false
-            }
-
-            // Create profile row (best-effort) - Store username temporarily
-            do {
-                try await createUserProfile(userId: user.id.uuidString, email: user.email ?? email, username: username)
-                print("✅ User profile created")
-            } catch {
-                print("⚠️ Failed to create user profile: \(error.localizedDescription)")
-                // Don't fail signup if profile creation fails
             }
 
             // Send OTP email - Supabase should handle this automatically
@@ -213,7 +214,9 @@ class SupabaseManager: ObservableObject {
 
         } catch {
             isSigningUp = false
-            print("❌ Signup failed: \(error.localizedDescription)")
+            print("❌ Signup failed: \(error)")
+            print("❌ Error type: \(type(of: error))")
+            print("❌ Localized description: \(error.localizedDescription)")
 
             let lower = error.localizedDescription.lowercased()
             if lower.contains("user already registered") || lower.contains("already registered") || lower.contains("exists") {
@@ -308,6 +311,20 @@ class SupabaseManager: ObservableObject {
     // MARK: - User Profile Management
     
     func createUserProfile(userId: String, email: String, username: String) async throws {
+        // Check if profile already exists (might be created by database trigger)
+        if let existingProfile = try? await getUserProfile(userId: userId) {
+            print("ℹ️ User profile already exists for: \(userId), updating username if needed")
+            // Update username if it's different
+            let currentUsername = existingProfile["username"] as? String
+            if currentUsername != username {
+                try? await updateUserProfile(
+                    userId: userId,
+                    updates: ["username": username]
+                )
+            }
+            return
+        }
+
         let profileData: [String: AnyJSON] = [
             "id": AnyJSON.string(userId),
             "email": AnyJSON.string(email),
@@ -319,13 +336,18 @@ class SupabaseManager: ObservableObject {
             "ideas_sparked": 0,
             "projects_contributed": 0
         ]
-        
-        try await supabase
-            .from("users")
-            .insert(profileData)
-            .execute()
-        
-        print("✅ User profile created for: \(username)")
+
+        do {
+            try await supabase
+                .from("users")
+                .insert(profileData)
+                .execute()
+            print("✅ User profile created for: \(username)")
+        } catch {
+            // If insert fails due to RLS, log warning but don't fail the flow
+            // (profile might be created by database trigger)
+            print("⚠️ Could not insert user profile (might already exist): \(error.localizedDescription)")
+        }
     }
     
     func getUserProfile(userId: String) async throws -> [String: Any]? {
@@ -1751,6 +1773,115 @@ class SupabaseManager: ObservableObject {
             .from("account_deletion_requests")
             .insert(request)
             .execute()
+    }
+
+    // MARK: - Content Reporting
+    func submitContentReport(
+        contentType: ContentReport.ReportContentType,
+        contentId: String,
+        reportedUserId: String?,
+        reason: ContentReport.ReportReason,
+        description: String?
+    ) async throws {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+
+        struct ReportRequest: Encodable {
+            let reporter_id: String
+            let reported_content_type: String
+            let reported_content_id: String
+            let reported_user_id: String?
+            let reason: String
+            let description: String?
+            let status: String
+            let created_at: String
+        }
+
+        let report = ReportRequest(
+            reporter_id: userId.uuidString,
+            reported_content_type: contentType.rawValue,
+            reported_content_id: contentId,
+            reported_user_id: reportedUserId,
+            reason: reason.rawValue,
+            description: description,
+            status: "pending",
+            created_at: ISO8601DateFormatter().string(from: Date())
+        )
+
+        _ = try await supabase
+            .from("content_reports")
+            .insert(report)
+            .execute()
+    }
+
+    // MARK: - Block User
+    func blockUser(userId: String, username: String) async throws {
+        guard let currentUserId = currentUser?.id else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+
+        struct BlockRequest: Encodable {
+            let blocker_id: String
+            let blocked_user_id: String
+            let blocked_username: String
+            let blocked_at: String
+        }
+
+        let block = BlockRequest(
+            blocker_id: currentUserId.uuidString,
+            blocked_user_id: userId,
+            blocked_username: username,
+            blocked_at: ISO8601DateFormatter().string(from: Date())
+        )
+
+        _ = try await supabase
+            .from("blocked_users")
+            .insert(block)
+            .execute()
+    }
+
+    func unblockUser(userId: String) async throws {
+        guard let currentUserId = currentUser?.id else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+
+        _ = try await supabase
+            .from("blocked_users")
+            .delete()
+            .eq("blocker_id", value: currentUserId.uuidString)
+            .eq("blocked_user_id", value: userId)
+            .execute()
+    }
+
+    func isUserBlocked(userId: String) async throws -> Bool {
+        guard let currentUserId = currentUser?.id else {
+            return false
+        }
+
+        let response = try await supabase
+            .from("blocked_users")
+            .select()
+            .eq("blocker_id", value: currentUserId.uuidString)
+            .eq("blocked_user_id", value: userId)
+            .execute()
+
+        let data = try JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] ?? []
+        return !data.isEmpty
+    }
+
+    func getBlockedUsers() async throws -> [BlockedUser] {
+        guard let currentUserId = currentUser?.id else {
+            return []
+        }
+
+        let response = try await supabase
+            .from("blocked_users")
+            .select()
+            .eq("blocker_id", value: currentUserId.uuidString)
+            .execute()
+
+        return try JSONDecoder().decode([BlockedUser].self, from: response.data)
     }
 }
 
