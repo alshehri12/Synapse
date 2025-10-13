@@ -16,31 +16,81 @@ struct AuthenticationView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Language Switcher
-                languageSwitcher
-                
-                // Hero Section (Compact)
-                heroSection
-                
-                // Features Section (Compact)
-                featuresSection
-                
-                // Auth Section
-                authSection
-                
-                Spacer()
+            ZStack {
+                // Clean white background
+                Color.backgroundPrimary
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    // Language switcher at top right
+                    HStack {
+                        Spacer()
+                        languageSwitcherCompact
+                    }
+                    .padding(.top, 16)
+                    .padding(.horizontal, 24)
+
+                    Spacer()
+
+                    // Centered logo and tagline (Duolingo style)
+                    VStack(spacing: 24) {
+                        // App Logo - Large and centered
+                        Image("AppLogo")
+                            .resizable()
+                            .renderingMode(.original)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 180, height: 180)
+
+                        // App name with gradient
+                        Text("Synapse")
+                            .font(.system(size: 42, weight: .bold))
+                            .foregroundColor(Color.accentGreen)
+
+                        // Tagline - clean and simple
+                        Text(localizationManager.currentLanguage == .arabic ?
+                             "الطريقة الممتعة والفعالة\nلتحويل الأفكار إلى واقع!" :
+                             "The free, fun, and effective way to\nturn ideas into reality!")
+                            .font(.system(size: 18, weight: .regular))
+                            .foregroundColor(Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .padding(.horizontal, 40)
+                    }
+
+                    Spacer()
+
+                    // Buttons at bottom (Duolingo style)
+                    VStack(spacing: 16) {
+                        // GET STARTED button (primary green)
+                        Button(action: { showingSignUp = true }) {
+                            Text(localizationManager.currentLanguage == .arabic ? "ابدأ الآن" : "GET STARTED")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Color.accentGreen)
+                                .cornerRadius(16)
+                        }
+
+                        // I ALREADY HAVE AN ACCOUNT button (white with border)
+                        Button(action: { showingLogin = true }) {
+                            Text(localizationManager.currentLanguage == .arabic ? "لدي حساب بالفعل" : "I ALREADY HAVE AN ACCOUNT")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(Color.accentGreen)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Color.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.textSecondary.opacity(0.2), lineWidth: 2)
+                                )
+                                .cornerRadius(16)
+                        }
+                    }
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 40)
+                }
             }
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.backgroundPrimary,
-                        Color.backgroundSecondary.opacity(0.3)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
         }
         .navigationBarHidden(true)
         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
@@ -53,35 +103,29 @@ struct AuthenticationView: View {
     }
     
     // MARK: - Language Switcher
-    private var languageSwitcher: some View {
-        HStack {
-            Spacer()
-            
-            Button(action: {
-                localizationManager.toggleLanguage()
-            }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "globe")
-                        .font(.system(size: 14, weight: .medium))
-                    
-                    Text(localizationManager.currentLanguage == .arabic ? "العربية" : "English")
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .foregroundColor(Color.accentGreen)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(Color.accentGreen.opacity(0.1))
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.accentGreen.opacity(0.3), lineWidth: 1)
-                        )
-                )
+    private var languageSwitcherCompact: some View {
+        Button(action: {
+            localizationManager.toggleLanguage()
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: "globe")
+                    .font(.system(size: 14, weight: .medium))
+
+                Text(localizationManager.currentLanguage == .arabic ? "العربية" : "English")
+                    .font(.system(size: 14, weight: .medium))
             }
+            .foregroundColor(Color.accentGreen)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.accentGreen.opacity(0.1))
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.accentGreen.opacity(0.3), lineWidth: 1)
+                    )
+            )
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 10)
     }
     
     // MARK: - Hero Section (Compact)
