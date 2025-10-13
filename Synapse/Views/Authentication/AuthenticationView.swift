@@ -61,6 +61,25 @@ struct AuthenticationView: View {
 
                     // Buttons at bottom (Duolingo style)
                     VStack(spacing: 16) {
+                        // Continue with Google button - at top, matching app design
+                        GoogleSignInButton()
+                            .frame(height: 56)
+
+                        // Divider with "or"
+                        HStack {
+                            Rectangle()
+                                .fill(Color.textSecondary.opacity(0.3))
+                                .frame(height: 1)
+                            Text(localizationManager.currentLanguage == .arabic ? "أو" : "or")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(Color.textSecondary)
+                                .padding(.horizontal, 12)
+                            Rectangle()
+                                .fill(Color.textSecondary.opacity(0.3))
+                                .frame(height: 1)
+                        }
+                        .padding(.vertical, 4)
+
                         // GET STARTED button (primary green)
                         Button(action: { showingSignUp = true }) {
                             Text(localizationManager.currentLanguage == .arabic ? "ابدأ الآن" : "GET STARTED")
@@ -86,25 +105,6 @@ struct AuthenticationView: View {
                                 )
                                 .cornerRadius(16)
                         }
-
-                        // Divider with "or"
-                        HStack {
-                            Rectangle()
-                                .fill(Color.textSecondary.opacity(0.3))
-                                .frame(height: 1)
-                            Text(localizationManager.currentLanguage == .arabic ? "أو" : "or")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.textSecondary)
-                                .padding(.horizontal, 12)
-                            Rectangle()
-                                .fill(Color.textSecondary.opacity(0.3))
-                                .frame(height: 1)
-                        }
-                        .padding(.vertical, 8)
-
-                        // Continue with Google button
-                        GoogleSignInButton()
-                            .frame(height: 56)
                     }
                     .padding(.horizontal, 32)
                     .padding(.bottom, 40)
