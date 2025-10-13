@@ -88,25 +88,13 @@ struct AuthenticationView: View {
     private var heroSection: some View {
         VStack(spacing: 16) {
             // App Icon (Smaller)
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.accentGreen.opacity(0.2),
-                                Color.accentGreen.opacity(0.05)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: "sparkles")
-                    .font(.system(size: 32, weight: .medium))
-                    .foregroundColor(Color.accentGreen)
-            }
-            .padding(.top, 40)
+            // App Logo - Elegant and transparent
+            Image("AppLogo")
+                .resizable()
+                .renderingMode(.original)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 100, height: 100)
+                .padding(.top, 40)
             
             // Main Title (Compact)
             VStack(spacing: 8) {
