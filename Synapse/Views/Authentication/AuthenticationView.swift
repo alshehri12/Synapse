@@ -13,7 +13,8 @@ struct AuthenticationView: View {
     @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var showingSignUp = false
     @State private var showingLogin = false
-    
+    @State private var animateContent = false
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -34,19 +35,25 @@ struct AuthenticationView: View {
 
                     // Centered logo and tagline (Duolingo style)
                     VStack(spacing: 24) {
-                        // App Logo - Large and centered
+                        // App Logo - Large and centered with fade-in animation
                         Image("AppLogo")
                             .resizable()
                             .renderingMode(.original)
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 180, height: 180)
+                            .opacity(animateContent ? 1 : 0)
+                            .scaleEffect(animateContent ? 1 : 0.8)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0), value: animateContent)
 
-                        // App name with gradient
+                        // App name with gradient and pulse animation
                         Text("Synapse")
                             .font(.system(size: 42, weight: .bold))
                             .foregroundColor(Color.accentGreen)
+                            .opacity(animateContent ? 1 : 0)
+                            .scaleEffect(animateContent ? 1 : 0.9)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0).delay(0.2), value: animateContent)
 
-                        // Tagline - clean and simple
+                        // Tagline - clean and simple with fade-in
                         Text(localizationManager.currentLanguage == .arabic ?
                              "الطريقة الممتعة والفعالة\nلتحويل الأفكار إلى واقع!" :
                              "The free, fun, and effective way to\nturn ideas into reality!")
@@ -55,15 +62,21 @@ struct AuthenticationView: View {
                             .multilineTextAlignment(.center)
                             .lineLimit(3)
                             .padding(.horizontal, 40)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 10)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.8, blendDuration: 0).delay(0.3), value: animateContent)
                     }
 
                     Spacer()
 
-                    // Buttons at bottom (Duolingo style)
+                    // Buttons at bottom (Duolingo style) with slide-up animations
                     VStack(spacing: 16) {
                         // Continue with Google button - at top, matching app design
                         GoogleSignInButton()
                             .frame(height: 56)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 30)
+                            .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.5), value: animateContent)
 
                         // Divider with "or"
                         HStack {
@@ -79,9 +92,15 @@ struct AuthenticationView: View {
                                 .frame(height: 1)
                         }
                         .padding(.vertical, 4)
+                        .opacity(animateContent ? 1 : 0)
+                        .animation(.easeIn(duration: 0.4).delay(0.6), value: animateContent)
 
-                        // GET STARTED button (primary green)
-                        Button(action: { showingSignUp = true }) {
+                        // GET STARTED button (primary green) with spring animation
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                showingSignUp = true
+                            }
+                        }) {
                             Text(localizationManager.currentLanguage == .arabic ? "ابدأ الآن" : "GET STARTED")
                                 .font(.system(size: 17, weight: .bold))
                                 .foregroundColor(.white)
@@ -90,9 +109,17 @@ struct AuthenticationView: View {
                                 .background(Color.accentGreen)
                                 .cornerRadius(16)
                         }
+                        .buttonStyle(ScaleButtonStyle())
+                        .opacity(animateContent ? 1 : 0)
+                        .offset(y: animateContent ? 0 : 30)
+                        .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.7), value: animateContent)
 
                         // I ALREADY HAVE AN ACCOUNT button (white with border)
-                        Button(action: { showingLogin = true }) {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                showingLogin = true
+                            }
+                        }) {
                             Text(localizationManager.currentLanguage == .arabic ? "لدي حساب بالفعل" : "I ALREADY HAVE AN ACCOUNT")
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundColor(Color.accentGreen)
@@ -105,6 +132,10 @@ struct AuthenticationView: View {
                                 )
                                 .cornerRadius(16)
                         }
+                        .buttonStyle(ScaleButtonStyle())
+                        .opacity(animateContent ? 1 : 0)
+                        .offset(y: animateContent ? 0 : 30)
+                        .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.85), value: animateContent)
                     }
                     .padding(.horizontal, 32)
                     .padding(.bottom, 40)
@@ -113,6 +144,12 @@ struct AuthenticationView: View {
         }
         .navigationBarHidden(true)
         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+        .onAppear {
+            // Trigger animations when view appears
+            withAnimation {
+                animateContent = true
+            }
+        }
         .sheet(isPresented: $showingSignUp) {
             SignUpView()
         }
@@ -1650,7 +1687,7 @@ struct OTPDigitField: View {
 // MARK: - Language Switcher
 struct LanguageSwitcher: View {
     @EnvironmentObject private var localizationManager: LocalizationManager
-    
+
     var body: some View {
         Menu {
             Button("English") {
@@ -1667,6 +1704,15 @@ struct LanguageSwitcher: View {
                     .foregroundColor(Color.textSecondary)
             .font(.system(size: 14))
         }
+    }
+}
+
+// MARK: - Scale Button Style for Modern Interactions
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6, blendDuration: 0), value: configuration.isPressed)
     }
 }
 
