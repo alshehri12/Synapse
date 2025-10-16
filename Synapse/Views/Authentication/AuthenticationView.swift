@@ -84,38 +84,70 @@ struct AuthenticationView: View {
 
                     // Centered logo and content - Modern card style
                     VStack(spacing: 32) {
-                        // Logo with elegant shadow and glow
+                        // Logo with elegant green card background
                         ZStack {
-                            // Glow effect
+                            // Soft green glow behind card
                             Circle()
                                 .fill(
                                     RadialGradient(
                                         gradient: Gradient(colors: [
                                             Color.accentGreen.opacity(0.15),
-                                            Color.accentGreen.opacity(0.05),
+                                            Color.accentGreen.opacity(0.08),
                                             Color.clear
                                         ]),
                                         center: .center,
-                                        startRadius: 50,
-                                        endRadius: 120
+                                        startRadius: 60,
+                                        endRadius: 140
                                     )
                                 )
-                                .frame(width: 240, height: 240)
-                                .blur(radius: 20)
+                                .frame(width: 280, height: 280)
+                                .blur(radius: 25)
                                 .opacity(animateContent ? 1 : 0)
                                 .animation(.easeInOut(duration: 1.5), value: animateContent)
 
-                            // App Logo
+                            // Modern card container with gradient
+                            RoundedRectangle(cornerRadius: 32)
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.accentGreen.opacity(0.12),
+                                            Color.accentGreen.opacity(0.08),
+                                            Color.white.opacity(0.6)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 180, height: 180)
+                                .shadow(color: Color.accentGreen.opacity(0.15), radius: 25, x: 0, y: 12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 32)
+                                        .stroke(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color.accentGreen.opacity(0.3),
+                                                    Color.white.opacity(0.5)
+                                                ]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 1.5
+                                        )
+                                )
+                                .opacity(animateContent ? 1 : 0)
+                                .scaleEffect(animateContent ? 1 : 0.85)
+                                .animation(.spring(response: 1.0, dampingFraction: 0.7, blendDuration: 0), value: animateContent)
+
+                            // App Logo on top of card
                             Image("AppLogo")
                                 .resizable()
                                 .renderingMode(.original)
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 140, height: 140)
-                                .shadow(color: Color.accentGreen.opacity(0.2), radius: 20, x: 0, y: 10)
+                                .frame(width: 120, height: 120)
                                 .opacity(animateContent ? 1 : 0)
                                 .scaleEffect(animateContent ? 1 : 0.7)
                                 .rotationEffect(.degrees(animateContent ? 0 : -10))
-                                .animation(.spring(response: 1.0, dampingFraction: 0.6, blendDuration: 0), value: animateContent)
+                                .animation(.spring(response: 1.0, dampingFraction: 0.6, blendDuration: 0).delay(0.15), value: animateContent)
                         }
 
                         // App name with modern gradient text
