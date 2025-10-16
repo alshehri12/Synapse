@@ -473,15 +473,28 @@ struct SignUpView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    headerSection
-                    formSection
-                    actionSection
+            ZStack {
+                // Modern gradient background matching home page
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.95, green: 0.98, blue: 0.96),
+                        Color.white,
+                        Color(red: 0.97, green: 1.0, blue: 0.98)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 32) {
+                        headerSection
+                        formSection
+                        actionSection
+                    }
+                    .padding(.bottom, 50)
                 }
-                .padding(.bottom, 50)
             }
-            .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showOtpVerification) {
@@ -495,112 +508,251 @@ struct SignUpView: View {
             Text(errorMessage)
         }
     }
-    
+
     private var headerSection: some View {
-        VStack(spacing: 24) {
-                    HStack {
-                        Button("Cancel".localized, action: { dismiss() })
-                            .foregroundColor(Color.textSecondary)
-                        
-                        Spacer()
-                        
-                        LanguageSwitcher()
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    
-                    VStack(spacing: 8) {
-                        Text("Create Account".localized)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(Color.textPrimary)
-                        
-                        Text("Join the Synapse community".localized)
-                            .font(.system(size: 16))
+        VStack(spacing: 28) {
+            // Top bar with close button and language switcher
+            HStack {
+                Button(action: { dismiss() }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.9))
+                            .frame(width: 40, height: 40)
+                            .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
+
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(Color.textSecondary)
                     }
-                    .padding(.top, 20)
+                }
+
+                Spacer()
+
+                LanguageSwitcher()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+
+            // Modern title section with icon
+            VStack(spacing: 16) {
+                // Icon with green glow
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                gradient: Gradient(colors: [
+                                    Color.accentGreen.opacity(0.2),
+                                    Color.accentGreen.opacity(0.05),
+                                    Color.clear
+                                ]),
+                                center: .center,
+                                startRadius: 20,
+                                endRadius: 60
+                            )
+                        )
+                        .frame(width: 120, height: 120)
+
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.accentGreen.opacity(0.15),
+                                    Color.accentGreen.opacity(0.08)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 70, height: 70)
+
+                    Image(systemName: "person.badge.plus")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundColor(Color.accentGreen)
+                }
+
+                VStack(spacing: 8) {
+                    Text("Create Account".localized)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.accentGreen,
+                                    Color.accentGreen.opacity(0.8)
+                                ]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+
+                    Text("Join the Synapse community".localized)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.textSecondary.opacity(0.8))
+                }
+            }
         }
     }
                     
     private var formSection: some View {
-                    VStack(spacing: 16) {
+        // Modern card container for form
+        VStack(spacing: 20) {
             usernameField
             emailField
             passwordField
             confirmPasswordField
-            ageVerificationCheckbox
-            termsCheckbox
+
+            VStack(spacing: 12) {
+                ageVerificationCheckbox
+                termsCheckbox
+            }
+            .padding(.top, 4)
         }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white.opacity(0.7))
+                .shadow(color: Color.black.opacity(0.06), radius: 20, x: 0, y: 10)
+        )
         .padding(.horizontal, 24)
     }
-    
+
     private var usernameField: some View {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Username".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            HStack {
-                                TextField("Enter username".localized, text: $username)
-                                    .textFieldStyle(CustomTextFieldStyle())
-                                                                    .onChange(of: username) { _, newValue in
-                                    validateUsername(newValue)
-                                }
-                                
-                                if isCheckingUsername {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
-                                        .scaleEffect(0.8)
-                                }
-                            }
-                            
-                            if !usernameError.isEmpty {
-                                Text(usernameError)
-                    .font(.caption)
-                                    .foregroundColor(Color.error)
-            }
-                            }
-                        }
-                        
-    private var emailField: some View {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Email".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            TextField("Enter email".localized, text: $email)
-                                .textFieldStyle(CustomTextFieldStyle())
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
-        }
-                        }
-                        
-    private var passwordField: some View {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Password".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            SecureField("Enter password".localized, text: $password)
-                                .textFieldStyle(CustomTextFieldStyle())
-        }
-                        }
-                        
-    private var confirmPasswordField: some View {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Confirm Password".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            SecureField("Confirm password".localized, text: $confirmPassword)
-                                .textFieldStyle(CustomTextFieldStyle())
-                        
-                        if !confirmPassword.isEmpty && password != confirmPassword {
-                Text("Passwords do not match".localized)
-                    .font(.caption)
-                                .foregroundColor(Color.error)
-                        }
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Username".localized)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.textPrimary.opacity(0.7))
+
+            HStack(spacing: 12) {
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.accentGreen.opacity(0.6))
+
+                TextField("Enter username".localized, text: $username)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+                    .autocapitalization(.none)
+                    .onChange(of: username) { _, newValue in
+                        validateUsername(newValue)
                     }
+
+                if isCheckingUsername {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                        .scaleEffect(0.8)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(usernameError.isEmpty ? Color.black.opacity(0.08) : Color.red.opacity(0.3), lineWidth: 1.5)
+                    )
+            )
+
+            if !usernameError.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 12))
+                    Text(usernameError)
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundColor(Color.red.opacity(0.8))
+            }
+        }
+    }
+
+    private var emailField: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Email".localized)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.textPrimary.opacity(0.7))
+
+            HStack(spacing: 12) {
+                Image(systemName: "envelope.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.accentGreen.opacity(0.6))
+
+                TextField("Enter email".localized, text: $email)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1.5)
+                    )
+            )
+        }
+    }
+
+    private var passwordField: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Password".localized)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.textPrimary.opacity(0.7))
+
+            HStack(spacing: 12) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.accentGreen.opacity(0.6))
+
+                SecureField("Enter password".localized, text: $password)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1.5)
+                    )
+            )
+        }
+    }
+
+    private var confirmPasswordField: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Confirm Password".localized)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.textPrimary.opacity(0.7))
+
+            HStack(spacing: 12) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.accentGreen.opacity(0.6))
+
+                SecureField("Confirm password".localized, text: $confirmPassword)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(!confirmPassword.isEmpty && password != confirmPassword ? Color.red.opacity(0.3) : Color.black.opacity(0.08), lineWidth: 1.5)
+                    )
+            )
+
+            if !confirmPassword.isEmpty && password != confirmPassword {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 12))
+                    Text("Passwords do not match".localized)
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundColor(Color.red.opacity(0.8))
+            }
+        }
     }
 
     private var ageVerificationCheckbox: some View {
@@ -642,50 +794,61 @@ struct SignUpView: View {
     }
 
     private var actionSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             signUpButton
             loginPrompt
         }
         .padding(.horizontal, 24)
     }
-    
+
     private var signUpButton: some View {
-                    Button(action: signUp) {
-                        HStack {
-                            if isSubmitting {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            } else {
+        Button(action: signUp) {
+            HStack(spacing: 12) {
+                if isSubmitting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.9)
+                } else {
                     Text("Create Account".localized)
-                        .fontWeight(.semibold)
-                            }
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isFormValid && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
-            )
-                    }
-                    .disabled(!isFormValid || isSubmitting)
-        .padding(.top, 8)
-    }
-    
-    private var loginPrompt: some View {
-        HStack {
-            Text("Already have an account?".localized)
-                .foregroundColor(Color.textSecondary)
-            
-            Button("Sign In".localized) {
-                dismiss()
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 16, weight: .semibold))
+                }
             }
-            .foregroundColor(Color.accentGreen)
-            .fontWeight(.medium)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 58)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        isFormValid && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.5),
+                        isFormValid && !isSubmitting ? Color.accentGreen.opacity(0.85) : Color.gray.opacity(0.4)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(18)
+            .shadow(color: isFormValid ? Color.accentGreen.opacity(0.4) : Color.clear, radius: 15, x: 0, y: 8)
         }
-        .font(.system(size: 14))
-        .padding(.top, 16)
+        .buttonStyle(ModernScaleButtonStyle())
+        .disabled(!isFormValid || isSubmitting)
+    }
+
+    private var loginPrompt: some View {
+        Button(action: { dismiss() }) {
+            HStack(spacing: 6) {
+                Text("Already have an account?".localized)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(Color.textSecondary)
+
+                Text("Sign In".localized)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(Color.accentGreen)
+            }
+            .padding(.vertical, 12)
+        }
     }
     
     private func validateUsername(_ username: String) {
@@ -780,15 +943,28 @@ struct LoginView: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    headerSection
-                    formSection
-                    actionSection
+            ZStack {
+                // Modern gradient background matching home page
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.95, green: 0.98, blue: 0.96),
+                        Color.white,
+                        Color(red: 0.97, green: 1.0, blue: 0.98)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 32) {
+                        headerSection
+                        formSection
+                        actionSection
+                    }
+                    .padding(.bottom, 50)
                 }
-                .padding(.bottom, 50)
             }
-            .background(Color.backgroundPrimary)
         }
         .navigationBarHidden(true)
         .alert("Sign In Error", isPresented: $showError) {
@@ -799,110 +975,217 @@ struct LoginView: View {
             Text(errorMessage)
         }
     }
-    
+
     private var headerSection: some View {
-        VStack(spacing: 24) {
-                    HStack {
-                        Button("Cancel".localized, action: { dismiss() })
-                            .foregroundColor(Color.textSecondary)
-                        
-                        Spacer()
-                        
-                        LanguageSwitcher()
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    
-                    VStack(spacing: 8) {
-                        Text("Welcome Back".localized)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(Color.textPrimary)
-                        
-                        Text("Sign in to your account".localized)
-                            .font(.system(size: 16))
+        VStack(spacing: 28) {
+            // Top bar with close button and language switcher
+            HStack {
+                Button(action: { dismiss() }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.9))
+                            .frame(width: 40, height: 40)
+                            .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
+
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(Color.textSecondary)
                     }
-                    .padding(.top, 20)
+                }
+
+                Spacer()
+
+                LanguageSwitcher()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+
+            // Modern title section with icon
+            VStack(spacing: 16) {
+                // Icon with green glow
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                gradient: Gradient(colors: [
+                                    Color.accentGreen.opacity(0.2),
+                                    Color.accentGreen.opacity(0.05),
+                                    Color.clear
+                                ]),
+                                center: .center,
+                                startRadius: 20,
+                                endRadius: 60
+                            )
+                        )
+                        .frame(width: 120, height: 120)
+
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.accentGreen.opacity(0.15),
+                                    Color.accentGreen.opacity(0.08)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 70, height: 70)
+
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundColor(Color.accentGreen)
+                }
+
+                VStack(spacing: 8) {
+                    Text("Welcome Back".localized)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.accentGreen,
+                                    Color.accentGreen.opacity(0.8)
+                                ]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+
+                    Text("Sign in to your account".localized)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.textSecondary.opacity(0.8))
+                }
+            }
         }
     }
-                    
+
     private var formSection: some View {
-                    VStack(spacing: 16) {
+        // Modern card container for form
+        VStack(spacing: 20) {
             emailField
             passwordField
         }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white.opacity(0.7))
+                .shadow(color: Color.black.opacity(0.06), radius: 20, x: 0, y: 10)
+        )
         .padding(.horizontal, 24)
     }
-    
+
     private var emailField: some View {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Email".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            TextField("Enter email".localized, text: $email)
-                                .textFieldStyle(CustomTextFieldStyle())
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Email".localized)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.textPrimary.opacity(0.7))
+
+            HStack(spacing: 12) {
+                Image(systemName: "envelope.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.accentGreen.opacity(0.6))
+
+                TextField("Enter email".localized, text: $email)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1.5)
+                    )
+            )
         }
-                        }
-                        
+    }
+
     private var passwordField: some View {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Password".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            SecureField("Enter password".localized, text: $password)
-                                .textFieldStyle(CustomTextFieldStyle())
-                        }
-                    }
-    
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Password".localized)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.textPrimary.opacity(0.7))
+
+            HStack(spacing: 12) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.accentGreen.opacity(0.6))
+
+                SecureField("Enter password".localized, text: $password)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.textPrimary)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1.5)
+                    )
+            )
+        }
+    }
+
     private var actionSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             signInButton
             signUpPrompt
         }
         .padding(.horizontal, 24)
     }
-    
+
     private var signInButton: some View {
-                    Button(action: signIn) {
-                        HStack {
-                            if isSubmitting {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            } else {
+        Button(action: signIn) {
+            HStack(spacing: 12) {
+                if isSubmitting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.9)
+                } else {
                     Text("Sign In".localized)
-                        .fontWeight(.semibold)
-                            }
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isFormValid && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.3))
-            )
-                    }
-                    .disabled(!isFormValid || isSubmitting)
-        .padding(.top, 8)
-    }
-    
-    private var signUpPrompt: some View {
-        HStack {
-            Text("Don't have an account?".localized)
-                .foregroundColor(Color.textSecondary)
-            
-            Button("Sign Up".localized) {
-                    dismiss()
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 16, weight: .semibold))
                 }
-            .foregroundColor(Color.accentGreen)
-            .fontWeight(.medium)
             }
-        .font(.system(size: 14))
-        .padding(.top, 16)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 58)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        isFormValid && !isSubmitting ? Color.accentGreen : Color.gray.opacity(0.5),
+                        isFormValid && !isSubmitting ? Color.accentGreen.opacity(0.85) : Color.gray.opacity(0.4)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(18)
+            .shadow(color: isFormValid ? Color.accentGreen.opacity(0.4) : Color.clear, radius: 15, x: 0, y: 8)
+        }
+        .buttonStyle(ModernScaleButtonStyle())
+        .disabled(!isFormValid || isSubmitting)
+    }
+
+    private var signUpPrompt: some View {
+        Button(action: { dismiss() }) {
+            HStack(spacing: 6) {
+                Text("Don't have an account?".localized)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(Color.textSecondary)
+
+                Text("Sign Up".localized)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(Color.accentGreen)
+            }
+            .padding(.vertical, 12)
+        }
     }
     
     private func signIn() {
