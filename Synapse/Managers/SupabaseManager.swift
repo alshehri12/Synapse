@@ -307,7 +307,12 @@ class SupabaseManager: ObservableObject {
             type: .signup
         )
     }
-    
+
+    @MainActor
+    func resetPassword(email: String) async throws {
+        try await supabase.auth.resetPasswordForEmail(email)
+    }
+
     // MARK: - User Profile Management
     
     func createUserProfile(userId: String, email: String, username: String) async throws {
