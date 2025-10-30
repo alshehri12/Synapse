@@ -13,6 +13,7 @@ import Supabase
 struct SynapseApp: App {
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var supabaseManager = SupabaseManager.shared
+    @StateObject private var appearanceManager = AppearanceManager.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some Scene {
@@ -22,35 +23,45 @@ struct SynapseApp: App {
                     // Show onboarding first
                     OnboardingView()
                         .environmentObject(localizationManager)
+                        .environmentObject(appearanceManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                        .preferredColorScheme(appearanceManager.colorScheme)
                 } else if !supabaseManager.isAuthReady {
                     // Show loading while checking auth state
                     LoadingView()
                         .environmentObject(localizationManager)
+                        .environmentObject(appearanceManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                        .preferredColorScheme(appearanceManager.colorScheme)
                 } else if supabaseManager.isAuthenticated && supabaseManager.isEmailVerified && !supabaseManager.isSigningUp {
                     // User is signed in AND email verified - show main app
                     ContentView()
                         .environmentObject(localizationManager)
                         .environmentObject(supabaseManager)
+                        .environmentObject(appearanceManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                        .preferredColorScheme(appearanceManager.colorScheme)
                 } else if supabaseManager.isAuthenticated && !supabaseManager.isEmailVerified {
                     // User is signed in BUT email NOT verified - show verification required screen
                     EmailVerificationRequiredView()
                         .environmentObject(localizationManager)
                         .environmentObject(supabaseManager)
+                        .environmentObject(appearanceManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                        .preferredColorScheme(appearanceManager.colorScheme)
                 } else {
                     // User is not signed in - show authentication
                     AuthenticationView()
                         .environmentObject(localizationManager)
                         .environmentObject(supabaseManager)
+                        .environmentObject(appearanceManager)
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                        .preferredColorScheme(appearanceManager.colorScheme)
                 }
             }
         }

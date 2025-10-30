@@ -593,6 +593,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
     @EnvironmentObject private var supabaseManager: SupabaseManager
+    @EnvironmentObject private var appearanceManager: AppearanceManager
     @State private var showingLanguageSelector = false
     
     private func signOut() async {
@@ -618,6 +619,12 @@ struct SettingsView: View {
                     }
                 }
                 
+                Section("Appearance".localized) {
+                    SettingsLinkRow(icon: "paintbrush", title: "Appearance".localized) {
+                        AppearanceSettingsView()
+                    }
+                }
+
                 Section("App".localized) {
                     SettingsRow(icon: "globe", title: "Language".localized, action: { showingLanguageSelector = true })
                     SettingsLinkRow(icon: "gearshape.2", title: "App Preferences".localized) {
@@ -891,6 +898,47 @@ struct PrivacySettingsView: View {
             }
         }
         .navigationTitle("Privacy".localized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Appearance Settings
+struct AppearanceSettingsView: View {
+    @EnvironmentObject private var appearanceManager: AppearanceManager
+    @EnvironmentObject private var localizationManager: LocalizationManager
+
+    var body: some View {
+        List {
+            Section(header: Text("Theme".localized), footer: Text("Choose how Synapse looks on your device".localized)) {
+                ForEach(AppearanceManager.ColorSchemePreference.allCases, id: \.self) { preference in
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            appearanceManager.setPreference(preference)
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: preference.icon)
+                                .foregroundColor(Color.accentGreen)
+                                .frame(width: 24)
+
+                            Text(preference.rawValue.localized)
+                                .foregroundColor(Color.Text.primary)
+
+                            Spacer()
+
+                            if appearanceManager.preference == preference {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(Color.accentGreen)
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+        }
+        .navigationTitle("Appearance".localized)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
