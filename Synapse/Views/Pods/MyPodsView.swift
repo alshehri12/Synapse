@@ -18,6 +18,15 @@ struct MyPodsView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
+                // Elegant Header
+                MyProjectsHeader(
+                    onCreateProject: {
+                        // Navigate to create pod view if available
+                        // For now, this can be left empty or trigger a future action
+                    }
+                )
+                .environmentObject(localizationManager)
+
                 // Tab Selector
                 HStack(spacing: 0) {
                     TabButton(
@@ -25,7 +34,7 @@ struct MyPodsView: View {
                         isSelected: selectedTab == 0,
                         action: { selectedTab = 0 }
                     )
-                    
+
                     TabButton(
                         title: "Completed".localized,
                         isSelected: selectedTab == 1,
@@ -34,6 +43,7 @@ struct MyPodsView: View {
                 }
                 .background(Color.backgroundPrimary)
                 .padding(.horizontal, 20)
+                .padding(.top, 8)
                 
                 // Pods List
                 if isLoading {
@@ -64,8 +74,7 @@ struct MyPodsView: View {
                 }
             }
             .background(Color.backgroundSecondary)
-            .navigationTitle("My Pods".localized)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
             .onAppear {
                 loadPods()
             }

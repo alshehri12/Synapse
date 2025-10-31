@@ -29,7 +29,7 @@ struct ContentView: View {
                 }
                 .tag(1)
             
-            NotificationsView()
+            NotificationsViewRedesigned()
                 .tabItem {
                     Image(systemName: "bell")
                     Text("Notifications".localized)

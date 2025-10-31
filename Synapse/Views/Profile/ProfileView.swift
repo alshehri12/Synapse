@@ -19,47 +19,81 @@ struct ProfileView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Profile Header
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
-                            .scaleEffect(1.2)
-                            .frame(height: 200)
-                    } else if let user = user {
-                        ProfileHeader(user: user) {
-                            showingEditProfile = true
+            VStack(spacing: 0) {
+                // Elegant Profile Header
+                if let user = user {
+                    ProfilePageHeader(
+                        username: user.username,
+                        email: user.email,
+                        avatarInitial: String(user.username.prefix(1)).uppercased(),
+                        onSettings: { showingSettings = true }
+                    )
+                    .environmentObject(localizationManager)
+                }
+
+                // Content
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Loading State
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
+                                .scaleEffect(1.2)
+                                .frame(height: 200)
+                        } else if let user = user {
+                            // Bio Section
+                            if let bio = user.bio, !bio.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("About".localized)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(Color.textPrimary)
+                                        .padding(.horizontal, 20)
+
+                                    Text(bio)
+                                        .font(.system(size: 14))
+                                        .foregroundColor(Color.textSecondary)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 12)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.backgroundPrimary)
+                                        .cornerRadius(12)
+                                        .padding(.horizontal, 20)
+                                }
+                            }
+
+                            // Edit Profile Button
+                            Button(action: { showingEditProfile = true }) {
+                                Text("Edit Profile".localized)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.Brand.primary, Color.Brand.primaryDark],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 20)
+
+                            // Stats Section
+                            StatsSection(user: user)
+
+                            // Skills & Interests
+                            SkillsInterestsSection(user: user)
+
+                            // Menu Items
+                            MenuSection()
                         }
                     }
-                    
-                    // Stats Section
-                    if let user = user {
-                        StatsSection(user: user)
-                    }
-                    
-                    // Skills & Interests
-                    if let user = user {
-                        SkillsInterestsSection(user: user)
-                    }
-                    
-                    // Menu Items
-                    MenuSection()
+                    .padding(.vertical, 20)
                 }
-                .padding(.vertical, 20)
             }
             .background(Color.backgroundSecondary)
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingSettings = true }) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 18))
-                            .foregroundColor(Color.accentGreen)
-                    }
-                }
-            }
+            .navigationBarHidden(true)
             .onAppear {
                 loadUserProfile()
             }

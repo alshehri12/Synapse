@@ -49,36 +49,29 @@ struct ExploreView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Search and Filter Bar
-                VStack(spacing: 12) {
-                    HStack {
-                        SearchBar(text: $searchText, placeholder: "Search ideas, tags, or users...".localized)
-                        
-                        Button(action: { showingSearch = true }) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 18))
-                                .foregroundColor(Color.accentGreen)
-                                .frame(width: 44, height: 44)
-                                .background(Color.accentGreen.opacity(0.1))
-                                .cornerRadius(12)
-                        }
-                    }
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(IdeaFilter.allCases, id: \.self) { filter in
-                                FilterChip(
-                                    title: filter.rawValue.localized,
-                                    isSelected: selectedFilter == filter
-                                ) {
-                                    selectedFilter = filter
-                                }
+                // Elegant Header
+                ExploreHeader(
+                    searchText: $searchText,
+                    onActivityTap: { showingActivityFeed = true },
+                    onCreateIdea: { showingCreateIdea = true }
+                )
+                .environmentObject(localizationManager)
+
+                // Filter Chips
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(IdeaFilter.allCases, id: \.self) { filter in
+                            FilterChip(
+                                title: filter.rawValue.localized,
+                                isSelected: selectedFilter == filter
+                            ) {
+                                selectedFilter = filter
                             }
                         }
-                        .padding(.horizontal, 20)
                     }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, 12)
                 .background(Color.backgroundPrimary)
                 
                 // Ideas Feed
@@ -107,46 +100,7 @@ struct ExploreView: View {
                 }
             }
             .background(Color.backgroundSecondary)
-            .navigationTitle("")
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles")
-                            .foregroundColor(Color.accentGreen)
-                        Text("Explore Ideas".localized)
-                            .font(.system(size: 20, weight: .semibold))
-                    }
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 8) {
-                        Button(action: {
-                            showingActivityFeed = true
-                        }) {
-                            Image(systemName: "bell")
-                                .font(.title2)
-                                .foregroundColor(Color.textPrimary)
-                        }
-                        
-                        Button(action: {
-                            showingCreateIdea = true
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "plus.circle")
-                                    .font(.system(size: 14, weight: .semibold))
-                                Text("New Idea".localized)
-                                    .font(.system(size: 14, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.accentGreen)
-                            .cornerRadius(20)
-                        }
-                    }
-                }
-            }
+            .navigationBarHidden(true)
             .onAppear {
                 loadIdeas()
             }
