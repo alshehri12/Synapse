@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ModerationTestView: View {
-    @State private var testContent = "This is a test message for content moderation"
+    @State private var testContent = "This is a safe message for testing"
     @State private var testResult = ""
     @State private var isLoading = false
     
@@ -62,11 +62,11 @@ struct ModerationTestView: View {
                         .cornerRadius(10)
                     }
                     .disabled(isLoading)
-                    
+
                     Button(action: testConnection) {
                         HStack {
                             Image(systemName: "wifi")
-                            Text("Test Services Connection")
+                            Text("Test API Connection")
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -75,6 +75,30 @@ struct ModerationTestView: View {
                         .cornerRadius(10)
                     }
                     .disabled(isLoading)
+
+                    // Example test buttons
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Quick Tests:")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        HStack(spacing: 8) {
+                            Button("Safe Text") {
+                                testContent = "I have a great idea for a mobile app"
+                                testBasicContent()
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isLoading)
+
+                            Button("Spam Test") {
+                                testContent = "BUY NOW!!! 🔥🔥🔥 CLICK HERE $$$ CHEAP!!!"
+                                testBasicContent()
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isLoading)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal)
                 

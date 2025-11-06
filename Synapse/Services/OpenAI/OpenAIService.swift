@@ -44,36 +44,52 @@ class OpenAIService {
     /// Moderate content using OpenAI Moderation API
     func moderateContent(_ content: String) async throws -> OpenAIModerationResult {
         guard isConfigured else {
+            print("❌ API key not configured")
             throw OpenAIError.apiKeyMissing
         }
-        
+
+        print("🔑 Using API key (first 10 chars): \(String(apiKey.prefix(10)))...")
+
         let url = URL(string: "\(baseURL)/moderations")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let requestBody: [String: Any] = [
-            "input": content,
-            "model": "text-moderation-latest"
+            "input": content
         ]
-        
+
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-        
+
+        print("📤 Sending request to: \(url.absoluteString)")
+        print("📝 Content to moderate: '\(content)'")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         if let httpResponse = response as? HTTPURLResponse {
-            guard httpResponse.statusCode == 200 else {
+            print("📥 Response status code: \(httpResponse.statusCode)")
+
+            if httpResponse.statusCode != 200 {
+                // Print error response body for debugging
+                if let errorBody = String(data: data, encoding: .utf8) {
+                    print("❌ Error response body: \(errorBody)")
+                }
                 throw OpenAIError.httpError(httpResponse.statusCode)
             }
         }
-        
+
+        // Print successful response for debugging
+        if let responseBody = String(data: data, encoding: .utf8) {
+            print("✅ Response body: \(responseBody)")
+        }
+
         let moderationResponse = try JSONDecoder().decode(OpenAIModerationResponse.self, from: data)
-        
+
         guard let result = moderationResponse.results.first else {
             throw OpenAIError.invalidResponse
         }
-        
+
         return result
     }
 }
