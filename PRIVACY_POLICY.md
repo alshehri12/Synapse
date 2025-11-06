@@ -1,6 +1,6 @@
 # Privacy Policy for Synapse
 
-**Last Updated: [Current Date]**
+**Last Updated: January 2025**
 
 ## Introduction
 
@@ -94,15 +94,41 @@ If you're a California resident, you have the right to:
 
 ## 6. Children's Privacy (COPPA Compliance)
 
-### 6.1 Age Requirement
-Synapse is **not intended for children under 13 years old**. We do not knowingly collect personal information from children under 13.
+### 6.1 Age Requirement and Parental Consent
+Synapse is designed to be suitable for **all ages** with appropriate content moderation:
 
-### 6.2 Age Verification
-- We ask users to confirm they are 13 or older during signup
-- If we discover a user is under 13, we will delete their account immediately
+- **Users of all ages** can use Synapse
+- **Users under 13**: Parental or guardian consent is required before creating an account
+- **No adult content**: Our content moderation system actively filters inappropriate content
+- **Safe environment**: All user-generated content is moderated using AI to ensure age-appropriate interactions
 
-### 6.3 Parental Notice
-If you believe your child under 13 has created an account, please contact us immediately at [your-email@domain.com], and we will delete it.
+### 6.2 Data Collection from Children
+For users under 13, we collect only the minimum necessary information:
+- Email address (for account access and parental contact)
+- Username (display name)
+- Content created within the app
+- Basic usage data for app functionality
+
+We do **not** collect:
+- Location data from children
+- Social security numbers
+- Financial information
+- Unnecessary personal details
+
+### 6.3 Parental Rights
+Parents or guardians of users under 13 have the right to:
+- Review their child's personal information
+- Request deletion of their child's information
+- Refuse further collection of their child's information
+- Revoke consent at any time
+
+**To exercise parental rights**: Contact us at support@mysynapses.com with verification of parental status.
+
+### 6.4 Content Safety for All Ages
+- AI-powered content moderation filters inappropriate content
+- User reporting system for flagging concerning content
+- Regular monitoring and human review of flagged content
+- Zero-tolerance policy for adult or harmful content
 
 ## 7. Data Security
 
@@ -160,15 +186,15 @@ We may update this Privacy Policy from time to time. We will notify you of signi
 ## 13. Contact Us
 
 ### 13.1 Questions or Concerns
-Email: [your-email@domain.com]
-Website: [your-website.com]
+Email: support@mysynapses.com
+Website: https://mysynapses.com/
 
 ### 13.2 Data Protection Officer (GDPR)
-Email: dpo@[your-domain.com]
+Email: privacy@mysynapses.com
 
 ### 13.3 Mailing Address
-[Your Company Name]
-[Street Address]
+Synapse App
+[Your Company Address - To be added]
 [City, State, ZIP]
 [Country]
 
@@ -188,9 +214,9 @@ We process your data based on:
 **Why we collect it**: To run the app, keep it safe, and improve it
 **Who sees it**: Other users see your public content; we use secure services for hosting
 **Your rights**: You can see, change, download, or delete your data anytime
-**Kids**: Must be 13+ to use Synapse
-**AI**: We use AI to check for inappropriate content
-**Contact**: [your-email@domain.com] for questions
+**Kids**: All ages allowed with parental consent for under 13
+**AI**: We use AI to check for inappropriate content and keep the environment safe
+**Contact**: support@mysynapses.com for questions
 
 ---
 

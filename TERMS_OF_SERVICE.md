@@ -1,6 +1,6 @@
 # Terms of Service for Synapse
 
-**Last Updated: [Current Date]**
+**Last Updated: January 2025**
 
 ## 1. Acceptance of Terms
 
@@ -9,7 +9,11 @@ By accessing or using Synapse ("Service," "App," "we," "us," or "our"), you agre
 ## 2. Eligibility
 
 ### 2.1 Age Requirement
-You must be at least **13 years old** to use Synapse. If you're under 18, you must have parental or guardian consent.
+Synapse is designed for users of **all ages**:
+- **All ages welcome**: No minimum age requirement
+- **Users under 13**: Must have verifiable parental or guardian consent before creating an account
+- **Users under 18**: Parental or guardian consent recommended
+- **Safe environment**: Active content moderation ensures age-appropriate content for all users
 
 ### 2.2 Account Responsibility
 - You're responsible for maintaining account security
@@ -148,7 +152,7 @@ You agree to indemnify and hold us harmless from any claims, damages, losses, or
 ## 11. Dispute Resolution
 
 ### 11.1 Informal Resolution
-Contact us first at [your-email@domain.com] to resolve disputes informally.
+Contact us first at support@mysynapses.com to resolve disputes informally.
 
 ### 11.2 Arbitration
 If informal resolution fails, disputes will be resolved through binding arbitration (not court), except:
@@ -213,7 +217,7 @@ Apple and its subsidiaries are third-party beneficiaries of these Terms. Upon ac
 
 ### 15.1 Infringement Claims
 If you believe content infringes your copyright, send a notice to:
-Email: dmca@[your-domain.com]
+Email: legal@mysynapses.com
 
 Include:
 - Your contact information
@@ -246,15 +250,15 @@ We're not liable for delays or failures due to circumstances beyond our control.
 ## 17. Contact Information
 
 ### 17.1 General Questions
-Email: [your-email@domain.com]
-Website: [your-website.com]
+Email: support@mysynapses.com
+Website: https://mysynapses.com/
 
 ### 17.2 Legal Notices
-Email: legal@[your-domain.com]
+Email: legal@mysynapses.com
 
 ### 17.3 Mailing Address
-[Your Company Name]
-[Street Address]
+Synapse App
+[Your Company Address - To be added]
 [City, State, ZIP]
 [Country]
 
@@ -266,8 +270,8 @@ Email: legal@[your-domain.com]
 **What you can't do**: Post illegal/inappropriate content, hack, spam, harass
 **Our rights**: We can remove content or terminate accounts that violate rules
 **Your rights**: You own your content, can delete your account anytime
-**Age**: Must be 13+ to use Synapse
-**AI Moderation**: We use AI to check for inappropriate content
+**Age**: All ages welcome (parental consent required for under 13)
+**AI Moderation**: We use AI to check for inappropriate content and ensure safe environment
 **Liability**: We're not liable for user content or most damages
 **Changes**: We may update these Terms; we'll notify you
 **Disputes**: Handled through arbitration, not court
@@ -276,5 +280,5 @@ Email: legal@[your-domain.com]
 
 **By using Synapse, you agree to these Terms of Service.**
 
-**Last Updated**: [Current Date]
-**Effective Date**: [Current Date]
+**Last Updated**: January 2025
+**Effective Date**: January 2025
