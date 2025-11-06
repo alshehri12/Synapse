@@ -290,15 +290,50 @@ struct CreateIdeaView: View {
     private func submitIdea() {
         guard isFormValid else { return }
         guard let currentUser = supabaseManager.currentUser else { return }
-        
+
         print("🚀 CreateIdeaView: Starting idea submission...")
         print("📝 Form data: Title='\(title)', Public=\(isPublic), Tags=\(tags)")
-        
+
         isSubmitting = true
-        
+
         Task {
             do {
-                // Try to fetch profile, but don't fail idea creation if profile lookup has issues
+                // STEP 1: Content Moderation Check
+                print("🛡️ Moderating content...")
+
+                // Check title
+                let titleResult = try await ModerationService.shared.moderateContent(
+                    title,
+                    contentType: .idea
+                )
+
+                if !titleResult.isAllowed {
+                    let violations = titleResult.violations.map { $0.rawValue }.joined(separator: ", ")
+                    throw NSError(
+                        domain: "ContentModeration",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "Title contains inappropriate content (\(violations)). Please revise and try again."]
+                    )
+                }
+
+                // Check description
+                let descriptionResult = try await ModerationService.shared.moderateContent(
+                    description,
+                    contentType: .idea
+                )
+
+                if !descriptionResult.isAllowed {
+                    let violations = descriptionResult.violations.map { $0.rawValue }.joined(separator: ", ")
+                    throw NSError(
+                        domain: "ContentModeration",
+                        code: 2,
+                        userInfo: [NSLocalizedDescriptionKey: "Description contains inappropriate content (\(violations)). Please revise and try again."]
+                    )
+                }
+
+                print("✅ Content moderation passed")
+
+                // STEP 2: Resolve username
                 var resolvedUsername: String = "Anonymous User"
                 do {
                     if let userData = try await supabaseManager.getUserProfile(userId: currentUser.uid) {
@@ -320,6 +355,7 @@ struct CreateIdeaView: View {
                     print("⚠️ Profile lookup failed; falling back to username: \(resolvedUsername). Error: \(error)")
                 }
 
+                // STEP 3: Create the idea (content is now verified safe)
                 let ideaSparkId = try await supabaseManager.createIdeaSpark(
                     title: title,
                     description: description,
@@ -328,9 +364,9 @@ struct CreateIdeaView: View {
                     creatorId: currentUser.uid,
                     creatorUsername: resolvedUsername
                 )
-                
+
                 print("✅ CreateIdeaView: Idea created with ID: \(ideaSparkId)")
-                
+
                 await MainActor.run {
                     isSubmitting = false
                     showingSuccessAlert = true

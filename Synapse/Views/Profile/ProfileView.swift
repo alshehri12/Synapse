@@ -664,6 +664,9 @@ struct SettingsView: View {
                     SettingsLinkRow(icon: "gearshape.2", title: "App Preferences".localized) {
                         AppPreferencesView()
                     }
+                    SettingsLinkRow(icon: "shield.checkered", title: "Content Moderation Test".localized) {
+                        ModerationTestView()
+                    }
                     SettingsLinkRow(icon: "questionmark.circle", title: "Help & Support".localized) {
                         HelpSupportView()
                     }

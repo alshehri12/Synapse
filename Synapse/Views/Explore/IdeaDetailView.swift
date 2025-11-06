@@ -523,13 +523,32 @@ struct IdeaDetailView: View {
     private func submitComment() {
         guard let currentUser = supabaseManager.currentUser,
               !newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
+
         isSubmittingComment = true
         let commentText = newComment.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         Task {
             do {
-                // Get username from profile first, then fallback to Google display name
+                // STEP 1: Content Moderation Check
+                print("🛡️ Moderating comment...")
+
+                let moderationResult = try await ModerationService.shared.moderateContent(
+                    commentText,
+                    contentType: .comment
+                )
+
+                if !moderationResult.isAllowed {
+                    let violations = moderationResult.violations.map { $0.rawValue }.joined(separator: ", ")
+                    throw NSError(
+                        domain: "ContentModeration",
+                        code: 3,
+                        userInfo: [NSLocalizedDescriptionKey: "Comment contains inappropriate content (\(violations)). Please revise and try again."]
+                    )
+                }
+
+                print("✅ Comment moderation passed")
+
+                // STEP 2: Get username from profile first, then fallback to Google display name
                 var username = "Anonymous User"
                 do {
                     if let userData = try await supabaseManager.getUserProfile(userId: currentUser.uid) {
@@ -540,18 +559,19 @@ struct IdeaDetailView: View {
                 } catch {
                     username = currentUser.displayName ?? "Anonymous User"
                 }
-                
+
                 print("💬 Submitting comment: '\(commentText)' by \(username)")
-                
+
+                // STEP 3: Submit the comment (content is now verified safe)
                 _ = try await supabaseManager.addCommentToIdea(
                     ideaId: currentIdea.id,
                     content: commentText,
                     authorId: currentUser.uid,
                     authorUsername: username
                 )
-                
+
                 print("✅ Comment submitted successfully, reloading comments...")
-                
+
                 await MainActor.run {
                     newComment = ""
                     isSubmittingComment = false
@@ -561,6 +581,11 @@ struct IdeaDetailView: View {
                 print("❌ Error submitting comment: \(error.localizedDescription)")
                 await MainActor.run {
                     isSubmittingComment = false
+                    // Show error to user
+                    if error.localizedDescription.contains("inappropriate content") {
+                        // Could show an alert here, but for now just print
+                        print("⚠️ User attempted to post inappropriate content")
+                    }
                 }
             }
         }
