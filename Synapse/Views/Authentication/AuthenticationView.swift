@@ -18,149 +18,153 @@ struct AuthenticationView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background image (Tempo-inspired)
-                Image("AuthBackground")
-                    .resizable()
-                    .scaledToFill()
+                // Green background (GoFundMe-inspired)
+                Color.accentGreen
                     .ignoresSafeArea()
 
-                // Dark overlay for better text contrast
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.black.opacity(0.6),
-                        Color.black.opacity(0.4),
-                        Color.black.opacity(0.7)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-
                 VStack(spacing: 0) {
-                    // Language switcher at top right
-                    HStack {
-                        Spacer()
+                    // Top illustration banner
+                    ZStack(alignment: .topTrailing) {
+                        // Illustration
+                        Image("AuthIllustration")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: 300)
+                            .clipped()
+                            .opacity(animateContent ? 1 : 0)
+                            .scaleEffect(animateContent ? 1 : 0.9)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0), value: animateContent)
+
+                        // Language switcher overlay on illustration
                         Button(action: {
                             localizationManager.toggleLanguage()
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "globe")
                                     .font(.system(size: 14, weight: .medium))
-                                Text(localizationManager.currentLanguage == .arabic ? "العربية" : "English")
-                                    .font(.system(size: 14, weight: .medium))
+                                Text(localizationManager.currentLanguage == .arabic ? "العربية" : "EN")
+                                    .font(.system(size: 14, weight: .semibold))
                             }
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(
                                 Capsule()
-                                    .fill(Color.white.opacity(0.15))
+                                    .fill(Color.black.opacity(0.2))
                             )
                         }
+                        .padding(.top, 50)
+                        .padding(.trailing, 20)
                     }
-                    .padding(.top, 20)
-                    .padding(.horizontal, 28)
 
-                    Spacer()
+                    // White rounded section (GoFundMe-style)
+                    VStack(spacing: 0) {
+                        VStack(spacing: 32) {
+                            // Logo
+                            Image("AppLogo")
+                                .resizable()
+                                .renderingMode(.original)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 80, height: 80)
+                                .padding(.top, 40)
+                                .opacity(animateContent ? 1 : 0)
+                                .scaleEffect(animateContent ? 1 : 0.8)
+                                .animation(.spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0).delay(0.1), value: animateContent)
 
-                    // Logo and tagline centered on image
-                    VStack(spacing: 24) {
-                        // App Logo
-                        Image("AppLogo")
-                            .resizable()
-                            .renderingMode(.original)
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 120, height: 120)
-                            .opacity(animateContent ? 1 : 0)
-                            .scaleEffect(animateContent ? 1 : 0.8)
-                            .animation(.spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0).delay(0.1), value: animateContent)
+                            // Welcome text
+                            Text(localizationManager.currentLanguage == .arabic ?
+                                 "مرحباً بك في\nمنزلك للأفكار" :
+                                 "Welcome to\nyour home for ideas")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(Color.textPrimary)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(4)
+                                .opacity(animateContent ? 1 : 0)
+                                .offset(y: animateContent ? 0 : 10)
+                                .animation(.spring(response: 0.8, dampingFraction: 0.8, blendDuration: 0).delay(0.2), value: animateContent)
 
-                        // Tagline
-                        Text(localizationManager.currentLanguage == .arabic ?
-                             "حوّل أفكارك إلى واقع ملموس" :
-                             "Start getting real results from ideas tailored to you.")
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundColor(.white)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-                            .opacity(animateContent ? 1 : 0)
-                            .offset(y: animateContent ? 0 : 10)
-                            .animation(.spring(response: 0.8, dampingFraction: 0.8, blendDuration: 0).delay(0.2), value: animateContent)
-                    }
-                    .padding(.bottom, 40)
+                            // Buttons section
+                            VStack(spacing: 14) {
+                                // Primary green button - Continue with Google
+                                GoogleSignInButton()
+                                    .frame(height: 54)
+                                    .opacity(animateContent ? 1 : 0)
+                                    .offset(y: animateContent ? 0 : 20)
+                                    .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.3), value: animateContent)
 
-                    Spacer()
+                                // Secondary outlined button - Sign in
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        showingLogin = true
+                                    }
+                                }) {
+                                    Text(localizationManager.currentLanguage == .arabic ? "تسجيل الدخول" : "Sign in")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(Color.textPrimary)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 54)
+                                        .background(Color.white)
+                                        .cornerRadius(27)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 27)
+                                                .stroke(Color.gray.opacity(0.3), lineWidth: 1.5)
+                                        )
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                                .opacity(animateContent ? 1 : 0)
+                                .offset(y: animateContent ? 0 : 20)
+                                .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.4), value: animateContent)
 
-                    // Bottom buttons (Tempo-style)
-                    VStack(spacing: 16) {
-                        // Primary button - Try for free (outlined)
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                showingSignUp = true
+                                // "or" divider
+                                HStack(spacing: 12) {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(height: 1)
+                                    Text("or")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(Color.textSecondary)
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(height: 1)
+                                }
+                                .padding(.vertical, 8)
+                                .opacity(animateContent ? 1 : 0)
+                                .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.5), value: animateContent)
+
+                                // Create account link
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        showingSignUp = true
+                                    }
+                                }) {
+                                    Text(localizationManager.currentLanguage == .arabic ? "إنشاء حساب" : "Create an account")
+                                        .font(.system(size: 17, weight: .bold))
+                                        .foregroundColor(Color.accentGreen)
+                                }
+                                .opacity(animateContent ? 1 : 0)
+                                .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.6), value: animateContent)
+
+                                // Terms text
+                                Text(localizationManager.currentLanguage == .arabic ?
+                                     "باستخدام Synapse، أنت توافق على\nالشروط وسياسة الخصوصية." :
+                                     "By continuing to use Synapse, you\nagree to the terms and privacy policy.")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(Color.textSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 16)
+                                    .opacity(animateContent ? 1 : 0)
+                                    .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.7), value: animateContent)
                             }
-                        }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lightbulb.fill")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text(localizationManager.currentLanguage == .arabic ? "جرّب مجاناً" : "Try Synapse for free")
-                                    .font(.system(size: 18, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 58)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(29)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 29)
-                                    .stroke(Color.white, lineWidth: 2)
-                            )
+                            .padding(.horizontal, 32)
+                            .padding(.bottom, 40)
                         }
-                        .buttonStyle(ScaleButtonStyle())
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 20)
-                        .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.3), value: animateContent)
-
-                        // Secondary button - Log In (outlined)
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                showingLogin = true
-                            }
-                        }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "person.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text(localizationManager.currentLanguage == .arabic ? "لدي حساب" : "I'm a Synapse member")
-                                    .font(.system(size: 18, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 58)
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(29)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 29)
-                                    .stroke(Color.white, lineWidth: 2)
-                            )
-                        }
-                        .buttonStyle(ScaleButtonStyle())
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 20)
-                        .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.4), value: animateContent)
-
-                        // Terms text
-                        Text(localizationManager.currentLanguage == .arabic ?
-                             "بإنشاء حساب، أنت توافق على شروط الخدمة." :
-                             "By creating your account, you agree to our Terms of Service.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-                            .padding(.top, 8)
-                            .opacity(animateContent ? 1 : 0)
-                            .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.5), value: animateContent)
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 50)
+                    .background(Color.white)
+                    .clipShape(RoundedCorner(radius: 32, corners: [.topLeft, .topRight]))
+                    .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: -5)
+                    .opacity(animateContent ? 1 : 0)
+                    .offset(y: animateContent ? 0 : 50)
+                    .animation(.spring(response: 0.9, dampingFraction: 0.8, blendDuration: 0).delay(0.2), value: animateContent)
                 }
             }
         }
