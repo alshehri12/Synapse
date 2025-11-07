@@ -18,165 +18,123 @@ struct AuthenticationView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Modern gradient background with green tones
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.95, green: 0.98, blue: 0.96),  // Very light mint
-                        Color.white,
-                        Color(red: 0.97, green: 1.0, blue: 0.98)    // Soft green tint
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-
-                // Subtle animated circles in background
-                GeometryReader { geometry in
-                    ZStack {
-                        // Large circle - top right
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.accentGreen.opacity(0.08),
-                                        Color.accentGreen.opacity(0.03)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 300, height: 300)
-                            .offset(x: geometry.size.width * 0.6, y: -100)
-                            .blur(radius: 40)
-                            .opacity(animateContent ? 0.6 : 0)
-                            .animation(.easeInOut(duration: 2.0), value: animateContent)
-
-                        // Medium circle - bottom left
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.accentGreen.opacity(0.06),
-                                        Color.accentGreen.opacity(0.02)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 250, height: 250)
-                            .offset(x: -80, y: geometry.size.height * 0.7)
-                            .blur(radius: 30)
-                            .opacity(animateContent ? 0.5 : 0)
-                            .animation(.easeInOut(duration: 2.5).delay(0.3), value: animateContent)
-                    }
-                }
+                // Solid green background (Grab-inspired)
+                Color.accentGreen
+                    .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Language switcher at top right - more modern
+                    // Language switcher at top right
                     HStack {
                         Spacer()
-                        languageSwitcherCompact
+                        Button(action: {
+                            localizationManager.toggleLanguage()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 14, weight: .medium))
+                                Text(localizationManager.currentLanguage == .arabic ? "العربية" : "English")
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundColor(.white.opacity(0.9))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.2))
+                            )
+                        }
                     }
                     .padding(.top, 20)
                     .padding(.horizontal, 28)
 
                     Spacer()
 
-                    // Centered logo - Clean and simple
-                    VStack(spacing: 32) {
-                        // App Logo - Large and centered
+                    // Logo and tagline centered on green background
+                    VStack(spacing: 20) {
+                        // App Logo
                         Image("AppLogo")
                             .resizable()
                             .renderingMode(.original)
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 200, height: 200)
+                            .frame(width: 180, height: 180)
                             .opacity(animateContent ? 1 : 0)
-                            .scaleEffect(animateContent ? 1 : 0.7)
-                            .animation(.spring(response: 1.0, dampingFraction: 0.6, blendDuration: 0).delay(0.15), value: animateContent)
+                            .scaleEffect(animateContent ? 1 : 0.8)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0).delay(0.1), value: animateContent)
 
-                        // Tagline with modern styling
+                        // Tagline
                         Text(localizationManager.currentLanguage == .arabic ?
                              "حوّل أفكارك إلى واقع ملموس" :
                              "Transform Your Ideas Into Reality")
-                            .font(.system(size: 17, weight: .medium, design: .rounded))
-                            .foregroundColor(Color.textSecondary.opacity(0.8))
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
                             .opacity(animateContent ? 1 : 0)
-                            .offset(y: animateContent ? 0 : 15)
-                            .animation(.spring(response: 0.9, dampingFraction: 0.8, blendDuration: 0).delay(0.45), value: animateContent)
+                            .offset(y: animateContent ? 0 : 10)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.8, blendDuration: 0).delay(0.2), value: animateContent)
                     }
-                    .padding(.bottom, 30)
+                    .padding(.bottom, 60)
 
                     Spacer()
 
-                    // Modern buttons container with glass morphism effect
-                    VStack(spacing: 14) {
-                        // GET STARTED - Primary action with gradient
-                        Button(action: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                showingSignUp = true
-                            }
-                        }) {
-                            HStack(spacing: 12) {
-                                Text(localizationManager.currentLanguage == .arabic ? "ابدأ الآن" : "Get Started")
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    // White bottom section with rounded top corners (Grab-style)
+                    VStack(spacing: 0) {
+                        VStack(spacing: 16) {
+                            // Primary button - Log In
+                            Button(action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    showingLogin = true
+                                }
+                            }) {
+                                Text(localizationManager.currentLanguage == .arabic ? "تسجيل الدخول" : "Log In")
+                                    .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.white)
-
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.9))
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(Color.accentGreen)
+                                    .cornerRadius(28)
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 62)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.accentGreen,
-                                        Color.accentGreen.opacity(0.85)
-                                    ]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(18)
-                            .shadow(color: Color.accentGreen.opacity(0.4), radius: 15, x: 0, y: 8)
-                        }
-                        .buttonStyle(ModernScaleButtonStyle())
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 40)
-                        .animation(.spring(response: 0.8, dampingFraction: 0.75, blendDuration: 0).delay(0.6), value: animateContent)
-
-                        // Continue with Google - Modern glass effect
-                        GoogleSignInButton()
-                            .frame(height: 62)
+                            .buttonStyle(ScaleButtonStyle())
                             .opacity(animateContent ? 1 : 0)
-                            .offset(y: animateContent ? 0 : 40)
-                            .animation(.spring(response: 0.8, dampingFraction: 0.75, blendDuration: 0).delay(0.7), value: animateContent)
+                            .offset(y: animateContent ? 0 : 20)
+                            .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.3), value: animateContent)
 
-                        // Sign In - Minimal text button
-                        Button(action: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                showingLogin = true
+                            // Secondary text button - Sign Up
+                            Button(action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    showingSignUp = true
+                                }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Text(localizationManager.currentLanguage == .arabic ? "مستخدم جديد؟" : "New to Synapse?")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(Color.textSecondary)
+                                    Text(localizationManager.currentLanguage == .arabic ? "إنشاء حساب" : "Sign up!")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(Color.textPrimary)
+                                }
+                                .padding(.vertical, 12)
                             }
-                        }) {
-                            HStack(spacing: 6) {
-                                Text(localizationManager.currentLanguage == .arabic ? "لدي حساب؟" : "Already have an account?")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(Color.textSecondary)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 20)
+                            .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.4), value: animateContent)
 
-                                Text(localizationManager.currentLanguage == .arabic ? "تسجيل الدخول" : "Sign In")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(Color.accentGreen)
-                            }
-                            .padding(.vertical, 16)
+                            // Google Sign In
+                            GoogleSignInButton()
+                                .frame(height: 56)
+                                .opacity(animateContent ? 1 : 0)
+                                .offset(y: animateContent ? 0 : 20)
+                                .animation(.spring(response: 0.7, dampingFraction: 0.8, blendDuration: 0).delay(0.5), value: animateContent)
                         }
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 20)
-                        .animation(.spring(response: 0.8, dampingFraction: 0.8, blendDuration: 0).delay(0.8), value: animateContent)
+                        .padding(.horizontal, 32)
+                        .padding(.top, 40)
+                        .padding(.bottom, 50)
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 50)
+                    .background(
+                        Color.white
+                            .clipShape(RoundedCorner(radius: 32, corners: [.topLeft, .topRight]))
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: -5)
                 }
             }
         }
@@ -2023,6 +1981,21 @@ struct ModernScaleButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .brightness(configuration.isPressed ? -0.05 : 0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Rounded Corner Shape (for Grab-style bottom section)
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
     }
 }
 
