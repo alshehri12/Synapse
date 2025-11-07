@@ -82,105 +82,29 @@ struct AuthenticationView: View {
 
                     Spacer()
 
-                    // Centered logo and content - Modern card style
+                    // Centered logo - Clean and simple
                     VStack(spacing: 32) {
-                        // Logo with elegant green card background
-                        ZStack {
-                            // Soft green glow behind card
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.accentGreen.opacity(0.15),
-                                            Color.accentGreen.opacity(0.08),
-                                            Color.clear
-                                        ]),
-                                        center: .center,
-                                        startRadius: 60,
-                                        endRadius: 140
-                                    )
-                                )
-                                .frame(width: 280, height: 280)
-                                .blur(radius: 25)
-                                .opacity(animateContent ? 1 : 0)
-                                .animation(.easeInOut(duration: 1.5), value: animateContent)
+                        // App Logo - Large and centered
+                        Image("AppLogo")
+                            .resizable()
+                            .renderingMode(.original)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 200, height: 200)
+                            .opacity(animateContent ? 1 : 0)
+                            .scaleEffect(animateContent ? 1 : 0.7)
+                            .animation(.spring(response: 1.0, dampingFraction: 0.6, blendDuration: 0).delay(0.15), value: animateContent)
 
-                            // Modern card container with gradient
-                            RoundedRectangle(cornerRadius: 32)
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.accentGreen.opacity(0.12),
-                                            Color.accentGreen.opacity(0.08),
-                                            Color.white.opacity(0.6)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 180, height: 180)
-                                .shadow(color: Color.accentGreen.opacity(0.15), radius: 25, x: 0, y: 12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 32)
-                                        .stroke(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [
-                                                    Color.accentGreen.opacity(0.3),
-                                                    Color.white.opacity(0.5)
-                                                ]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            lineWidth: 1.5
-                                        )
-                                )
-                                .opacity(animateContent ? 1 : 0)
-                                .scaleEffect(animateContent ? 1 : 0.85)
-                                .animation(.spring(response: 1.0, dampingFraction: 0.7, blendDuration: 0), value: animateContent)
-
-                            // App Logo on top of card
-                            Image("AppLogo")
-                                .resizable()
-                                .renderingMode(.original)
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 120, height: 120)
-                                .opacity(animateContent ? 1 : 0)
-                                .scaleEffect(animateContent ? 1 : 0.7)
-                                .rotationEffect(.degrees(animateContent ? 0 : -10))
-                                .animation(.spring(response: 1.0, dampingFraction: 0.6, blendDuration: 0).delay(0.15), value: animateContent)
-                        }
-
-                        // App name with modern gradient text
-                        VStack(spacing: 12) {
-                            Text("Synapse")
-                                .font(.system(size: 48, weight: .bold, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.accentGreen,
-                                            Color.accentGreen.opacity(0.8)
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .shadow(color: Color.accentGreen.opacity(0.3), radius: 8, x: 0, y: 4)
-                                .opacity(animateContent ? 1 : 0)
-                                .offset(y: animateContent ? 0 : 20)
-                                .animation(.spring(response: 0.9, dampingFraction: 0.7, blendDuration: 0).delay(0.3), value: animateContent)
-
-                            // Tagline with modern styling
-                            Text(localizationManager.currentLanguage == .arabic ?
-                                 "حوّل أفكارك إلى واقع ملموس" :
-                                 "Transform Your Ideas Into Reality")
-                                .font(.system(size: 17, weight: .medium, design: .rounded))
-                                .foregroundColor(Color.textSecondary.opacity(0.8))
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 40)
-                                .opacity(animateContent ? 1 : 0)
-                                .offset(y: animateContent ? 0 : 15)
-                                .animation(.spring(response: 0.9, dampingFraction: 0.8, blendDuration: 0).delay(0.45), value: animateContent)
-                        }
+                        // Tagline with modern styling
+                        Text(localizationManager.currentLanguage == .arabic ?
+                             "حوّل أفكارك إلى واقع ملموس" :
+                             "Transform Your Ideas Into Reality")
+                            .font(.system(size: 17, weight: .medium, design: .rounded))
+                            .foregroundColor(Color.textSecondary.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 15)
+                            .animation(.spring(response: 0.9, dampingFraction: 0.8, blendDuration: 0).delay(0.45), value: animateContent)
                     }
                     .padding(.bottom, 30)
 
