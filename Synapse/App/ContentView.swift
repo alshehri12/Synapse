@@ -17,7 +17,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             ExploreView()
                 .tabItem {
-                    Image(systemName: "sparkles")
+                    Image("AppLogo")
                     Text("Explore".localized)
                 }
                 .tag(0)

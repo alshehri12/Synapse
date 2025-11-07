@@ -250,7 +250,7 @@ struct StatsSection: View {
                 StatCard(
                     title: "Ideas Sparked".localized,
                     value: "\(user.ideasSparked)",
-                    icon: "sparkles",
+                    icon: "lightbulb",
                     color: Color.accentOrange
                 )
                 

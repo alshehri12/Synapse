@@ -83,7 +83,7 @@ struct ExploreView: View {
                     Spacer()
                 } else if filteredIdeas.isEmpty {
                     EmptyStateView(
-                        icon: "sparkles",
+                        icon: "lightbulb",
                         title: "No ideas found".localized,
                         message: searchText.isEmpty ? "Be the first to spark an idea!".localized : "Try adjusting your search or filters".localized
                     )

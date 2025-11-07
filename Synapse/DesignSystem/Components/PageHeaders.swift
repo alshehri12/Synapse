@@ -20,24 +20,11 @@ struct ExploreHeader: View {
             HStack(spacing: Spacing.lg) {
                 // Title with Icon
                 HStack(spacing: Spacing.md) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.Brand.primary.opacity(0.2),
-                                        Color.Brand.primary.opacity(0.1)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 40, height: 40)
-
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(Color.Brand.primary)
-                    }
+                    // Synapse Logo
+                    Image("AppLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Explore".localized)

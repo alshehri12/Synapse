@@ -227,10 +227,10 @@ struct CreateIdeaView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(0.8)
                                 } else {
-                                    Image(systemName: "sparkles")
+                                    Image(systemName: "lightbulb")
                                         .font(.system(size: 16, weight: .semibold))
                                 }
-                                
+
                                 Text(isSubmitting ? "Creating...".localized : "Create Idea".localized)
                                     .font(.system(size: 16, weight: .semibold))
                             }
