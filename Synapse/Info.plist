@@ -26,6 +26,6 @@
 	<key>SupabaseAnonKey</key>
 	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vY2VnbndkZm5uamdvd29ycndoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDk1MDcsImV4cCI6MjA3MDkyNTUwN30.QA05vtt_KgQTQ_EfABuEtDnYO_2-W-L6zo_dHBLBRfw</string>
 	<key>OpenAIAPIKey</key>
-	<string>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</string>
+	<string>YOUR_OPENAI_API_KEY_HERE</string>
 </dict>
 </plist>

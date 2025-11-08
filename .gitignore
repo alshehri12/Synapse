@@ -71,3 +71,4 @@ node_modules/
 # Secrets and API Keys
 Secrets.xcconfig
 **/Secrets.xcconfig
+Info.plist.local
