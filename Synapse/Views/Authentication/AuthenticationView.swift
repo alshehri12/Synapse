@@ -18,78 +18,67 @@ struct AuthenticationView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Elegant green gradient background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.20, green: 0.73, blue: 0.45),  // Bright green
-                        Color(red: 0.16, green: 0.60, blue: 0.38),  // Medium green
-                        Color(red: 0.12, green: 0.47, blue: 0.31)   // Deep green
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Clean white background
+                Color.white.ignoresSafeArea()
 
-                // Subtle background circles for depth
+                // Subtle green accent circles for depth
                 GeometryReader { geometry in
                     Circle()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(width: 400, height: 400)
-                        .blur(radius: 60)
-                        .offset(x: -100, y: -150)
+                        .fill(Color(red: 0.20, green: 0.73, blue: 0.45).opacity(0.06))
+                        .frame(width: 500, height: 500)
+                        .blur(radius: 80)
+                        .offset(x: -150, y: -200)
 
                     Circle()
-                        .fill(Color.white.opacity(0.06))
-                        .frame(width: 350, height: 350)
-                        .blur(radius: 50)
-                        .offset(x: geometry.size.width - 150, y: geometry.size.height - 200)
+                        .fill(Color(red: 0.12, green: 0.47, blue: 0.31).opacity(0.05))
+                        .frame(width: 450, height: 450)
+                        .blur(radius: 70)
+                        .offset(x: geometry.size.width - 100, y: geometry.size.height - 150)
                 }
 
                 VStack(spacing: 0) {
+                    // Language switcher at top with proper spacing
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            localizationManager.toggleLanguage()
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 16, weight: .medium))
+                                Text(localizationManager.currentLanguage == .arabic ? "العربية" : "EN")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(Color(red: 0.12, green: 0.47, blue: 0.31))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule()
+                                    .fill(Color(red: 0.20, green: 0.73, blue: 0.45).opacity(0.1))
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(Color(red: 0.20, green: 0.73, blue: 0.45).opacity(0.3), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.top, 60)
+                    .opacity(animateContent ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1), value: animateContent)
+
                     Spacer()
 
                     // Content section
                     VStack(spacing: 40) {
-                        // Language switcher at top
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                localizationManager.toggleLanguage()
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "globe")
-                                        .font(.system(size: 16, weight: .medium))
-                                    Text(localizationManager.currentLanguage == .arabic ? "العربية" : "EN")
-                                        .font(.system(size: 16, weight: .semibold))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.white.opacity(0.15))
-                                        .overlay(
-                                            Capsule()
-                                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                            }
-                            .buttonStyle(ScaleButtonStyle())
-                        }
-                        .padding(.horizontal, 28)
-                        .padding(.top, 20)
-                        .opacity(animateContent ? 1 : 0)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1), value: animateContent)
-
-                        Spacer()
-
-                        // Logo - Large and prominent
+                        // Logo - 50% larger (240x240)
                         Image("SynapseLogo")
                             .resizable()
                             .renderingMode(.original)
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 160, height: 160)
-                            .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 10)
+                            .frame(width: 240, height: 240)
+                            .shadow(color: Color.black.opacity(0.08), radius: 25, x: 0, y: 12)
                             .opacity(animateContent ? 1 : 0)
                             .scaleEffect(animateContent ? 1 : 0.7)
                             .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2), value: animateContent)
@@ -100,23 +89,21 @@ struct AuthenticationView: View {
                                  "مرحباً بك في Synapse" :
                                  "Welcome to Synapse")
                                 .font(.system(size: 36, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.textPrimary)
                                 .multilineTextAlignment(.center)
 
                             Text(localizationManager.currentLanguage == .arabic ?
                                  "حيث تتحول الأفكار إلى واقع" :
                                  "Where ideas come to life")
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(Color.textSecondary)
                                 .multilineTextAlignment(.center)
                         }
                         .opacity(animateContent ? 1 : 0)
                         .offset(y: animateContent ? 0 : 15)
                         .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.3), value: animateContent)
 
-                        Spacer()
-
-                        // Glass-morphism card with buttons
+                        // Buttons section
                         VStack(spacing: 18) {
                             // Google Sign-In Button
                             GoogleSignInButton()
@@ -132,16 +119,12 @@ struct AuthenticationView: View {
                                      "تسجيل الدخول" :
                                      "Sign In")
                                     .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(Color.textPrimary)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 58)
                                     .background(
                                         RoundedRectangle(cornerRadius: 16)
-                                            .fill(Color.white.opacity(0.2))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 16)
-                                                    .stroke(Color.white.opacity(0.4), lineWidth: 1.5)
-                                            )
+                                            .stroke(Color.gray.opacity(0.3), lineWidth: 1.5)
                                     )
                             }
                             .buttonStyle(ScaleButtonStyle())
@@ -149,18 +132,18 @@ struct AuthenticationView: View {
                             // Divider
                             HStack(spacing: 14) {
                                 Rectangle()
-                                    .fill(Color.white.opacity(0.3))
+                                    .fill(Color.gray.opacity(0.3))
                                     .frame(height: 1)
                                 Text(localizationManager.currentLanguage == .arabic ? "أو" : "or")
                                     .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.8))
+                                    .foregroundColor(Color.textSecondary)
                                 Rectangle()
-                                    .fill(Color.white.opacity(0.3))
+                                    .fill(Color.gray.opacity(0.3))
                                     .frame(height: 1)
                             }
                             .padding(.vertical, 4)
 
-                            // Create Account Button
+                            // Create Account Button - Green
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     showingSignUp = true
@@ -170,31 +153,29 @@ struct AuthenticationView: View {
                                      "إنشاء حساب جديد" :
                                      "Create Account")
                                     .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(Color(red: 0.12, green: 0.47, blue: 0.31))
+                                    .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 58)
                                     .background(
                                         RoundedRectangle(cornerRadius: 16)
-                                            .fill(.white)
-                                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 6)
+                                            .fill(
+                                                LinearGradient(
+                                                    gradient: Gradient(colors: [
+                                                        Color(red: 0.20, green: 0.73, blue: 0.45),
+                                                        Color(red: 0.16, green: 0.60, blue: 0.38)
+                                                    ]),
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                            .shadow(color: Color(red: 0.20, green: 0.73, blue: 0.45).opacity(0.3), radius: 12, x: 0, y: 6)
                                     )
                             }
                             .buttonStyle(ScaleButtonStyle())
                         }
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 32)
-                        .background(
-                            RoundedRectangle(cornerRadius: 32)
-                                .fill(.ultraThinMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 32)
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
-                                )
-                                .shadow(color: Color.black.opacity(0.15), radius: 30, x: 0, y: 15)
-                        )
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 32)
                         .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 40)
+                        .offset(y: animateContent ? 0 : 30)
                         .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.4), value: animateContent)
 
                         // Terms text
@@ -202,13 +183,14 @@ struct AuthenticationView: View {
                              "باستمرارك، أنت توافق على الشروط وسياسة الخصوصية" :
                              "By continuing, you agree to our Terms & Privacy Policy")
                             .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(Color.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
-                            .padding(.bottom, 30)
                             .opacity(animateContent ? 1 : 0)
                             .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.5), value: animateContent)
                     }
+
+                    Spacer()
                 }
             }
         }
