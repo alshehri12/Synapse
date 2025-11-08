@@ -34,6 +34,61 @@ struct AuthenticationView: View {
                         .frame(width: 450, height: 450)
                         .blur(radius: 70)
                         .offset(x: geometry.size.width - 100, y: geometry.size.height - 150)
+
+                    // Floating project management icons with shadows
+                    // Top left - Lightbulb (Ideas)
+                    FloatingIcon(
+                        systemName: "lightbulb.fill",
+                        color: Color(red: 0.20, green: 0.73, blue: 0.45),
+                        size: 50,
+                        opacity: 0.15
+                    )
+                    .offset(x: 30, y: 120)
+
+                    // Top right - Rocket (Launch)
+                    FloatingIcon(
+                        systemName: "rocket.fill",
+                        color: Color(red: 0.16, green: 0.60, blue: 0.38),
+                        size: 45,
+                        opacity: 0.12
+                    )
+                    .offset(x: geometry.size.width - 80, y: 180)
+
+                    // Middle left - People (Collaboration)
+                    FloatingIcon(
+                        systemName: "person.3.fill",
+                        color: Color(red: 0.20, green: 0.73, blue: 0.45),
+                        size: 40,
+                        opacity: 0.1
+                    )
+                    .offset(x: 50, y: geometry.size.height / 2 - 100)
+
+                    // Middle right - Target (Goals)
+                    FloatingIcon(
+                        systemName: "target",
+                        color: Color(red: 0.12, green: 0.47, blue: 0.31),
+                        size: 48,
+                        opacity: 0.13
+                    )
+                    .offset(x: geometry.size.width - 90, y: geometry.size.height / 2 + 50)
+
+                    // Bottom left - Chart (Progress)
+                    FloatingIcon(
+                        systemName: "chart.line.uptrend.xyaxis",
+                        color: Color(red: 0.20, green: 0.73, blue: 0.45),
+                        size: 42,
+                        opacity: 0.11
+                    )
+                    .offset(x: 40, y: geometry.size.height - 280)
+
+                    // Bottom right - Sparkles (Innovation)
+                    FloatingIcon(
+                        systemName: "sparkles",
+                        color: Color(red: 0.16, green: 0.60, blue: 0.38),
+                        size: 38,
+                        opacity: 0.14
+                    )
+                    .offset(x: geometry.size.width - 70, y: geometry.size.height - 200)
                 }
 
                 VStack(spacing: 0) {
@@ -2051,6 +2106,46 @@ struct RoundedCorner: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
+    }
+}
+
+// MARK: - Floating Icon Component
+struct FloatingIcon: View {
+    let systemName: String
+    let color: Color
+    let size: CGFloat
+    let opacity: Double
+
+    @State private var isAnimating = false
+
+    var body: some View {
+        ZStack {
+            // Shadow circle
+            Circle()
+                .fill(color.opacity(opacity * 0.3))
+                .frame(width: size + 20, height: size + 20)
+                .blur(radius: 8)
+
+            // Icon
+            Image(systemName: systemName)
+                .font(.system(size: size * 0.5, weight: .medium))
+                .foregroundColor(color.opacity(opacity))
+                .frame(width: size, height: size)
+                .background(
+                    Circle()
+                        .fill(Color.white)
+                        .shadow(color: color.opacity(opacity * 0.4), radius: 10, x: 0, y: 4)
+                )
+        }
+        .offset(y: isAnimating ? -10 : 10)
+        .animation(
+            Animation.easeInOut(duration: 3.0)
+                .repeatForever(autoreverses: true),
+            value: isAnimating
+        )
+        .onAppear {
+            isAnimating = true
+        }
     }
 }
 
