@@ -233,16 +233,50 @@ struct AuthenticationView: View {
                         .offset(y: animateContent ? 0 : 30)
                         .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.4), value: animateContent)
 
-                        // Terms text
-                        Text(localizationManager.currentLanguage == .arabic ?
-                             "باستمرارك، أنت توافق على الشروط وسياسة الخصوصية" :
-                             "By continuing, you agree to our Terms & Privacy Policy")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(Color.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-                            .opacity(animateContent ? 1 : 0)
-                            .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.5), value: animateContent)
+                        // Terms text with clickable links
+                        HStack(spacing: 4) {
+                            Text(localizationManager.currentLanguage == .arabic ?
+                                 "باستمرارك، أنت توافق على" :
+                                 "By continuing, you agree to our")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(Color.textSecondary)
+
+                            Button(action: {
+                                if let url = URL(string: "https://mysynapses.com/terms") {
+                                    UIApplication.shared.open(url)
+                                }
+                            }) {
+                                Text(localizationManager.currentLanguage == .arabic ?
+                                     "الشروط" :
+                                     "Terms")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(Color.accentGreen)
+                                    .underline()
+                            }
+
+                            Text(localizationManager.currentLanguage == .arabic ?
+                                 "و" :
+                                 "&")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(Color.textSecondary)
+
+                            Button(action: {
+                                if let url = URL(string: "https://mysynapses.com/privacy") {
+                                    UIApplication.shared.open(url)
+                                }
+                            }) {
+                                Text(localizationManager.currentLanguage == .arabic ?
+                                     "سياسة الخصوصية" :
+                                     "Privacy Policy")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(Color.accentGreen)
+                                    .underline()
+                            }
+                        }
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .opacity(animateContent ? 1 : 0)
+                        .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.5), value: animateContent)
                     }
 
                     Spacer()
@@ -784,13 +818,38 @@ struct SignUpView: View {
                     .foregroundColor(agreedToTerms ? Color.accentGreen : Color.textSecondary)
             }
 
-            (Text("I agree to the ") +
-             Text("Terms of Service").foregroundColor(Color.accentGreen).underline() +
-             Text(" and ") +
-             Text("Privacy Policy").foregroundColor(Color.accentGreen).underline())
-                .font(.system(size: 14))
-                .foregroundColor(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 0) {
+                Text("I agree to the ")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.textPrimary)
+
+                Button(action: {
+                    if let url = URL(string: "https://mysynapses.com/terms") {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Terms of Service")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.accentGreen)
+                        .underline()
+                }
+
+                Text(" and ")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.textPrimary)
+
+                Button(action: {
+                    if let url = URL(string: "https://mysynapses.com/privacy") {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Privacy Policy")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.accentGreen)
+                        .underline()
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }

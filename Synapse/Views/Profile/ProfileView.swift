@@ -1069,7 +1069,7 @@ struct TermsView: View {
                 Text("These are a summary of our Terms. For full details, please visit our website.".localized)
                     .foregroundColor(Color.textSecondary)
                 Button {
-                    if let url = URL(string: "https://mysynapeses.com/terms") {
+                    if let url = URL(string: "https://mysynapses.com/terms") {
                         UIApplication.shared.open(url)
                     }
                 } label: {
@@ -1096,7 +1096,7 @@ struct PrivacyPolicyView: View {
                 Text("Learn how we collect, use, and protect your data. For full details, please visit our website.".localized)
                     .foregroundColor(Color.textSecondary)
                 Button {
-                    if let url = URL(string: "https://mysynapeses.com/privacy") {
+                    if let url = URL(string: "https://mysynapses.com/privacy") {
                         UIApplication.shared.open(url)
                     }
                 } label: {
