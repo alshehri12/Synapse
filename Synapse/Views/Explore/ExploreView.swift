@@ -21,28 +21,14 @@ struct ExploreView: View {
     
     enum IdeaFilter: String, CaseIterable {
         case all = "All"
-        case new = "New"
-        case active = "Active"
-        case completed = "Completed"
     }
-    
+
     var filteredIdeas: [IdeaSpark] {
-        let filtered = ideas.filter { idea in
+        return ideas.filter { idea in
             if searchText.isEmpty { return true }
             return idea.title.localizedCaseInsensitiveContains(searchText) ||
                    idea.description.localizedCaseInsensitiveContains(searchText) ||
                    idea.tags.contains { $0.localizedCaseInsensitiveContains(searchText) }
-        }
-        
-        switch selectedFilter {
-        case .all:
-            return filtered
-        case .new:
-            return filtered.sorted { $0.createdAt > $1.createdAt }
-        case .active:
-            return filtered.filter { $0.status == .incubating || $0.status == .planning }
-        case .completed:
-            return filtered.filter { $0.status == .launched || $0.status == .completed }
         }
     }
     
@@ -57,23 +43,6 @@ struct ExploreView: View {
                 )
                 .environmentObject(localizationManager)
 
-                // Filter Chips
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(IdeaFilter.allCases, id: \.self) { filter in
-                            FilterChip(
-                                title: filter.rawValue.localized,
-                                isSelected: selectedFilter == filter
-                            ) {
-                                selectedFilter = filter
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.vertical, 12)
-                .background(Color.backgroundPrimary)
-                
                 // Ideas Feed
                 if isLoading {
                     Spacer()
@@ -192,7 +161,7 @@ struct SearchBar: View {
 // MARK: - Status Badge
 struct StatusBadge: View {
     let status: IdeaSpark.IdeaStatus
-    
+
     var statusColor: Color {
         switch status {
         case .sparking: return Color.accentOrange
@@ -204,9 +173,21 @@ struct StatusBadge: View {
         case .cancelled: return Color.textSecondary
         }
     }
-    
+
+    var statusLabel: String {
+        switch status {
+        case .sparking: return "New Idea"
+        case .incubating: return "In Development"
+        case .launched: return "Launched"
+        case .completed: return "Completed"
+        case .planning: return "Planning"
+        case .onHold: return "On Hold"
+        case .cancelled: return "Cancelled"
+        }
+    }
+
     var body: some View {
-        Text(status.rawValue.localized.capitalized)
+        Text(statusLabel.localized)
             .font(.system(size: 10, weight: .semibold))
             .foregroundColor(Color.white)
             .padding(.horizontal, 8)
@@ -289,42 +270,28 @@ struct ExploreIdeaCard: View {
                         Image(systemName: isLiked ? "heart.fill" : "heart")
                             .font(.system(size: 14))
                             .foregroundColor(isLiked ? .red : Color.textSecondary)
-                        
+
                         Text("\(idea.likes)")
                             .font(.system(size: 14))
                             .foregroundColor(Color.textSecondary)
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
-                
+
                 Button(action: { showingDetail = true }) {
                     HStack(spacing: 4) {
                         Image(systemName: "message")
                             .font(.system(size: 14))
                             .foregroundColor(Color.textSecondary)
-                        
+
                         Text("\(idea.comments)")
                             .font(.system(size: 14))
                             .foregroundColor(Color.textSecondary)
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
-                
+
                 Spacer()
-                
-                Button(action: { showingDetail = true }) {
-                    Text("Join Pod".localized)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color.accentGreen)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.accentGreen.opacity(0.1))
-                        .cornerRadius(8)
-                        .fixedSize(horizontal: true, vertical: false)
-                }
-                .buttonStyle(PlainButtonStyle())
             }
             }
             .padding(16)

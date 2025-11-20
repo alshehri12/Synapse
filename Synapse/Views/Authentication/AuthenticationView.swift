@@ -242,7 +242,7 @@ struct AuthenticationView: View {
                                 .foregroundColor(Color.textSecondary)
 
                             Button(action: {
-                                if let url = URL(string: "https://mysynapses.com/terms") {
+                                if let url = URL(string: "https://usynapse.com/terms") {
                                     UIApplication.shared.open(url)
                                 }
                             }) {
@@ -261,7 +261,7 @@ struct AuthenticationView: View {
                                 .foregroundColor(Color.textSecondary)
 
                             Button(action: {
-                                if let url = URL(string: "https://mysynapses.com/privacy") {
+                                if let url = URL(string: "https://usynapse.com/privacy") {
                                     UIApplication.shared.open(url)
                                 }
                             }) {
@@ -824,7 +824,7 @@ struct SignUpView: View {
                     .foregroundColor(Color.textPrimary)
 
                 Button(action: {
-                    if let url = URL(string: "https://mysynapses.com/terms") {
+                    if let url = URL(string: "https://usynapse.com/terms") {
                         UIApplication.shared.open(url)
                     }
                 }) {
@@ -839,7 +839,7 @@ struct SignUpView: View {
                     .foregroundColor(Color.textPrimary)
 
                 Button(action: {
-                    if let url = URL(string: "https://mysynapses.com/privacy") {
+                    if let url = URL(string: "https://usynapse.com/privacy") {
                         UIApplication.shared.open(url)
                     }
                 }) {

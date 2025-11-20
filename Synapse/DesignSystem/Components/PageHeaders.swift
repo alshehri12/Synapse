@@ -117,65 +117,42 @@ struct MyProjectsHeader: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: Spacing.lg) {
+            HStack(spacing: Spacing.md) {
                 // Title with Icon
-                HStack(spacing: Spacing.md) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.Brand.primary.opacity(0.2),
-                                        Color.Brand.primary.opacity(0.1)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.Brand.primary.opacity(0.2),
+                                    Color.Brand.primary.opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .frame(width: 40, height: 40)
+                        )
+                        .frame(width: 40, height: 40)
 
-                        Image(systemName: "folder.fill.badge.person.crop")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.Brand.primary)
-                    }
+                    Image(systemName: "folder.fill.badge.person.crop")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color.Brand.primary)
+                }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("My Projects".localized)
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Color.Text.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("My Projects".localized)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(Color.Text.primary)
 
-                        Text("Collaborate and build".localized)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Color.Text.secondary)
-                    }
+                    Text("Collaborate and build".localized)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color.Text.secondary)
                 }
 
                 Spacer()
-
-                // Create Project Button
-                Button(action: onCreateProject) {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
-                        Text("New".localized)
-                            .font(.system(size: 14, weight: .bold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.vertical, Spacing.md)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.Brand.primary, Color.Brand.primaryDark],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadiusRound()
-                    .shadowSM()
-                }
             }
             .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.lg)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.lg)
         }
         .background(Color.Background.primary)
         .shadowSM()

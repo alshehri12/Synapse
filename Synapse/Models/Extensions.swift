@@ -9,9 +9,23 @@ import Foundation
 
 extension Date {
     func timeAgoDisplay() -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: self, relativeTo: Date())
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(self)
+
+        // If less than 24 hours, show relative time
+        if timeInterval < 86400 { // 24 hours
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            formatter.dateTimeStyle = .named
+            return formatter.localizedString(for: self, relativeTo: now)
+        } else {
+            // If more than 24 hours, show actual date and time
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            formatter.locale = Locale.current
+            return formatter.string(from: self)
+        }
     }
 }
 
