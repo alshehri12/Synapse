@@ -182,6 +182,7 @@ struct AuthenticationView: View {
                                             .stroke(Color.gray.opacity(0.3), lineWidth: 1.5)
                                     )
                             }
+                            .contentShape(Rectangle())
                             .buttonStyle(ScaleButtonStyle())
 
                             // Divider
@@ -226,6 +227,7 @@ struct AuthenticationView: View {
                                             .shadow(color: Color(red: 0.20, green: 0.73, blue: 0.45).opacity(0.3), radius: 12, x: 0, y: 6)
                                     )
                             }
+                            .contentShape(Rectangle())
                             .buttonStyle(ScaleButtonStyle())
                         }
                         .padding(.horizontal, 32)
