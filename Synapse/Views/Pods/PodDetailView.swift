@@ -691,17 +691,23 @@ extension FullScreenChatView {
         
         let messageContent = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         messageText = ""
-        
+
         Task {
             do {
-                let username = currentUser.displayName ?? "Anonymous User"
+                // Fetch username from user profile in database
+                var username = "Anonymous User"
+                if let userProfile = try await supabaseManager.getUserProfile(userId: currentUser.uid),
+                   let fetchedUsername = userProfile["username"] as? String {
+                    username = fetchedUsername
+                }
+
                 _ = try await supabaseManager.sendChatMessage(
                     podId: pod.id,
                     content: messageContent,
                     senderId: currentUser.uid,
                     senderUsername: username
                 )
-                print("💬 Message sent successfully")
+                print("💬 Message sent successfully by: \(username)")
                 loadChatMessages() // Reload to show new message
             } catch {
                 print("❌ Failed to send message: \(error.localizedDescription)")
