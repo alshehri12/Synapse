@@ -72,3 +72,4 @@ node_modules/
 Secrets.xcconfig
 **/Secrets.xcconfig
 Info.plist.local
+Synapse/Info.plist
