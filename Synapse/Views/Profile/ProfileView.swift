@@ -29,6 +29,15 @@ struct ProfileView: View {
                         onSettings: { showingSettings = true }
                     )
                     .environmentObject(localizationManager)
+                } else if !isLoading {
+                    // Fallback header when user profile is not loaded yet
+                    ProfilePageHeader(
+                        username: supabaseManager.currentUser?.email?.split(separator: "@").first.map(String.init) ?? "User",
+                        email: supabaseManager.currentUser?.email ?? "",
+                        avatarInitial: String(supabaseManager.currentUser?.email?.prefix(1) ?? "U").uppercased(),
+                        onSettings: { showingSettings = true }
+                    )
+                    .environmentObject(localizationManager)
                 }
 
                 // Content
@@ -87,6 +96,39 @@ struct ProfileView: View {
 
                             // Menu Items
                             MenuSection()
+                        } else {
+                            // No user profile found - show message
+                            VStack(spacing: 16) {
+                                Image(systemName: "person.crop.circle.badge.exclamationmark")
+                                    .font(.system(size: 64))
+                                    .foregroundColor(Color.accentGreen.opacity(0.5))
+                                    .padding(.top, 40)
+
+                                Text("Profile Not Found")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(Color.textPrimary)
+
+                                Text("Your profile couldn't be loaded. This might be because your profile wasn't created properly during sign up.")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color.textSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 40)
+
+                                Button(action: {
+                                    loadUserProfile()
+                                }) {
+                                    Text("Try Again")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 32)
+                                        .padding(.vertical, 12)
+                                        .background(Color.accentGreen)
+                                        .cornerRadius(12)
+                                }
+                                .padding(.top, 8)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
                         }
                     }
                     .padding(.vertical, 20)
@@ -121,14 +163,14 @@ struct ProfileView: View {
     
     private func loadUserProfile() {
         guard let currentUser = supabaseManager.currentUser else { return }
-        
+
         isLoading = true
-        
+
         Task {
             do {
                 // First, update user stats with real data
                 try await supabaseManager.updateUserStats(userId: currentUser.id.uuidString)
-                
+
                 if let userData = try await supabaseManager.getUserProfile(userId: currentUser.id.uuidString) {
                     let username = userData["username"] as? String ?? ""
                     let email = userData["email"] as? String ?? ""
@@ -144,7 +186,7 @@ struct ProfileView: View {
                         }
                         return Date()
                     }()
-                    
+
                     await MainActor.run {
                         user = UserProfile(
                             id: currentUser.id.uuidString,
@@ -161,12 +203,45 @@ struct ProfileView: View {
                         isLoading = false
                     }
                 } else {
-                    await MainActor.run {
-                        isLoading = false
+                    // Profile doesn't exist, try to create it
+                    print("⚠️ Profile not found, attempting to create one...")
+                    let defaultUsername = currentUser.email?.split(separator: "@").first.map(String.init) ?? "User_\(currentUser.id.uuidString.prefix(6))"
+
+                    try await supabaseManager.createUserProfile(
+                        userId: currentUser.id.uuidString,
+                        email: currentUser.email ?? "",
+                        username: defaultUsername
+                    )
+
+                    print("✅ Profile created, reloading...")
+                    // Try loading again after creating
+                    if let userData = try await supabaseManager.getUserProfile(userId: currentUser.id.uuidString) {
+                        let username = userData["username"] as? String ?? defaultUsername
+                        let email = userData["email"] as? String ?? currentUser.email ?? ""
+
+                        await MainActor.run {
+                            user = UserProfile(
+                                id: currentUser.id.uuidString,
+                                username: username,
+                                email: email,
+                                bio: nil,
+                                avatarURL: nil,
+                                skills: [],
+                                interests: [],
+                                ideasSparked: 0,
+                                projectsContributed: 0,
+                                dateJoined: Date()
+                            )
+                            isLoading = false
+                        }
+                    } else {
+                        await MainActor.run {
+                            isLoading = false
+                        }
                     }
                 }
             } catch {
-                print("Error loading user profile: \(error)")
+                print("❌ Error loading user profile: \(error)")
                 await MainActor.run {
                     isLoading = false
                 }

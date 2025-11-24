@@ -126,31 +126,31 @@ struct AuthenticationView: View {
                     Spacer()
 
                     // Content section
-                    VStack(spacing: 40) {
+                    VStack(spacing: 24) {
                         // Logo - 50% larger (240x240)
                         Image("SynapseLogo")
                             .resizable()
                             .renderingMode(.original)
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 240, height: 240)
+                            .frame(width: 220, height: 220)
                             .shadow(color: Color.black.opacity(0.08), radius: 25, x: 0, y: 12)
                             .opacity(animateContent ? 1 : 0)
                             .scaleEffect(animateContent ? 1 : 0.7)
                             .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2), value: animateContent)
 
                         // Welcome text
-                        VStack(spacing: 12) {
+                        VStack(spacing: 8) {
                             Text(localizationManager.currentLanguage == .arabic ?
                                  "مرحباً بك في Synapse" :
                                  "Welcome to Synapse")
-                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(Color.textPrimary)
                                 .multilineTextAlignment(.center)
 
                             Text(localizationManager.currentLanguage == .arabic ?
                                  "حيث تتحول الأفكار إلى واقع" :
                                  "Where ideas come to life")
-                                .font(.system(size: 18, weight: .medium))
+                                .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(Color.textSecondary)
                                 .multilineTextAlignment(.center)
                         }
@@ -159,7 +159,11 @@ struct AuthenticationView: View {
                         .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.3), value: animateContent)
 
                         // Buttons section
-                        VStack(spacing: 18) {
+                        VStack(spacing: 16) {
+                            // Sign in with Apple Button
+                            SignInWithAppleButton()
+                                .frame(height: 58)
+
                             // Google Sign-In Button
                             GoogleSignInButton()
                                 .frame(height: 58)

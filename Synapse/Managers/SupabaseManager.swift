@@ -11,6 +11,7 @@ import Supabase
 import Combine
 import GoogleSignIn
 import UIKit
+import AuthenticationServices
 
 // MARK: - Custom Errors
 
@@ -20,6 +21,8 @@ enum AuthError: LocalizedError, Equatable {
     case missingIdToken
     case googleSignInNotImplemented
     case emailNotVerified
+    case missingAppleIdToken
+    case appleSignInFailed
 
     var errorDescription: String? {
         switch self {
@@ -33,6 +36,10 @@ enum AuthError: LocalizedError, Equatable {
             return "Google Sign-In implementation in progress"
         case .emailNotVerified:
             return "Please verify your email before signing in"
+        case .missingAppleIdToken:
+            return "Apple ID token not received"
+        case .appleSignInFailed:
+            return "Sign in with Apple failed"
         }
     }
 }
@@ -158,7 +165,80 @@ class SupabaseManager: ObservableObject {
             throw error
         }
     }
-    
+
+    @MainActor
+    func signInWithApple(authorization: ASAuthorization) async throws {
+        authError = nil
+
+        do {
+            guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                throw AuthError.appleSignInFailed
+            }
+
+            guard let identityToken = appleIDCredential.identityToken,
+                  let idTokenString = String(data: identityToken, encoding: .utf8) else {
+                throw AuthError.missingAppleIdToken
+            }
+
+            // Sign in to Supabase with Apple credentials
+            try await supabase.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .apple,
+                    idToken: idTokenString
+                )
+            )
+
+            // Immediately reflect auth state in UI
+            do {
+                let session = try await supabase.auth.session
+                let user = session.user
+
+                // Ensure user profile exists for Apple sign-in users
+                do {
+                    let hasProfile = try await self.getUserProfile(userId: user.id.uuidString) != nil
+                    if !hasProfile {
+                        // Get user info from Apple credential
+                        let defaultUsername: String = {
+                            if let fullName = appleIDCredential.fullName {
+                                let firstName = fullName.givenName ?? ""
+                                let lastName = fullName.familyName ?? ""
+                                let name = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+                                if !name.isEmpty {
+                                    return name
+                                }
+                            }
+                            if let email = user.email, let prefix = email.split(separator: "@").first {
+                                return String(prefix)
+                            }
+                            return "user_\(user.id.uuidString.prefix(6))"
+                        }()
+
+                        try await self.createUserProfile(
+                            userId: user.id.uuidString,
+                            email: user.email ?? appleIDCredential.email ?? "",
+                            username: defaultUsername
+                        )
+                    }
+                } catch {
+                    print("⚠️ Failed to ensure user profile for Apple sign-in: \(error.localizedDescription)")
+                }
+
+                await MainActor.run {
+                    self.currentUser = user
+                    self.isEmailVerified = user.emailConfirmedAt != nil
+                    self.isAuthenticated = true
+                    self.isAuthReady = true
+                }
+            } catch {
+                // Non-fatal; listener should still catch it
+                print("⚠️ Error after Apple sign-in: \(error.localizedDescription)")
+            }
+        } catch {
+            self.authError = error.localizedDescription
+            throw error
+        }
+    }
+
     @MainActor
     func signUp(email: String, password: String, username: String) async throws {
         isSigningUp = true
