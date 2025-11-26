@@ -202,8 +202,11 @@ struct ExploreIdeaCard: View {
     let idea: IdeaSpark
     @State private var isLiked = false
     @State private var showingDetail = false
+    @State private var showingOptions = false
+    @State private var showingReportSheet = false
+    @StateObject private var moderationManager = ContentModerationManager.shared
     @EnvironmentObject private var supabaseManager: SupabaseManager
-    
+
     var body: some View {
         Button(action: { showingDetail = true }) {
             VStack(alignment: .leading, spacing: 12) {
@@ -217,20 +220,31 @@ struct ExploreIdeaCard: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                     )
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(idea.authorUsername)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(Color.textPrimary)
-                    
+
                     Text(idea.createdAt.timeAgoDisplay())
                         .font(.system(size: 12))
                         .foregroundColor(Color.textSecondary)
                 }
-                
+
                 Spacer()
-                
+
                 StatusBadge(status: idea.status)
+
+                // Three-dot menu for reporting
+                if idea.authorId != supabaseManager.currentUser?.id.uuidString {
+                    Button(action: { showingOptions = true }) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color.textSecondary)
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
             }
             
             // Content
@@ -303,8 +317,40 @@ struct ExploreIdeaCard: View {
         .sheet(isPresented: $showingDetail) {
             IdeaDetailView(idea: idea)
         }
+        .sheet(isPresented: $showingReportSheet) {
+            ReportContentView(
+                contentId: idea.id,
+                contentType: "idea",
+                reportedUserId: idea.authorId
+            )
+        }
+        .actionSheet(isPresented: $showingOptions) {
+            ActionSheet(
+                title: Text("Idea Options"),
+                buttons: [
+                    .default(Text("Report Idea")) {
+                        showingReportSheet = true
+                    },
+                    .destructive(Text("Block User")) {
+                        blockUser(userId: idea.authorId)
+                    },
+                    .cancel()
+                ]
+            )
+        }
         .onAppear {
             checkIfLiked()
+        }
+    }
+
+    private func blockUser(userId: String) {
+        Task {
+            do {
+                try await moderationManager.blockUser(userId: userId)
+                print("✅ User blocked successfully")
+            } catch {
+                print("❌ Error blocking user: \(error)")
+            }
         }
     }
     

@@ -13,13 +13,16 @@ import UIKit
 struct PodChatView: View {
     let pod: IncubationProject
     @StateObject private var supabaseManager = SupabaseManager.shared
+    @StateObject private var moderationManager = ContentModerationManager.shared
     @State private var messageText = ""
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
     @State private var showingMessageOptions: ChatMessage?
+    @State private var showingReportSheet = false
+    @State private var selectedMessageToReport: ChatMessage?
     @State private var keyboardHeight: CGFloat = 0
     @FocusState private var isTextFieldFocused: Bool
-    
+
     // Placeholder for chat functionality - to be integrated with SupabaseManager
     @State private var chatMessages: [ChatMessage] = []
     @State private var typingUsers: [TypingIndicator] = []
@@ -31,6 +34,15 @@ struct PodChatView: View {
         }
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
+        }
+        .sheet(isPresented: $showingReportSheet) {
+            if let message = selectedMessageToReport {
+                ReportContentView(
+                    contentId: message.id,
+                    contentType: "message",
+                    reportedUserId: message.senderId
+                )
+            }
         }
         .actionSheet(item: $showingMessageOptions) { message in
             messageOptionsSheet(for: message)
@@ -84,7 +96,7 @@ struct PodChatView: View {
             ForEach(chatMessages) { message in
                 MessageBubble(
                     message: message,
-                    isFromCurrentUser: message.senderId == supabaseManager.currentUser?.uid,
+                    isFromCurrentUser: message.senderId == supabaseManager.currentUser?.id.uuidString,
                     onLongPress: { showingMessageOptions = message }
                 )
                 .id(message.id)
@@ -126,15 +138,46 @@ struct PodChatView: View {
     
     // MARK: - Message Options Sheet
     private func messageOptionsSheet(for message: ChatMessage) -> ActionSheet {
-        ActionSheet(
+        let isOwnMessage = message.senderId == supabaseManager.currentUser?.id.uuidString
+
+        var buttons: [ActionSheet.Button] = []
+
+        // Only show Delete for own messages
+        if isOwnMessage {
+            buttons.append(.destructive(Text("Delete")) {
+                // TODO: Implement message deletion
+            })
+        }
+
+        // Show Report and Block for other users' messages
+        if !isOwnMessage {
+            buttons.append(.default(Text("Report Message")) {
+                selectedMessageToReport = message
+                showingReportSheet = true
+            })
+
+            buttons.append(.destructive(Text("Block User")) {
+                blockUser(userId: message.senderId)
+            })
+        }
+
+        buttons.append(.cancel())
+
+        return ActionSheet(
             title: Text("Message Options"),
-            buttons: [
-                .destructive(Text("Delete")) {
-                    // TODO: Implement message deletion
-                },
-                .cancel()
-            ]
+            buttons: buttons
         )
+    }
+
+    private func blockUser(userId: String) {
+        Task {
+            do {
+                try await moderationManager.blockUser(userId: userId)
+                print("✅ User blocked successfully")
+            } catch {
+                print("❌ Error blocking user: \(error)")
+            }
+        }
     }
     
     // MARK: - Header

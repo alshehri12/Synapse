@@ -727,6 +727,12 @@ struct SettingsView: View {
                         PrivacySettingsView()
                     }
                 }
+
+                Section("Safety & Moderation".localized) {
+                    SettingsLinkRow(icon: "person.2.slash", title: "Blocked Users".localized) {
+                        BlockedUsersView()
+                    }
+                }
                 
                 Section("Appearance".localized) {
                     SettingsLinkRow(icon: "paintbrush", title: "Appearance".localized) {
@@ -738,9 +744,6 @@ struct SettingsView: View {
                     SettingsRow(icon: "globe", title: "Language".localized, action: { showingLanguageSelector = true })
                     SettingsLinkRow(icon: "gearshape.2", title: "App Preferences".localized) {
                         AppPreferencesView()
-                    }
-                    SettingsLinkRow(icon: "shield.checkered", title: "Content Moderation Test".localized) {
-                        ModerationTestView()
                     }
                     SettingsLinkRow(icon: "questionmark.circle", title: "Help & Support".localized) {
                         HelpSupportView()
@@ -899,18 +902,23 @@ struct SettingsLinkRow<Destination: View>: View {
 
 // MARK: - Account Settings
 struct AccountSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localizationManager: LocalizationManager
     @EnvironmentObject private var supabaseManager: SupabaseManager
     @State private var showingResetAlert = false
-    
+    @State private var showingDeleteAlert = false
+    @State private var showingDeleteConfirmation = false
+    @State private var deleteConfirmationText = ""
+    @State private var isDeleting = false
+
     private var userEmail: String {
         supabaseManager.currentUser?.email ?? ""
     }
-    
+
     private var username: String {
         supabaseManager.currentUser?.displayName ?? ""
     }
-    
+
     var body: some View {
         List {
             Section(header: Text("Profile".localized), footer: Text("Manage your public information".localized)) {
@@ -918,7 +926,7 @@ struct AccountSettingsView: View {
                     EditProfileView(user: mockUser)
                 }
             }
-            
+
             Section(header: Text("Account".localized)) {
                 HStack {
                     Text("Email".localized)
@@ -931,7 +939,7 @@ struct AccountSettingsView: View {
                     Text(username).foregroundColor(Color.textSecondary)
                 }
             }
-            
+
             Section(header: Text("Security".localized), footer: Text("We will email you a link to reset your password.".localized)) {
                 Button {
                     showingResetAlert = true
@@ -943,6 +951,18 @@ struct AccountSettingsView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
+
+            Section(header: Text("Danger Zone".localized), footer: Text("Deleting your account is permanent and cannot be undone. All your data will be permanently removed.".localized)) {
+                Button {
+                    showingDeleteAlert = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "trash.fill").foregroundColor(Color.error).frame(width: 20)
+                        Text("Delete Account".localized).foregroundColor(Color.error)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
         }
         .navigationTitle("Account Settings".localized)
         .navigationBarTitleDisplayMode(.inline)
@@ -950,6 +970,49 @@ struct AccountSettingsView: View {
             Button("OK".localized, role: .cancel) {}
         } message: {
             Text("Password reset via email will be available after SMTP setup.".localized)
+        }
+        .alert("Delete Account?".localized, isPresented: $showingDeleteAlert) {
+            Button("Cancel".localized, role: .cancel) {}
+            Button("Delete".localized, role: .destructive) {
+                showingDeleteConfirmation = true
+            }
+        } message: {
+            Text("Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.".localized)
+        }
+        .sheet(isPresented: $showingDeleteConfirmation) {
+            DeleteAccountConfirmationView(
+                isDeleting: $isDeleting,
+                onConfirm: {
+                    deleteAccount()
+                }
+            )
+        }
+    }
+
+    private func deleteAccount() {
+        guard let currentUser = supabaseManager.currentUser else { return }
+
+        isDeleting = true
+
+        Task {
+            do {
+                // Delete user profile and all associated data
+                try await supabaseManager.deleteUserAccount(userId: currentUser.id.uuidString)
+
+                // Sign out
+                try await supabaseManager.signOut()
+
+                await MainActor.run {
+                    isDeleting = false
+                    showingDeleteConfirmation = false
+                    dismiss()
+                }
+            } catch {
+                print("❌ Error deleting account: \(error)")
+                await MainActor.run {
+                    isDeleting = false
+                }
+            }
         }
     }
 }
@@ -1188,9 +1251,120 @@ struct PrivacyPolicyView: View {
     }
 }
 
+// MARK: - Delete Account Confirmation View
+struct DeleteAccountConfirmationView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var localizationManager: LocalizationManager
+    @Binding var isDeleting: Bool
+    let onConfirm: () -> Void
 
+    @State private var confirmationText = ""
 
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                // Warning Icon
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 64))
+                    .foregroundColor(Color.error)
+                    .padding(.top, 40)
 
+                // Title
+                Text("Delete Account".localized)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(Color.textPrimary)
+
+                // Warning Message
+                VStack(spacing: 12) {
+                    Text("This action cannot be undone".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color.error)
+
+                    Text("All your data will be permanently deleted, including:".localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.textSecondary)
+                        .multilineTextAlignment(.center)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Your profile and account information".localized, systemImage: "person.fill")
+                        Label("All your projects and tasks".localized, systemImage: "folder.fill")
+                        Label("All your messages and conversations".localized, systemImage: "message.fill")
+                        Label("All your files and attachments".localized, systemImage: "doc.fill")
+                    }
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.textSecondary)
+                    .padding()
+                    .background(Color.error.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal, 20)
+
+                // Confirmation Input
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Type DELETE to confirm".localized)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color.textPrimary)
+
+                    TextField("DELETE", text: $confirmationText)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .autocapitalization(.allCharacters)
+                        .disableAutocorrection(true)
+                }
+                .padding(.horizontal, 20)
+
+                Spacer()
+
+                // Buttons
+                VStack(spacing: 12) {
+                    Button(action: {
+                        onConfirm()
+                    }) {
+                        if isDeleting {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                        } else {
+                            Text("Delete My Account".localized)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                        }
+                    }
+                    .background(confirmationText == "DELETE" ? Color.error : Color.error.opacity(0.5))
+                    .cornerRadius(12)
+                    .disabled(confirmationText != "DELETE" || isDeleting)
+
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Text("Cancel".localized)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                    }
+                    .background(Color.backgroundPrimary)
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+            .background(Color.backgroundSecondary)
+            .navigationTitle("Delete Account".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel".localized) {
+                        dismiss()
+                    }
+                    .disabled(isDeleting)
+                }
+            }
+        }
+    }
+}
 
 #Preview {
     ProfileView()
