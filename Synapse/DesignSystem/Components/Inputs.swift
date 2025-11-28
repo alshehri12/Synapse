@@ -126,10 +126,16 @@ struct DSTextArea: View {
                         .padding(.leading, 4)
                 }
 
-                TextEditor(text: $text)
-                    .bodyMedium()
-                    .frame(minHeight: minHeight, maxHeight: maxHeight)
-                    .scrollContentBackground(.hidden)
+                if #available(iOS 16.0, *) {
+                    TextEditor(text: $text)
+                        .bodyMedium()
+                        .frame(minHeight: minHeight, maxHeight: maxHeight)
+                        .scrollContentBackground(.hidden)
+                } else {
+                    TextEditor(text: $text)
+                        .bodyMedium()
+                        .frame(minHeight: minHeight, maxHeight: maxHeight)
+                }
             }
             .padding(Spacing.inputPadding)
             .background(Color.Background.elevated)

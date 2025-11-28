@@ -75,10 +75,10 @@ struct PodChatView: View {
             }
             .background(Color.backgroundSecondary.opacity(0.3))
             .frame(height: calculateChatHeight(screenHeight: geometry.size.height))
-            .onChange(of: chatMessages.count) {
+            .onChange(of: chatMessages.count) { _ in
                 scrollToBottom(proxy: proxy)
             }
-            .onChange(of: keyboardHeight) {
+            .onChange(of: keyboardHeight) { _ in
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     scrollToBottom(proxy: proxy)
                 }
@@ -283,7 +283,7 @@ struct PodChatView: View {
                         .foregroundColor(Color.textPrimary)
                         .focused($isTextFieldFocused)
                         .lineLimit(1...4)
-                        .onChange(of: messageText) {
+                        .onChange(of: messageText) { _ in
                             if !messageText.isEmpty {
                                 // TODO: Implement typing indicators
                             } else {

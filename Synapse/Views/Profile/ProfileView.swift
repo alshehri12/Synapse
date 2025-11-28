@@ -139,7 +139,7 @@ struct ProfileView: View {
             .onAppear {
                 loadUserProfile()
             }
-            .onChange(of: supabaseManager.currentUser) { _, user in
+            .onChange(of: supabaseManager.currentUser) { user in
                 if user != nil {
                     loadUserProfile()
                 }

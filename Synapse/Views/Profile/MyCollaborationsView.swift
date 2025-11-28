@@ -70,15 +70,15 @@ struct MyCollaborationsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done".localized) {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Text("Done".localized)
                     }
                 }
             }
             .onAppear {
                 loadCollaborations()
             }
-            .onChange(of: selectedTab) { _, _ in
+            .onChange(of: selectedTab) { _ in
                 // Filter is applied automatically
             }
         }

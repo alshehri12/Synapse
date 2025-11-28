@@ -247,7 +247,12 @@ extension View {
     /// Makes view focusable for keyboard navigation
     @available(iOS 15.0, *)
     func keyboardFocusable() -> some View {
-        self.focusable(true)
+        if #available(iOS 17.0, *) {
+            return AnyView(self.focusable(true))
+        } else {
+            // iOS 15-16: Use accessibility modifier as fallback
+            return AnyView(self.accessibilityAddTraits(.isButton))
+        }
     }
 }
 

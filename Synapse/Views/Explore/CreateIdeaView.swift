@@ -86,7 +86,7 @@ struct CreateIdeaView: View {
                         
                         TextField("Enter your idea title...".localized, text: $title)
                             .textFieldStyle(CustomTextFieldStyle())
-                            .onChange(of: title) { _, newValue in
+                            .onChange(of: title) { newValue in
                                 if newValue.count > maxTitleLength {
                                     title = String(newValue.prefix(maxTitleLength))
                                 }
@@ -117,7 +117,7 @@ struct CreateIdeaView: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.textSecondary.opacity(0.2), lineWidth: 1)
                             )
-                            .onChange(of: description) { _, newValue in
+                            .onChange(of: description) { newValue in
                                 if newValue.count > maxDescriptionLength {
                                     description = String(newValue.prefix(maxDescriptionLength))
                                 }

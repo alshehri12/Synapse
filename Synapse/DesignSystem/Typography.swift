@@ -215,10 +215,22 @@ extension View {
     }
 
     func overline(color: Color = .textSecondary) -> some View {
-        self
-            .font(.overline)
-            .foregroundColor(color)
-            .tracking(Typography.LetterSpacing.wider)
-            .textCase(.uppercase)
+        if #available(iOS 16.0, *) {
+            return AnyView(
+                self
+                    .font(.overline)
+                    .foregroundColor(color)
+                    .tracking(Typography.LetterSpacing.wider)
+                    .textCase(.uppercase)
+            )
+        } else {
+            // iOS 15: Skip letter spacing (not available)
+            return AnyView(
+                self
+                    .font(.overline)
+                    .foregroundColor(color)
+                    .textCase(.uppercase)
+            )
+        }
     }
 }

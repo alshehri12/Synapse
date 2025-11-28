@@ -554,7 +554,7 @@ struct FullScreenChatView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
                     }
-                    .onChange(of: chatMessages.count) { _, _ in
+                    .onChange(of: chatMessages.count) { _ in
                         scrollToBottom(proxy: proxy)
                     }
                 }
@@ -622,30 +622,26 @@ struct FullScreenChatView: View {
             }
             .navigationTitle(pod.name)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Back")
-                                .font(.system(size: 16, weight: .medium))
-                        }
-                        .foregroundColor(Color.accentGreen)
+            .navigationBarBackButtonHidden(true)
+            .navigationBarItems(
+                leading: Button(action: { dismiss() }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Back")
+                            .font(.system(size: 16, weight: .medium))
                     }
+                    .foregroundColor(Color.accentGreen)
+                },
+                trailing: HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 6, height: 6)
+                    Text("\(pod.members.count)")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color.textSecondary)
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 8, height: 8)
-                        Text("\(pod.members.count)")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(Color.textSecondary)
-                    }
-                }
-            }
+            )
             .onAppear {
                 // TODO: Implement chat room joining
             }

@@ -691,7 +691,7 @@ struct SignUpView: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(Color.textPrimary)
                     .autocapitalization(.none)
-                    .onChange(of: username) { _, newValue in
+                    .onChange(of: username) { newValue in
                         validateUsername(newValue)
                     }
 
@@ -1460,7 +1460,6 @@ struct OtpVerificationView: View {
                         .scaleEffect(0.8)
                 } else {
                     Text("Verify".localized)
-                        .fontWeight(.semibold)
                 }
             }
             .foregroundColor(.white)
@@ -1479,7 +1478,6 @@ struct OtpVerificationView: View {
             resendOTP()
                             }
                             .foregroundColor(Color.accentGreen)
-                        .fontWeight(.medium)
     }
     
     private func verifyOTP() {
@@ -1684,7 +1682,6 @@ struct EmailVerificationRequiredView: View {
                         .scaleEffect(0.8)
                 } else {
                     Text("Verify".localized)
-                        .fontWeight(.semibold)
                 }
             }
             .foregroundColor(.white)
@@ -1703,7 +1700,6 @@ struct EmailVerificationRequiredView: View {
             resendOTP()
         }
         .foregroundColor(Color.accentGreen)
-        .fontWeight(.medium)
     }
 
     private var signOutButton: some View {
@@ -1713,7 +1709,6 @@ struct EmailVerificationRequiredView: View {
             }
         } label: {
             Text("Sign Out".localized)
-                .fontWeight(.medium)
                 .foregroundColor(Color.error)
         }
     }
@@ -1883,54 +1878,69 @@ struct OTPInputView: View {
     @State private var digit6: String = ""
     @State private var isUpdatingFromParent = false
 
+    // For iOS 15-16 compatibility: Track previous values
+    @State private var prevDigit1: String = ""
+    @State private var prevDigit2: String = ""
+    @State private var prevDigit3: String = ""
+    @State private var prevDigit4: String = ""
+    @State private var prevDigit5: String = ""
+    @State private var prevDigit6: String = ""
+    @State private var prevOtpCode: String = ""
+
     var body: some View {
         HStack(spacing: 8) {
             // Field 1
             OTPSingleField(text: $digit1, isFocused: focusedField == 0)
                 .focused($focusedField, equals: 0)
-                .onChange(of: digit1) { oldValue, newValue in
+                .onChange(of: digit1) { newValue in
                     guard !isUpdatingFromParent else { return }
-                    handleChange(field: 0, oldValue: oldValue, newValue: newValue)
+                    handleChange(field: 0, oldValue: prevDigit1, newValue: newValue)
+                    prevDigit1 = newValue
                 }
 
             // Field 2
             OTPSingleField(text: $digit2, isFocused: focusedField == 1)
                 .focused($focusedField, equals: 1)
-                .onChange(of: digit2) { oldValue, newValue in
+                .onChange(of: digit2) { newValue in
                     guard !isUpdatingFromParent else { return }
-                    handleChange(field: 1, oldValue: oldValue, newValue: newValue)
+                    handleChange(field: 1, oldValue: prevDigit2, newValue: newValue)
+                    prevDigit2 = newValue
                 }
 
             // Field 3
             OTPSingleField(text: $digit3, isFocused: focusedField == 2)
                 .focused($focusedField, equals: 2)
-                .onChange(of: digit3) { oldValue, newValue in
+                .onChange(of: digit3) { newValue in
                     guard !isUpdatingFromParent else { return }
-                    handleChange(field: 2, oldValue: oldValue, newValue: newValue)
+                    handleChange(field: 2, oldValue: prevDigit3, newValue: newValue)
+                    prevDigit3 = newValue
                 }
 
             // Field 4
             OTPSingleField(text: $digit4, isFocused: focusedField == 3)
                 .focused($focusedField, equals: 3)
-                .onChange(of: digit4) { oldValue, newValue in
+                .onChange(of: digit4) { newValue in
                     guard !isUpdatingFromParent else { return }
-                    handleChange(field: 3, oldValue: oldValue, newValue: newValue)
+                    handleChange(field: 3, oldValue: prevDigit4, newValue: newValue)
+                    prevDigit4 = newValue
                 }
 
             // Field 5
             OTPSingleField(text: $digit5, isFocused: focusedField == 4)
                 .focused($focusedField, equals: 4)
-                .onChange(of: digit5) { oldValue, newValue in
+                .onChange(of: digit5) { newValue in
                     guard !isUpdatingFromParent else { return }
-                    handleChange(field: 4, oldValue: oldValue, newValue: newValue)
+                    handleChange(field: 4, oldValue: prevDigit5, newValue: newValue)
+                    prevDigit5 = newValue
                 }
 
             // Field 6
             OTPSingleField(text: $digit6, isFocused: focusedField == 5)
                 .focused($focusedField, equals: 5)
-                .onChange(of: digit6) { oldValue, newValue in
+                .onChange(of: digit6) { newValue in
                     guard !isUpdatingFromParent else { return }
-                    handleChange(field: 5, oldValue: oldValue, newValue: newValue)
+                    handleChange(field: 5, oldValue: prevDigit6, newValue: newValue)
+                    prevDigit6 = newValue
                 }
         }
         .environment(\.layoutDirection, .leftToRight) // Force LTR for OTP fields
@@ -1940,7 +1950,7 @@ struct OTPInputView: View {
                 focusedField = 0
             }
         }
-        .onChange(of: otpCode) { oldValue, newValue in
+        .onChange(of: otpCode) { newValue in
             // Only update if pasted from outside (not from our own updates)
             let currentCode = getCurrentCode()
             if newValue != currentCode && newValue.count >= 6 {
@@ -1955,6 +1965,7 @@ struct OTPInputView: View {
                 focusedField = 5
                 isUpdatingFromParent = false
             }
+            prevOtpCode = newValue
         }
     }
 
@@ -2095,13 +2106,13 @@ struct OTPDigitField: View {
             )
             .keyboardType(.numberPad)
             .focused($isFocused)
-            .onChange(of: text) { _, newValue in
+            .onChange(of: text) { newValue in
                 // Only allow single digits
                 let filtered = newValue.filter { $0.isNumber }
                 if filtered.count <= 1 {
                     text = filtered
                     onDigitChange(filtered)
-                    
+
                     // Auto-focus next field if digit entered
                     if !filtered.isEmpty {
                         // Move focus to next field (handled by parent)

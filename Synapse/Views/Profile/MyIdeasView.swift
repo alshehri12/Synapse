@@ -69,15 +69,15 @@ struct MyIdeasView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done".localized) {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Text("Done".localized)
                     }
                 }
             }
             .onAppear {
                 loadIdeas()
             }
-            .onChange(of: selectedTab) { _, _ in
+            .onChange(of: selectedTab) { _ in
                 loadIdeas()
             }
         }
