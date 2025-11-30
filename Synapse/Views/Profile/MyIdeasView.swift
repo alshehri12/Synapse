@@ -116,11 +116,23 @@ struct IdeaCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Title
-            Text(idea.title)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color.textPrimary)
-                .lineLimit(2)
+            // Title with Private badge
+            HStack(alignment: .top, spacing: 8) {
+                Text(idea.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                    .lineLimit(2)
+
+                if !idea.isPublic {
+                    Text("Private".localized)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.red)
+                        .cornerRadius(6)
+                }
+            }
             
             // Description
             Text(idea.description)

@@ -25,12 +25,14 @@
 "Tags" = "العلامات";
 "Add tags separated by commas..." = "أضف علامات مفصولة بفواصل...";
 "Make Public" = "اجعلها عامة";
+"Private" = "خاص";
 "Anyone can see and join this idea" = "يمكن لأي شخص رؤية والانضمام لهذه الفكرة";
 "Create Idea" = "أنشئ الفكرة";
 "Cancel" = "إلغاء";
 "Save Draft" = "احفظ كمسودة";
 "Idea created successfully!" = "تم إنشاء الفكرة بنجاح!";
 "Your idea has been shared with the community." = "تم مشاركة فكرتك مع المجتمع.";
+"Your private idea has been created. Check it in My Projects." = "تم إنشاء فكرتك الخاصة. تحقق منها في مشاريعي.";
 
 /* Delete Idea */
 "Delete Idea" = "حذف الفكرة";

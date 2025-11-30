@@ -25,12 +25,14 @@
 "Tags" = "Tags";
 "Add tags separated by commas..." = "Add tags separated by commas...";
 "Make Public" = "Make Public";
+"Private" = "Private";
 "Anyone can see and join this idea" = "Anyone can see and join this idea";
 "Create Idea" = "Create Idea";
 "Cancel" = "Cancel";
 "Save Draft" = "Save Draft";
 "Idea created successfully!" = "Idea created successfully!";
 "Your idea has been shared with the community." = "Your idea has been shared with the community.";
+"Your private idea has been created. Check it in My Projects." = "Your private idea has been created. Check it in My Projects.";
 
 /* Delete Idea */
 "Delete Idea" = "Delete Idea";

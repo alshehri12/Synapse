@@ -689,7 +689,7 @@ struct SignUpView: View {
 
                 TextField("Enter username".localized, text: $username)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color(hex: "333333"))
                     .autocapitalization(.none)
                     .onChange(of: username) { newValue in
                         validateUsername(newValue)
@@ -736,7 +736,7 @@ struct SignUpView: View {
 
                 TextField("Enter email".localized, text: $email)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color(hex: "333333"))
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
             }
@@ -765,7 +765,7 @@ struct SignUpView: View {
 
                 SecureField("Enter password".localized, text: $password)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color(hex: "333333"))
             }
             .padding(16)
             .background(
@@ -792,7 +792,7 @@ struct SignUpView: View {
 
                 SecureField("Confirm password".localized, text: $confirmPassword)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color(hex: "333333"))
             }
             .padding(16)
             .background(
@@ -1162,7 +1162,7 @@ struct LoginView: View {
 
                 TextField("Enter email".localized, text: $email)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color(hex: "333333"))
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
             }
@@ -1191,7 +1191,7 @@ struct LoginView: View {
 
                 SecureField("Enter password".localized, text: $password)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color(hex: "333333"))
             }
             .padding(16)
             .background(

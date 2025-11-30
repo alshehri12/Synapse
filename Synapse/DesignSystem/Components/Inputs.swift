@@ -26,7 +26,7 @@ struct DSTextField: View {
                 }
 
                 TextField(placeholder, text: $text)
-                    .bodyMedium()
+                    .bodyMedium(color: Color(hex: "333333"))
                     .disabled(isDisabled)
             }
             .padding(Spacing.inputPadding)
@@ -72,10 +72,10 @@ struct DSSecureField: View {
 
                 if isSecured {
                     SecureField(placeholder, text: $text)
-                        .bodyMedium()
+                        .bodyMedium(color: Color(hex: "333333"))
                 } else {
                     TextField(placeholder, text: $text)
-                        .bodyMedium()
+                        .bodyMedium(color: Color(hex: "333333"))
                 }
 
                 Button(action: { isSecured.toggle() }) {

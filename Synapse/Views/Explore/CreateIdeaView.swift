@@ -260,7 +260,7 @@ struct CreateIdeaView: View {
                     onDismiss()
                 }
             } message: {
-                Text("Your idea has been shared with the community.".localized)
+                Text(isPublic ? "Your idea has been shared with the community.".localized : "Your private idea has been created. Check it in My Projects.".localized)
             }
             .alert("Error Creating Idea".localized, isPresented: $showingErrorAlert) {
                 Button("OK".localized) { }
@@ -370,6 +370,13 @@ struct CreateIdeaView: View {
                 await MainActor.run {
                     isSubmitting = false
                     showingSuccessAlert = true
+
+                    // If private idea, navigate to My Projects tab
+                    if !isPublic {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            NotificationCenter.default.post(name: .switchToMyPods, object: nil)
+                        }
+                    }
                 }
             } catch {
                 print("❌ CreateIdeaView: Error creating idea - \(error)")

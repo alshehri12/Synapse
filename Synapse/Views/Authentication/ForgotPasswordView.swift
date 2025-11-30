@@ -67,7 +67,7 @@ struct ForgotPasswordView: View {
                 }
                 .padding(Spacing.screenPadding)
             }
-            .background(Color.Background.primary)
+            .background(Color.white)
             .navigationTitle("Reset Password".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
