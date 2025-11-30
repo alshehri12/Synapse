@@ -237,6 +237,15 @@
 "Confirm password" = "Confirm password";
 "Passwords don't match" = "Passwords don't match";
 "Creating Account..." = "Creating Account...";
+"Forgot Password?" = "Forgot Password?";
+"Reset Password" = "Reset Password";
+"Enter your email to receive password reset instructions" = "Enter your email to receive password reset instructions";
+"Send Reset Link" = "Send Reset Link";
+"Password reset instructions have been sent to your email." = "Password reset instructions have been sent to your email.";
+"Enter your email" = "Enter your email";
+"Enter your email address and we'll send you a link to reset your password." = "Enter your email address and we'll send you a link to reset your password.";
+"Check Your Email" = "Check Your Email";
+"If an account exists with that email, you'll receive a password reset link shortly." = "If an account exists with that email, you'll receive a password reset link shortly.";
 "Signing In..." = "Signing In...";
 "Email already in use" = "Email already in use";
 "Invalid email format" = "Invalid email format";

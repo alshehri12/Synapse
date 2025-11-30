@@ -236,6 +236,15 @@
 "Confirm password" = "أكد كلمة المرور";
 "Passwords don't match" = "كلمات المرور غير متطابقة";
 "Creating Account..." = "جاري إنشاء الحساب...";
+"Forgot Password?" = "نسيت كلمة المرور؟";
+"Reset Password" = "إعادة تعيين كلمة المرور";
+"Enter your email to receive password reset instructions" = "أدخل بريدك الإلكتروني لتلقي تعليمات إعادة تعيين كلمة المرور";
+"Send Reset Link" = "إرسال رابط إعادة التعيين";
+"Password reset instructions have been sent to your email." = "تم إرسال تعليمات إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.";
+"Enter your email" = "أدخل بريدك الإلكتروني";
+"Enter your email address and we'll send you a link to reset your password." = "أدخل عنوان بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور.";
+"Check Your Email" = "تحقق من بريدك الإلكتروني";
+"If an account exists with that email, you'll receive a password reset link shortly." = "إذا كان هناك حساب بهذا البريد الإلكتروني، ستتلقى رابط إعادة تعيين كلمة المرور قريبًا.";
 "Signing In..." = "جاري تسجيل الدخول...";
 "Email already in use" = "البريد الإلكتروني مستخدم بالفعل";
 "Invalid email format" = "صيغة البريد الإلكتروني غير صحيحة";

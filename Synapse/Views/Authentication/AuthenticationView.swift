@@ -18,8 +18,8 @@ struct AuthenticationView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Clean white background
-                Color.white.ignoresSafeArea()
+                // Adaptive background
+                Color.backgroundPrimary.ignoresSafeArea()
 
                 // Subtle green accent circles for depth
                 GeometryReader { geometry in
@@ -1004,6 +1004,7 @@ struct LoginView: View {
     @State private var isSubmitting = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showForgotPassword = false
 
     var isFormValid: Bool {
         !email.isEmpty && !password.isEmpty && email.contains("@")
@@ -1035,6 +1036,11 @@ struct LoginView: View {
             }
         }
         .navigationBarHidden(true)
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordView()
+                .environmentObject(supabaseManager)
+                .environmentObject(localizationManager)
+        }
         .alert("Sign In Error", isPresented: $showError) {
             Button("OK") {
                 showError = false
@@ -1132,6 +1138,7 @@ struct LoginView: View {
         VStack(spacing: 20) {
             emailField
             passwordField
+            forgotPasswordLink
         }
         .padding(24)
         .background(
@@ -1239,6 +1246,17 @@ struct LoginView: View {
         }
         .buttonStyle(ModernScaleButtonStyle())
         .disabled(!isFormValid || isSubmitting)
+    }
+
+    private var forgotPasswordLink: some View {
+        HStack {
+            Spacer()
+            Button(action: { showForgotPassword = true }) {
+                Text("Forgot Password?".localized)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.accentGreen)
+            }
+        }
     }
 
     private var signUpPrompt: some View {
@@ -1825,7 +1843,7 @@ struct GoogleSignInButton: View {
                 // Modern Google Logo
                 ZStack {
                     Circle()
-                        .fill(Color.white)
+                        .fill(Color.backgroundPrimary)
                         .frame(width: 32, height: 32)
                         .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
 
@@ -1854,7 +1872,7 @@ struct GoogleSignInButton: View {
             .padding(.horizontal, 20)
             .background(
                 RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.white)
+                    .fill(Color.backgroundPrimary)
                     .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
             )
             .overlay(
