@@ -417,7 +417,21 @@ class SupabaseManager: ObservableObject {
 
     @MainActor
     func resetPassword(email: String) async throws {
-        try await supabaseClient.auth.resetPasswordForEmail(email)
+        // ⚙️ CONFIGURATION REQUIRED:
+        // 1. Replace "yourdomain.com" with your actual domain below
+        // 2. Host the reset-password.html file at this URL
+        // 3. Update Supabase credentials in the HTML file
+        // 4. Add this URL to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
+        //
+        // The HTML file is located at: /web/reset-password.html
+        // You need to upload it to your web hosting and make it accessible at the URL below
+
+        let redirectURL = URL(string: "https://yourdomain.com/auth/reset-password")!
+
+        try await supabaseClient.auth.resetPasswordForEmail(
+            email,
+            redirectTo: redirectURL
+        )
     }
 
     // MARK: - User Profile Management
