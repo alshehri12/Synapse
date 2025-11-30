@@ -18,8 +18,8 @@ struct AuthenticationView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Adaptive background
-                Color.backgroundPrimary.ignoresSafeArea()
+                // Clean white background
+                Color.white.ignoresSafeArea()
 
                 // Subtle green accent circles for depth
                 GeometryReader { geometry in
@@ -178,7 +178,7 @@ struct AuthenticationView: View {
                                      "تسجيل الدخول" :
                                      "Sign In")
                                     .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(Color.textPrimary)
+                                    .foregroundColor(Color(hex: "333333"))
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 58)
                                     .background(
@@ -1843,7 +1843,7 @@ struct GoogleSignInButton: View {
                 // Modern Google Logo
                 ZStack {
                     Circle()
-                        .fill(Color.backgroundPrimary)
+                        .fill(Color.white)
                         .frame(width: 32, height: 32)
                         .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
 
@@ -1863,7 +1863,7 @@ struct GoogleSignInButton: View {
 
                 Text("Continue with Google".localized)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color(hex: "333333"))
 
                 Spacer()
             }
@@ -1872,7 +1872,7 @@ struct GoogleSignInButton: View {
             .padding(.horizontal, 20)
             .background(
                 RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.backgroundPrimary)
+                    .fill(Color.white)
                     .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
             )
             .overlay(
