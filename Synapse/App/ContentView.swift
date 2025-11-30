@@ -67,6 +67,7 @@ struct ContentView: View {
 #if canImport(UIKit)
 extension Notification.Name {
     static let switchToMyPods = Notification.Name("SwitchToMyPods")
+    static let podMembershipChanged = Notification.Name("PodMembershipChanged")
 }
 #endif
 

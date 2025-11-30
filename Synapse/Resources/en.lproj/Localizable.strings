@@ -54,6 +54,10 @@
 
 /* My Projects View */
 "Incubation Projects" = "Incubation Projects";
+"My Private Ideas" = "My Private Ideas";
+"No projects or ideas found" = "No projects or ideas found";
+"Join a pod or create an idea to start collaborating!" = "Join a pod or create an idea to start collaborating!";
+"No projects in this category" = "No projects in this category";
 "Create New Project" = "Create New Project";
 "Join Existing Project" = "Join Existing Project";
 "Project Name" = "Project Name";

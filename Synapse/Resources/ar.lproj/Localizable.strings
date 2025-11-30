@@ -54,6 +54,10 @@
 
 /* My Projects View */
 "Incubation Projects" = "المشاريع";
+"My Private Ideas" = "أفكاري الخاصة";
+"No projects or ideas found" = "لا توجد مشاريع أو أفكار";
+"Join a pod or create an idea to start collaborating!" = "انضم إلى مشروع أو أنشئ فكرة لبدء التعاون!";
+"No projects in this category" = "لا توجد مشاريع في هذه الفئة";
 "Create New Project" = "أنشئ مشروع جديد";
 "Join Existing Project" = "انضم لمشروع موجود";
 "Project Name" = "اسم المشروع";

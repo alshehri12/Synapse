@@ -11,6 +11,7 @@ import Supabase
 struct MyPodsView: View {
     @State private var selectedTab = 0
     @State private var pods: [IncubationProject] = []
+    @State private var privateIdeas: [IdeaSpark] = []
     @State private var isLoading = false
     @EnvironmentObject private var localizationManager: LocalizationManager
     @EnvironmentObject private var supabaseManager: SupabaseManager
@@ -45,25 +46,55 @@ struct MyPodsView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
                 
-                // Pods List
+                // Pods and Private Ideas List
                 if isLoading {
                     Spacer()
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: Color.accentGreen))
                         .scaleEffect(1.2)
                     Spacer()
-                } else if filteredPods.isEmpty {
+                } else if filteredPods.isEmpty && privateIdeas.isEmpty {
                     EmptyStateView(
                         icon: "person.3",
-                        title: "No pods found".localized,
-                        message: selectedTab == 0 ? "Join a pod to start collaborating!".localized : "No pods in this category".localized
+                        title: "No projects or ideas found".localized,
+                        message: selectedTab == 0 ? "Join a pod or create an idea to start collaborating!".localized : "No projects in this category".localized
                     )
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
-                            ForEach(filteredPods) { pod in
-                                PodCard(pod: pod)
-                                    .padding(.horizontal, 20)
+                            // Private Ideas Section (only in Active tab)
+                            if selectedTab == 0 && !privateIdeas.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("My Private Ideas".localized)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(Color.textPrimary)
+                                        .padding(.horizontal, 20)
+                                        .padding(.top, 8)
+
+                                    ForEach(privateIdeas) { idea in
+                                        NavigationLink(destination: IdeaDetailView(idea: idea)) {
+                                            PrivateIdeaCard(idea: idea)
+                                                .padding(.horizontal, 20)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                            }
+
+                            // Pods Section
+                            if !filteredPods.isEmpty {
+                                if selectedTab == 0 && !privateIdeas.isEmpty {
+                                    Text("My Projects".localized)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(Color.textPrimary)
+                                        .padding(.horizontal, 20)
+                                        .padding(.top, 16)
+                                }
+
+                                ForEach(filteredPods) { pod in
+                                    PodCard(pod: pod)
+                                        .padding(.horizontal, 20)
+                                }
                             }
                         }
                         .padding(.vertical, 16)
@@ -76,6 +107,9 @@ struct MyPodsView: View {
             .background(Color.backgroundSecondary)
             .navigationBarHidden(true)
             .onAppear {
+                loadPods()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .podMembershipChanged)) { _ in
                 loadPods()
             }
         }
@@ -94,21 +128,27 @@ struct MyPodsView: View {
     
     private func loadPods() {
         guard let currentUser = supabaseManager.currentUser else { return }
-        
+
         isLoading = true
-        
+
         Task {
             do {
-                let userPods = try await supabaseManager.getPodsForUser(userId: currentUser.uid)
+                // Load both pods and private ideas
+                async let userPods = supabaseManager.getPodsForUser(userId: currentUser.uid)
+                async let userPrivateIdeas = supabaseManager.getUserPrivateIdeas(userId: currentUser.uid)
+
+                let (pods, ideas) = try await (userPods, userPrivateIdeas)
+
                 await MainActor.run {
-                    self.pods = userPods
+                    self.pods = pods
+                    self.privateIdeas = ideas
                     self.isLoading = false
-                    print("✅ Loaded \(userPods.count) pods for user.")
+                    print("✅ Loaded \(pods.count) pods and \(ideas.count) private ideas for user.")
                 }
             } catch {
                 await MainActor.run {
                     self.isLoading = false
-                    print("❌ Error loading user pods: \(error.localizedDescription)")
+                    print("❌ Error loading user pods/ideas: \(error.localizedDescription)")
                 }
             }
         }
@@ -401,6 +441,78 @@ let mockPods: [IncubationProject] = [
         status: .planning
     )
 ]
+
+// MARK: - Private Idea Card
+struct PrivateIdeaCard: View {
+    let idea: IdeaSpark
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Title with Private badge
+            HStack(alignment: .top, spacing: 8) {
+                Text(idea.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.textPrimary)
+                    .lineLimit(2)
+
+                Text("Private".localized)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.red)
+                    .cornerRadius(6)
+            }
+
+            // Description
+            Text(idea.description)
+                .font(.system(size: 14))
+                .foregroundColor(Color.textSecondary)
+                .lineLimit(3)
+
+            // Tags
+            if !idea.tags.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(idea.tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.accentGreen)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.accentGreen.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                    }
+                }
+            }
+
+            // Stats
+            HStack {
+                HStack(spacing: 4) {
+                    Image(systemName: "heart")
+                        .font(.system(size: 12))
+                    Text("\(idea.likes)")
+                        .font(.system(size: 12))
+                }
+                .foregroundColor(Color.textSecondary)
+
+                Spacer()
+
+                // Date
+                Text(idea.createdAt, style: .date)
+                    .font(.system(size: 12))
+                    .foregroundColor(Color.textSecondary)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.backgroundPrimary)
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+    }
+}
 
 #Preview {
     MyPodsView()

@@ -183,12 +183,14 @@ struct PodSettingsView: View {
             do {
                 let currentUserId = supabaseManager.currentUser?.uid ?? ""
                 let updatedMembers = pod.members.filter { $0.userId != currentUserId }
-                
+
                 // Remove user from pod_members table
                 try await supabaseManager.removePodMember(podId: pod.id, userId: currentUserId)
                 print("✅ User removed from pod: \(pod.id)")
-                
+
                 await MainActor.run {
+                    // Notify MyPodsView to refresh
+                    NotificationCenter.default.post(name: .podMembershipChanged, object: nil)
                     dismiss()
                 }
             } catch {
