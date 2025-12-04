@@ -417,16 +417,22 @@ class SupabaseManager: ObservableObject {
 
     @MainActor
     func resetPassword(email: String) async throws {
-        // ⚙️ CONFIGURATION REQUIRED:
-        // 1. Replace "yourdomain.com" with your actual domain below
-        // 2. Host the reset-password.html file at this URL
-        // 3. Update Supabase credentials in the HTML file
-        // 4. Add this URL to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
+        // 🔗 SIMPLE SETUP - Deep Link Approach (No Web Hosting Needed!)
         //
-        // The HTML file is located at: /web/reset-password.html
-        // You need to upload it to your web hosting and make it accessible at the URL below
+        // STEP 1: Add URL Scheme in Xcode
+        // - Target → Info → URL Types → Add:
+        //   - Identifier: com.synapse.app
+        //   - URL Schemes: synapse
+        //
+        // STEP 2: Add to Supabase Dashboard
+        // - Authentication → URL Configuration → Redirect URLs
+        // - Add: synapse://reset-password
+        //
+        // STEP 3: Handle the URL in AppDelegate (already implemented below)
+        //
+        // When user clicks email link → Opens app → Shows password reset screen
 
-        let redirectURL = URL(string: "https://yourdomain.com/auth/reset-password")!
+        let redirectURL = URL(string: "synapse://reset-password")!
 
         try await supabaseClient.auth.resetPasswordForEmail(
             email,
