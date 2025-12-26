@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug URL - Synapse</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #E8F5F0 0%, #F0FFF4 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #10b981;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .label {
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .value {
+            color: #333;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .token-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .found {
+            background: #E8F5F0;
+            color: #059669;
+        }
+
+        .not-found {
+            background: #FFE5E9;
+            color: #C62828;
+        }
+
+        .all-params {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .param-row {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        .param-row:last-child {
+            border-bottom: none;
+        }
+
+        .param-key {
+            font-weight: 600;
+            color: #10b981;
+        }
+
+        .param-value {
+            color: #666;
+            margin-left: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 URL Debug Information</h1>
+
+        <div class="info-box">
+            <div class="label">Full URL:</div>
+            <div class="value" id="full-url"></div>
+        </div>
+
+        <div class="info-box">
+            <div class="label">Hash Fragment (after #):</div>
+            <div class="value" id="hash"></div>
+        </div>
+
+        <div class="info-box">
+            <div class="label">Query String (after ?):</div>
+            <div class="value" id="search"></div>
+        </div>
+
+        <div class="info-box">
+            <div class="label">Access Token Status:</div>
+            <span id="access-token-status" class="token-status"></span>
+        </div>
+
+        <div class="info-box">
+            <div class="label">Refresh Token Status:</div>
+            <span id="refresh-token-status" class="token-status"></span>
+        </div>
+
+        <div class="info-box">
+            <div class="label">Type Parameter:</div>
+            <div class="value" id="type-param"></div>
+        </div>
+
+        <div class="info-box">
+            <div class="label">All Hash Parameters:</div>
+            <div class="all-params" id="hash-params"></div>
+        </div>
+
+        <div class="info-box">
+            <div class="label">All Query Parameters:</div>
+            <div class="all-params" id="query-params"></div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            // Display full URL
+            document.getElementById('full-url').textContent = window.location.href
+
+            // Display hash
+            const hash = window.location.hash
+            document.getElementById('hash').textContent = hash || '(none)'
+
+            // Display search
+            const search = window.location.search
+            document.getElementById('search').textContent = search || '(none)'
+
+            // Parse hash parameters
+            const hashParams = new URLSearchParams(hash.substring(1))
+            const queryParams = new URLSearchParams(search)
+
+            // Check for access_token
+            const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
+            const accessTokenStatus = document.getElementById('access-token-status')
+            if (accessToken) {
+                accessTokenStatus.textContent = '✅ Found (length: ' + accessToken.length + ')'
+                accessTokenStatus.className = 'token-status found'
+            } else {
+                accessTokenStatus.textContent = '❌ Not Found'
+                accessTokenStatus.className = 'token-status not-found'
+            }
+
+            // Check for refresh_token
+            const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
+            const refreshTokenStatus = document.getElementById('refresh-token-status')
+            if (refreshToken) {
+                refreshTokenStatus.textContent = '✅ Found (length: ' + refreshToken.length + ')'
+                refreshTokenStatus.className = 'token-status found'
+            } else {
+                refreshTokenStatus.textContent = '❌ Not Found'
+                refreshTokenStatus.className = 'token-status not-found'
+            }
+
+            // Display type parameter
+            const type = hashParams.get('type') || queryParams.get('type')
+            document.getElementById('type-param').textContent = type || '(none)'
+
+            // Display all hash parameters
+            const hashParamsDiv = document.getElementById('hash-params')
+            if (hashParams.toString()) {
+                hashParamsDiv.innerHTML = ''
+                for (const [key, value] of hashParams) {
+                    const row = document.createElement('div')
+                    row.className = 'param-row'
+                    row.innerHTML = `<span class="param-key">${key}:</span><span class="param-value">${value.substring(0, 50)}${value.length > 50 ? '...' : ''}</span>`
+                    hashParamsDiv.appendChild(row)
+                }
+            } else {
+                hashParamsDiv.innerHTML = '<div style="color: #999; font-style: italic;">No hash parameters found</div>'
+            }
+
+            // Display all query parameters
+            const queryParamsDiv = document.getElementById('query-params')
+            if (queryParams.toString()) {
+                queryParamsDiv.innerHTML = ''
+                for (const [key, value] of queryParams) {
+                    const row = document.createElement('div')
+                    row.className = 'param-row'
+                    row.innerHTML = `<span class="param-key">${key}:</span><span class="param-value">${value.substring(0, 50)}${value.length > 50 ? '...' : ''}</span>`
+                    queryParamsDiv.appendChild(row)
+                }
+            } else {
+                queryParamsDiv.innerHTML = '<div style="color: #999; font-style: italic;">No query parameters found</div>'
+            }
+
+            // Log everything to console too
+            console.log('=== URL DEBUG INFO ===')
+            console.log('Full URL:', window.location.href)
+            console.log('Hash:', hash)
+            console.log('Search:', search)
+            console.log('Access Token:', accessToken ? 'Found' : 'Not Found')
+            console.log('Refresh Token:', refreshToken ? 'Found' : 'Not Found')
+            console.log('Type:', type)
+            console.log('===================')
+        })
+    </script>
+</body>
+</html>

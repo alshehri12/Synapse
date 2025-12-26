@@ -433,6 +433,7 @@ class SupabaseManager: ObservableObject {
 
         let redirectURL = URL(string: "https://usynapse.com/reset-password.html")!
 
+
         try await supabaseClient.auth.resetPasswordForEmail(
             email,
             redirectTo: redirectURL
