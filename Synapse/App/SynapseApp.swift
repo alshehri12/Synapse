@@ -15,6 +15,7 @@ struct SynapseApp: App {
     @StateObject private var supabaseManager = SupabaseManager.shared
     @StateObject private var appearanceManager = AppearanceManager.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @State private var showPasswordReset = false
 
     var body: some Scene {
         WindowGroup {
@@ -62,6 +63,36 @@ struct SynapseApp: App {
                         .environment(\.locale, localizationManager.locale)
                         .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
                         .preferredColorScheme(appearanceManager.colorScheme)
+                }
+            }
+            .onOpenURL { url in
+                handleDeepLink(url)
+            }
+            .sheet(isPresented: $showPasswordReset) {
+                ResetPasswordView()
+                    .environmentObject(localizationManager)
+                    .environmentObject(supabaseManager)
+                    .environmentObject(appearanceManager)
+                    .environment(\.locale, localizationManager.locale)
+                    .environment(\.layoutDirection, localizationManager.currentLanguage == .arabic ? .rightToLeft : .leftToRight)
+                    .preferredColorScheme(appearanceManager.colorScheme)
+            }
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        print("📱 Deep link received: \(url.absoluteString)")
+
+        // Handle password reset deep link: synapse://reset-password?code=xxx
+        if url.host == "reset-password" {
+            Task {
+                do {
+                    try await supabaseManager.handlePasswordResetDeepLink(url: url)
+                    await MainActor.run {
+                        showPasswordReset = true
+                    }
+                } catch {
+                    print("❌ Failed to handle password reset deep link: \(error.localizedDescription)")
                 }
             }
         }

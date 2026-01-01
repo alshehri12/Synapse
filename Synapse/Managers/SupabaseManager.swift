@@ -417,27 +417,56 @@ class SupabaseManager: ObservableObject {
 
     @MainActor
     func resetPassword(email: String) async throws {
-        // 🌐 Password Reset - Hosted on usynapse.com
+        // 🔐 Password Reset - Deep Link to App (PKCE Compatible)
+        //
+        // IMPORTANT: Supabase PKCE flow requires code_verifier which web pages can't access.
+        // Solution: Redirect back to the app using deep link where we CAN handle PKCE.
         //
         // SETUP REQUIRED:
-        // 1. Upload reset-password-page.html to usynapse.com/public_html/
-        // 2. Rename to: reset-password.html
-        // 3. Add to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs:
-        //    https://usynapse.com/reset-password.html
+        // 1. Add to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs:
+        //    synapse://reset-password
         //
         // USER FLOW:
-        // 1. User clicks "Reset My Password" in email
-        // 2. Opens: https://usynapse.com/reset-password.html
-        // 3. User enters new password
-        // 4. Password is reset ✅
+        // 1. User taps "Forgot Password" in app
+        // 2. Receives email with reset link
+        // 3. Clicks "Reset My Password" in email
+        // 4. Deep link opens app (synapse://reset-password?code=xxx)
+        // 5. App exchanges code for session using PKCE
+        // 6. App shows password reset screen
+        // 7. User enters new password
+        // 8. Password is reset ✅
 
-        let redirectURL = URL(string: "https://usynapse.com/reset-password.html")!
-
+        let redirectURL = URL(string: "synapse://reset-password")!
 
         try await supabaseClient.auth.resetPasswordForEmail(
             email,
             redirectTo: redirectURL
         )
+    }
+
+    @MainActor
+    func handlePasswordResetDeepLink(url: URL) async throws {
+        // Extract the code from the URL
+        // URL format: synapse://reset-password?code=xxx
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+              let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+            throw NSError(domain: "SupabaseManager", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Invalid reset link: no code found"])
+        }
+
+        // Exchange the code for a session using PKCE
+        try await supabaseClient.auth.exchangeCodeForSession(code: code)
+
+        // Session is now established, user can update their password
+        print("✅ Password reset session established successfully")
+    }
+
+    @MainActor
+    func updatePassword(newPassword: String) async throws {
+        // Update the user's password
+        // This requires an active session (from handlePasswordResetDeepLink)
+        try await supabaseClient.auth.update(user: UserAttributes(password: newPassword))
+        print("✅ Password updated successfully")
     }
 
     // MARK: - User Profile Management
