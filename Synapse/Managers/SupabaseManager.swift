@@ -417,26 +417,34 @@ class SupabaseManager: ObservableObject {
 
     @MainActor
     func resetPassword(email: String) async throws {
-        // 🔐 Password Reset - Deep Link to App (PKCE Compatible)
+        // 🌐 Password Reset - Universal Link (Multi-Platform)
         //
-        // IMPORTANT: Supabase PKCE flow requires code_verifier which web pages can't access.
-        // Solution: Redirect back to the app using deep link where we CAN handle PKCE.
+        // Smart web page that handles BOTH mobile and desktop:
+        // - Mobile: Auto-redirects to app (synapse://reset-password?code=xxx)
+        // - Desktop: Shows message to open link on mobile device
         //
         // SETUP REQUIRED:
-        // 1. Add to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs:
-        //    synapse://reset-password
+        // 1. Upload reset-password-smart.html to https://usynapse.com/reset-password.html
+        // 2. Add to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs:
+        //    - https://usynapse.com/reset-password
+        //    - synapse://reset-password (for fallback)
         //
-        // USER FLOW:
+        // USER FLOW (Mobile):
         // 1. User taps "Forgot Password" in app
         // 2. Receives email with reset link
-        // 3. Clicks "Reset My Password" in email
-        // 4. Deep link opens app (synapse://reset-password?code=xxx)
-        // 5. App exchanges code for session using PKCE
-        // 6. App shows password reset screen
-        // 7. User enters new password
-        // 8. Password is reset ✅
+        // 3. Clicks link → Opens web page
+        // 4. Web page detects mobile → Auto-redirects to app
+        // 5. App exchanges PKCE code for session
+        // 6. Shows ResetPasswordView
+        // 7. User enters new password → Success! ✅
+        //
+        // USER FLOW (Desktop):
+        // 1. User clicks link on desktop
+        // 2. Web page detects desktop → Shows friendly message
+        // 3. "Please open this link on your mobile device"
+        // 4. User forwards email to phone or scans QR code
 
-        let redirectURL = URL(string: "synapse://reset-password")!
+        let redirectURL = URL(string: "https://usynapse.com/reset-password")!
 
         try await supabaseClient.auth.resetPasswordForEmail(
             email,
