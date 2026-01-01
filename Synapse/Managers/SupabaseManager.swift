@@ -455,7 +455,7 @@ class SupabaseManager: ObservableObject {
         }
 
         // Exchange the code for a session using PKCE
-        try await supabaseClient.auth.exchangeCodeForSession(code: code)
+        try await supabaseClient.auth.exchangeCodeForSession(authCode: code)
 
         // Session is now established, user can update their password
         print("✅ Password reset session established successfully")
