@@ -78,12 +78,12 @@ struct ResetPasswordView: View {
                                     .font(.caption)
                                     .foregroundColor(.textSecondary)
 
-                                PasswordRequirement(
+                                PasswordResetRequirement(
                                     text: "Be at least 6 characters",
                                     isMet: newPassword.count >= 6
                                 )
 
-                                PasswordRequirement(
+                                PasswordResetRequirement(
                                     text: "Match confirmation",
                                     isMet: !newPassword.isEmpty && newPassword == confirmPassword
                                 )
@@ -135,10 +135,10 @@ struct ResetPasswordView: View {
                 // Success Overlay
                 if showSuccess {
                     SuccessAlertView(
+                        isPresented: $showSuccess,
                         title: "Password Reset!",
                         message: "Your password has been successfully updated. You can now sign in with your new password.",
                         onDismiss: {
-                            showSuccess = false
                             dismiss()
                         }
                     )
@@ -190,7 +190,7 @@ struct ResetPasswordView: View {
     }
 }
 
-struct PasswordRequirement: View {
+struct PasswordResetRequirement: View {
     let text: String
     let isMet: Bool
 
